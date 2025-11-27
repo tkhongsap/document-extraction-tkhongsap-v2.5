@@ -103,7 +103,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             <LanguageSwitcher />
             <Button variant="ghost" onClick={() => login()}>{t('nav.signin')}</Button>
             <Button onClick={() => login()}>
-              {t('hero.cta')}
+              {t('hero.cta_primary')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -130,7 +130,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             <Link href="/#about" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.about')}</Link>
             <div className="pt-4 space-y-3">
               <Button variant="outline" className="w-full" onClick={() => login()}>{t('nav.signin')}</Button>
-              <Button className="w-full" onClick={() => login()}>{t('hero.cta')}</Button>
+              <Button className="w-full" onClick={() => login()}>{t('hero.cta_primary')}</Button>
             </div>
           </motion.div>
         )}
