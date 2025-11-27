@@ -12,6 +12,7 @@ import Dashboard from "@/pages/dashboard";
 import Extraction from "@/pages/extraction";
 import History from "@/pages/history";
 import Templates from "@/pages/templates";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 
@@ -59,9 +60,8 @@ function Router() {
           {() => <PrivateRoute component={Templates} />}
         </Route>
 
-        {/* Settings - just redirect to dashboard for now */}
         <Route path="/settings">
-          {() => <PrivateRoute component={Dashboard} />}
+          {() => <PrivateRoute component={Settings} />}
         </Route>
 
         <Route component={NotFound} />

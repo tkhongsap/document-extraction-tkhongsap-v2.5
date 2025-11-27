@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { th, enUS } from 'date-fns/locale';
 import { useLanguage } from './i18n';
 
@@ -26,5 +26,11 @@ export function useDateFormatter() {
     return format(d, formatStr, { locale: enUS });
   };
 
-  return { formatDate };
+  const formatRelativeTime = (date: Date | string | number) => {
+    const d = new Date(date);
+    const locale = language === 'th' ? th : enUS;
+    return formatDistanceToNow(d, { addSuffix: true, locale });
+  };
+
+  return { formatDate, formatRelativeTime };
 }

@@ -16,7 +16,8 @@ import {
   Check,
   Lock,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -165,8 +166,6 @@ function Footer() {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li><Link href="/#about" className="hover:text-foreground transition-colors">Features</Link></li>
               <li><Link href="/#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
-              <li><Link href="/" className="hover:text-foreground transition-colors">Templates</Link></li>
-              <li><Link href="/" className="hover:text-foreground transition-colors">API</Link></li>
             </ul>
           </div>
 
@@ -174,10 +173,7 @@ function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-sm">Company</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/" className="hover:text-foreground transition-colors">About</Link></li>
-              <li><Link href="/" className="hover:text-foreground transition-colors">Contact</Link></li>
-              <li><Link href="/" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+              <li><Link href="/#about" className="hover:text-foreground transition-colors">About</Link></li>
             </ul>
           </div>
 
@@ -217,16 +213,25 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
   const { logout, user } = useAuth();
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { href: '/extraction/general', icon: FileText, label: t('nav.general') },
+    { href: '/extraction/general', icon: Plus, label: t('nav.general'), isPrimary: true },
     { href: '/templates', icon: Files, label: t('nav.templates') },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];
 
   const usagePercent = (user!.monthlyUsage / user!.monthlyLimit) * 100;
+
+  // Mobile nav items (simplified for bottom bar)
+  const mobileNavItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
+    { href: '/extraction/general', icon: Plus, label: t('nav.general') },
+    { href: '/history', icon: History, label: t('nav.history') },
+    { href: '/settings', icon: Settings, label: t('nav.settings') },
+  ];
 
   return (
     <div className="flex h-screen bg-background">
@@ -251,7 +256,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer",
                   isActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70"
+                    : "text-sidebar-foreground/70",
+                  item.isPrimary && "bg-sidebar-primary/10 text-sidebar-primary hover:bg-sidebar-primary/20 font-semibold"
                 )}>
                   {/* Active indicator bar */}
                   {isActive && (
@@ -320,15 +326,106 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+        {/* Mobile Header */}
+        <header className="md:hidden flex h-16 items-center justify-between border-b bg-background px-4">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
+            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
+              <FileText className="h-4 w-4" />
+            </div>
+            <span className="tracking-tight">DocExtract</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X /> : <Menu />}
+            </Button>
+          </div>
+        </header>
+
+        {/* Desktop Header */}
+        <header className="hidden md:flex h-16 items-center justify-between border-b bg-background px-6">
           <h1 className="text-lg font-semibold tracking-tight">
-            {navItems.find(i => location === i.href)?.label || 'DocExtract'}
+            {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'DocExtract'}
           </h1>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-6 bg-muted/20">
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <motion.div
+            className="md:hidden fixed inset-0 z-50 bg-background"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="flex flex-col h-full">
+              <div className="flex h-16 items-center justify-between border-b px-4">
+                <span className="font-semibold text-lg">Menu</span>
+                <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+                  <X />
+                </Button>
+              </div>
+              <nav className="flex-1 py-6 px-4 space-y-2">
+                {navItems.map((item) => {
+                  const isActive = location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href));
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                      <div className={cn(
+                        "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-all",
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground/70 hover:bg-muted"
+                      )}>
+                        <item.icon className="h-5 w-5" />
+                        {item.label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </nav>
+              <div className="border-t p-4 space-y-4">
+                <div className="p-4 rounded-xl bg-muted/50">
+                  <div className="flex justify-between mb-2 text-xs">
+                    <span className="text-muted-foreground">{t('common.usage')}</span>
+                    <span className="font-medium">
+                      {user?.monthlyUsage} / {user?.monthlyLimit}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${usagePercent}%` }}
+                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium">
+                      {user?.name.charAt(0)}
+                    </div>
+                    <div className="text-sm">
+                      <div className="font-medium">{user?.name}</div>
+                      <div className="text-xs text-muted-foreground">Pro Plan</div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={logout}>
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <main className="flex-1 overflow-auto p-6 bg-muted/20 pb-20 md:pb-6">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -337,6 +434,28 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             {children}
           </motion.div>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-40">
+          <div className="grid grid-cols-4 h-16">
+            {mobileNavItems.map((item) => {
+              const isActive = location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href));
+              return (
+                <Link key={item.href} href={item.href}>
+                  <div className={cn(
+                    "flex flex-col items-center justify-center gap-1 h-full transition-colors",
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  )}>
+                    <item.icon className="h-5 w-5" />
+                    <span className="text-xs font-medium">{item.label}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
     </div>
   );

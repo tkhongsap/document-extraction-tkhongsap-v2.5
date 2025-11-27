@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UploadCloud, FileText, Loader2, Download, ArrowLeft } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { getTemplateById } from "@/lib/templates";
 import {
   Table,
   TableBody,
@@ -94,10 +95,17 @@ export default function Extraction() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-xl font-semibold capitalize">{t('nav.general')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {type === 'general' ? t('dash.general_desc') : `${t('nav.templates')}: ${type}`}
-          </p>
+          {(() => {
+            const template = getTemplateById(type || 'general', t);
+            const displayName = template?.name || t('nav.general');
+            const displayDesc = template?.desc || t('dash.general_desc');
+            return (
+              <>
+                <h1 className="text-xl font-semibold">{displayName}</h1>
+                <p className="text-sm text-muted-foreground">{displayDesc}</p>
+              </>
+            );
+          })()}
         </div>
       </div>
 
