@@ -1,69 +1,65 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Sparkles, Table2, Building2, Receipt, FileCheck, ScrollText } from 'lucide-react';
+import { Upload, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { staggerContainer, staggerItem } from '@/lib/animations';
+import { useLanguage } from '@/lib/i18n';
 
 interface DemoField {
   label: string;
   value: string;
-  confidence: number;
+  confidence: 'high' | 'medium';
 }
 
 interface DemoTemplate {
   id: string;
   name: string;
-  icon: typeof FileText;
+  nameTh: string;
   fields: DemoField[];
 }
 
 const demoTemplates: DemoTemplate[] = [
   {
-    id: 'invoice',
-    name: 'Invoice',
-    icon: Receipt,
+    id: 'bank',
+    name: 'Bank',
+    nameTh: 'ธนาคาร',
     fields: [
-      { label: 'Vendor', value: 'Tech Solutions Co., Ltd.', confidence: 99 },
-      { label: 'Invoice No.', value: 'INV-2024-0847', confidence: 98 },
-      { label: 'Amount', value: '฿ 45,750.00', confidence: 99 },
-      { label: 'Due Date', value: '15 Dec 2024', confidence: 95 },
-      { label: 'Tax ID', value: '0105556123456', confidence: 97 },
+      { label: 'Account Name', value: 'ABC Company Limited', confidence: 'high' },
+      { label: 'Account No.', value: '123-4-56789-0', confidence: 'high' },
+      { label: 'Opening Balance', value: '฿ 1,234,567.89', confidence: 'high' },
+      { label: 'Closing Balance', value: '฿ 1,456,789.12', confidence: 'high' },
     ],
   },
   {
-    id: 'bank',
-    name: 'Bank Statement',
-    icon: Building2,
+    id: 'invoice',
+    name: 'Invoice',
+    nameTh: 'ใบแจ้งหนี้',
     fields: [
-      { label: 'Account Name', value: 'ABC Company Limited', confidence: 99 },
-      { label: 'Account No.', value: '123-4-56789-0', confidence: 99 },
-      { label: 'Statement Period', value: 'Nov 1-30, 2024', confidence: 96 },
-      { label: 'Opening Balance', value: '฿ 1,234,567.89', confidence: 98 },
-      { label: 'Closing Balance', value: '฿ 1,456,789.12', confidence: 98 },
+      { label: 'Vendor', value: 'Tech Solutions Co., Ltd.', confidence: 'high' },
+      { label: 'Invoice No.', value: 'INV-2024-0847', confidence: 'high' },
+      { label: 'Amount', value: '฿ 45,750.00', confidence: 'high' },
+      { label: 'Due Date', value: '15 Dec 2024', confidence: 'medium' },
     ],
   },
   {
     id: 'contract',
     name: 'Contract',
-    icon: ScrollText,
+    nameTh: 'สัญญา',
     fields: [
-      { label: 'Contract Type', value: 'Service Agreement', confidence: 94 },
-      { label: 'Party A', value: 'ABC Corporation', confidence: 97 },
-      { label: 'Party B', value: 'XYZ Services Ltd.', confidence: 96 },
-      { label: 'Effective Date', value: '1 Jan 2025', confidence: 98 },
-      { label: 'Contract Value', value: '฿ 2,400,000.00', confidence: 95 },
+      { label: 'Contract Type', value: 'Service Agreement', confidence: 'medium' },
+      { label: 'Party A', value: 'ABC Corporation', confidence: 'high' },
+      { label: 'Party B', value: 'XYZ Services Ltd.', confidence: 'high' },
+      { label: 'Contract Value', value: '฿ 2,400,000.00', confidence: 'high' },
     ],
   },
   {
-    id: 'po',
-    name: 'Purchase Order',
-    icon: FileCheck,
+    id: 'any',
+    name: 'Any',
+    nameTh: 'อื่นๆ',
     fields: [
-      { label: 'PO Number', value: 'PO-2024-1234', confidence: 99 },
-      { label: 'Supplier', value: 'Global Supplies Inc.', confidence: 97 },
-      { label: 'Total Items', value: '15 items', confidence: 98 },
-      { label: 'Total Amount', value: '฿ 128,500.00', confidence: 99 },
-      { label: 'Delivery Date', value: '20 Dec 2024', confidence: 94 },
+      { label: 'Document Type', value: 'Purchase Order', confidence: 'high' },
+      { label: 'Reference', value: 'PO-2024-1234', confidence: 'high' },
+      { label: 'Total Amount', value: '฿ 128,500.00', confidence: 'high' },
+      { label: 'Date', value: '20 Dec 2024', confidence: 'medium' },
     ],
   },
 ];
@@ -73,162 +69,162 @@ interface FeatureDemoProps {
 }
 
 export function FeatureDemo({ className }: FeatureDemoProps) {
-  const [activeTemplate, setActiveTemplate] = useState(demoTemplates[0]);
+  const { t, language } = useLanguage();
+  const [activeTemplate, setActiveTemplate] = useState<DemoTemplate | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showResults, setShowResults] = useState(true);
+  const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleTemplateChange = (template: DemoTemplate) => {
+  const handleTemplateClick = (template: DemoTemplate) => {
     setIsProcessing(true);
-    setShowResults(false);
+    setActiveTemplate(null);
 
     setTimeout(() => {
-      setActiveTemplate(template);
       setIsProcessing(false);
-      setShowResults(true);
-    }, 800);
+      setActiveTemplate(template);
+    }, 1200);
+  };
+
+  const handleReset = () => {
+    setActiveTemplate(null);
   };
 
   return (
     <div className={cn('', className)}>
-      {/* Template Tabs */}
-      <div className="flex flex-wrap justify-center gap-2 mb-8">
+      {/* Drop Zone / Results Area */}
+      <div className="mb-6">
+        <AnimatePresence mode="wait">
+          {!activeTemplate && !isProcessing && (
+            <motion.div
+              key="dropzone"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+                handleTemplateClick(demoTemplates[0]);
+              }}
+              className={cn(
+                'h-48 rounded-xl border-2 border-dashed transition-all duration-200',
+                'flex flex-col items-center justify-center gap-3 cursor-pointer',
+                isDragOver
+                  ? 'border-primary bg-primary/5 scale-[1.02]'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
+              )}
+              onClick={() => handleTemplateClick(demoTemplates[0])}
+            >
+              <Upload className={cn(
+                'h-6 w-6 transition-colors',
+                isDragOver ? 'text-primary' : 'text-muted-foreground'
+              )} />
+              <span className="text-sm text-muted-foreground">
+                {t('demo.drop')}
+              </span>
+            </motion.div>
+          )}
+
+          {isProcessing && (
+            <motion.div
+              key="processing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="h-48 rounded-xl bg-muted/30 flex flex-col items-center justify-center gap-3"
+            >
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              <span className="text-sm text-muted-foreground">
+                {t('demo.processing')}
+              </span>
+            </motion.div>
+          )}
+
+          {activeTemplate && !isProcessing && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-xl border border-border bg-card overflow-hidden"
+            >
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t('extract.field')}
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t('extract.value')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Data Rows */}
+              <div className="divide-y divide-border">
+                {activeTemplate.fields.map((field, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    className="px-4 py-3 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        'h-1.5 w-1.5 rounded-full',
+                        field.confidence === 'high' ? 'bg-emerald-500' : 'bg-amber-500'
+                      )} />
+                      <span className="text-sm text-muted-foreground">{field.label}</span>
+                    </div>
+                    <span className="text-sm font-medium">{field.value}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-border">
+                <button
+                  onClick={handleReset}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {t('demo.try_another')}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Template Pills */}
+      <div className="flex flex-wrap justify-center gap-2">
         {demoTemplates.map((template) => {
-          const Icon = template.icon;
-          const isActive = template.id === activeTemplate.id;
+          const isActive = activeTemplate?.id === template.id;
+          const displayName = language === 'th' ? template.nameTh : template.name;
 
           return (
             <button
               key={template.id}
-              onClick={() => handleTemplateChange(template)}
+              onClick={() => handleTemplateClick(template)}
+              disabled={isProcessing}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                'transition-all duration-200',
+                'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
                 isActive
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-transparent border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
               )}
             >
-              <Icon className="h-4 w-4" />
-              {template.name}
+              {displayName}
             </button>
           );
         })}
-      </div>
-
-      {/* Demo Area */}
-      <div className="grid md:grid-cols-2 gap-8 items-center">
-        {/* Document Preview */}
-        <div className="relative">
-          <div className="aspect-[3/4] rounded-2xl bg-muted/30 border border-border/50 overflow-hidden">
-            {/* Mock Document */}
-            <div className="p-6 h-full flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <activeTemplate.icon className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <div className="font-semibold">{activeTemplate.name}</div>
-                  <div className="text-xs text-muted-foreground">Sample Document</div>
-                </div>
-              </div>
-
-              {/* Mock Content Lines */}
-              <div className="space-y-3 flex-1">
-                {[...Array(8)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      'h-3 rounded bg-muted-foreground/10',
-                      i % 3 === 0 ? 'w-1/2' : i % 2 === 0 ? 'w-3/4' : 'w-full'
-                    )}
-                  />
-                ))}
-              </div>
-
-              {/* Mock Table */}
-              <div className="mt-4 p-3 rounded-lg bg-muted/50">
-                <div className="grid grid-cols-3 gap-2">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-2 rounded bg-muted-foreground/10" />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Processing Overlay */}
-            <AnimatePresence>
-              {isProcessing && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center"
-                >
-                  <motion.div
-                    animate={{
-                      scale: [1, 1.1, 1],
-                      opacity: [0.5, 1, 0.5],
-                    }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="flex flex-col items-center gap-3"
-                  >
-                    <Sparkles className="h-8 w-8 text-primary" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Extracting data...
-                    </span>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Results Table */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Table2 className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Extracted Data</h3>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {showResults && (
-              <motion.div
-                key={activeTemplate.id}
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-                className="space-y-3"
-              >
-                {activeTemplate.fields.map((field, i) => (
-                  <motion.div
-                    key={i}
-                    variants={staggerItem}
-                    className="flex items-center justify-between p-4 rounded-xl bg-card border border-border/50"
-                  >
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        {field.label}
-                      </div>
-                      <div className="font-medium">{field.value}</div>
-                    </div>
-                    <div
-                      className={cn(
-                        'text-xs font-medium px-2 py-1 rounded-full',
-                        field.confidence >= 95
-                          ? 'bg-emerald-500/10 text-emerald-600'
-                          : field.confidence >= 90
-                          ? 'bg-amber-500/10 text-amber-600'
-                          : 'bg-red-500/10 text-red-600'
-                      )}
-                    >
-                      {field.confidence}%
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       </div>
     </div>
   );
