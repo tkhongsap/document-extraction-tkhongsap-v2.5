@@ -1,19 +1,33 @@
-import { useLanguage } from "@/lib/i18n";
-import { useAuth } from "@/lib/mock-auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, FileSpreadsheet, Receipt, ScrollText, Landmark, ArrowRight, Clock } from "lucide-react";
-import { Link } from "wouter";
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/lib/i18n';
+import { useAuth } from '@/lib/mock-auth';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  FileText,
+  FileSpreadsheet,
+  Receipt,
+  ScrollText,
+  Landmark,
+  ArrowRight,
+  Clock,
+  UploadCloud,
+  BarChart3,
+} from 'lucide-react';
+import { Link } from 'wouter';
+import { staggerContainer, staggerItem, cardHover } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const { t } = useLanguage();
   const { user } = useAuth();
 
   const templates = [
-    { id: 'bank', name: t('dash.template_bank'), icon: Landmark, color: 'bg-blue-100 text-blue-600' },
-    { id: 'invoice', name: t('dash.template_invoice'), icon: Receipt, color: 'bg-green-100 text-green-600' },
-    { id: 'po', name: t('dash.template_po'), icon: FileSpreadsheet, color: 'bg-purple-100 text-purple-600' },
-    { id: 'contract', name: t('dash.template_contract'), icon: ScrollText, color: 'bg-orange-100 text-orange-600' },
+    { id: 'bank', name: t('dash.template_bank'), icon: Landmark, color: 'bg-primary/10 text-primary' },
+    { id: 'invoice', name: t('dash.template_invoice'), icon: Receipt, color: 'bg-emerald-500/10 text-emerald-600' },
+    { id: 'po', name: t('dash.template_po'), icon: FileSpreadsheet, color: 'bg-violet-500/10 text-violet-600' },
+    { id: 'contract', name: t('dash.template_contract'), icon: ScrollText, color: 'bg-amber-500/10 text-amber-600' },
   ];
 
   const recentDocs = [
@@ -22,14 +36,17 @@ export default function Dashboard() {
     { id: 3, name: 'Contract_Draft_v2.pdf', type: 'Contract', date: 'Yesterday', status: 'Review Needed' },
   ];
 
+  const usagePercent = (user!.usage / user!.limit) * 100;
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('dash.welcome')}</h1>
-          <p className="text-muted-foreground mt-1">Here's what's happening with your documents today.</p>
+          <p className="text-muted-foreground text-sm mb-1">Good morning, {user?.name.split(' ')[0]}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t('dash.welcome')}</h1>
         </div>
-        <Button asChild>
+        <Button asChild size="lg">
           <Link href="/extraction/general">
             <FileText className="mr-2 h-4 w-4" />
             {t('dash.quick_start')}
@@ -37,46 +54,92 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Main Extraction Options */}
+      {/* Main Grid */}
       <div className="grid md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              {t('nav.general')}
-            </CardTitle>
-            <CardDescription>{t('dash.general_desc')}</CardDescription>
+        {/* Upload Zone Card */}
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{t('nav.general')}</CardTitle>
+                <CardDescription>{t('dash.general_desc')}</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="h-32 border-2 border-dashed border-primary/20 rounded-lg flex flex-col items-center justify-center bg-background/50 hover:bg-background transition-colors cursor-pointer">
-              <Link href="/extraction/general" className="flex flex-col items-center w-full h-full justify-center">
-                <div className="p-2 rounded-full bg-primary/10 mb-2">
-                  <FileText className="h-6 w-6 text-primary" />
+            <Link href="/extraction/general">
+              <motion.div
+                className={cn(
+                  'h-40 rounded-2xl border-2 border-dashed border-border/70',
+                  'flex flex-col items-center justify-center gap-3',
+                  'bg-muted/30 hover:bg-muted/50 hover:border-primary/30',
+                  'transition-all duration-200 cursor-pointer group'
+                )}
+                whileHover={{ scale: 1.005 }}
+                whileTap={{ scale: 0.995 }}
+              >
+                <div className="h-12 w-12 rounded-2xl bg-background shadow-sm flex items-center justify-center group-hover:shadow-md transition-shadow">
+                  <UploadCloud className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
-                <span className="text-sm font-medium text-primary">Click to start general extraction</span>
-              </Link>
-            </div>
+                <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                  {t('extract.upload_title')}
+                </p>
+                <p className="text-xs text-muted-foreground/70">
+                  {t('extract.upload_desc')}
+                </p>
+              </motion.div>
+            </Link>
           </CardContent>
         </Card>
 
+        {/* Usage Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>{t('common.usage')}</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">{t('common.usage')}</CardTitle>
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-primary" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-6">
-              <div className="text-4xl font-bold text-primary mb-1">{user?.usage}</div>
-              <div className="text-sm text-muted-foreground">pages processed</div>
-              <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${(user!.usage / user!.limit) * 100}%` }} />
+            <div className="space-y-4">
+              <div>
+                <motion.div
+                  className="text-4xl font-semibold tracking-tight tabular-nums"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {user?.usage}
+                </motion.div>
+                <p className="text-sm text-muted-foreground">of {user?.limit} pages</p>
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>0</span>
-                <span>{user?.limit} limit</span>
+
+              <div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${usagePercent}%` }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span>0</span>
+                  <span>{user?.limit} limit</span>
+                </div>
               </div>
-              <Button variant="outline" size="sm" className="mt-4 w-full">
-                {t('common.upgrade')}
-              </Button>
+
+              {usagePercent > 80 && (
+                <Button variant="outline" size="sm" className="w-full">
+                  {t('common.upgrade')}
+                  <ArrowRight className="ml-2 h-3 w-3" />
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -84,26 +147,41 @@ export default function Dashboard() {
 
       {/* Templates Section */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">{t('nav.templates')}</h2>
           <Link href="/templates" className="text-sm text-primary hover:underline flex items-center">
             View all <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <motion.div
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
           {templates.map((template) => (
-            <Link key={template.id} href={`/extraction/${template.id}`}>
-              <Card className="hover:border-primary/50 transition-all cursor-pointer hover:shadow-sm">
-                <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${template.color}`}>
-                    <template.icon className="h-6 w-6" />
-                  </div>
-                  <div className="font-medium text-sm">{template.name}</div>
-                </CardContent>
-              </Card>
-            </Link>
+            <motion.div key={template.id} variants={staggerItem}>
+              <Link href={`/extraction/${template.id}`}>
+                <motion.div {...cardHover}>
+                  <Card className="hover:border-primary/30 transition-all duration-200 cursor-pointer group">
+                    <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                      <div
+                        className={cn(
+                          'h-14 w-14 rounded-2xl flex items-center justify-center',
+                          'transition-transform duration-200 group-hover:scale-110',
+                          template.color
+                        )}
+                      >
+                        <template.icon className="h-6 w-6" />
+                      </div>
+                      <span className="font-medium text-sm">{template.name}</span>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       {/* Recent History */}
@@ -111,11 +189,20 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold mb-4">{t('dash.recent')}</h2>
         <Card>
           <CardContent className="p-0">
-            <div className="divide-y">
+            <motion.div
+              className="divide-y"
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+            >
               {recentDocs.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                <motion.div
+                  key={doc.id}
+                  variants={staggerItem}
+                  className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex items-center gap-4">
-                    <div className="p-2 bg-muted rounded">
+                    <div className="p-2.5 bg-muted rounded-xl">
                       <FileText className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
@@ -125,21 +212,19 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-6 text-sm">
                     <div className="flex items-center text-muted-foreground">
-                      <Clock className="mr-1 h-3 w-3" />
+                      <Clock className="mr-1.5 h-3 w-3" />
                       {doc.date}
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      doc.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
+                    <Badge variant={doc.status === 'Completed' ? 'success' : 'warning'}>
                       {doc.status}
-                    </div>
+                    </Badge>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </CardContent>
         </Card>
       </div>
