@@ -7,6 +7,7 @@ interface Stat {
   label: string;
   suffix?: string;
   highlight?: boolean;
+  description?: string;
 }
 
 interface StatCounterProps {
@@ -66,7 +67,7 @@ function AnimatedNumber({ value, suffix = '' }: { value: string; suffix?: string
 
 export function StatCounter({ stats, className }: StatCounterProps) {
   return (
-    <div className={cn('grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12', className)}>
+    <div className={cn('grid grid-cols-3 gap-8 lg:gap-12', className)}>
       {stats.map((stat, i) => (
         <motion.div
           key={i}
@@ -85,6 +86,9 @@ export function StatCounter({ stats, className }: StatCounterProps) {
             <AnimatedNumber value={stat.value} suffix={stat.suffix} />
           </div>
           <div className="text-sm text-muted-foreground">{stat.label}</div>
+          {stat.description && (
+            <div className="text-sm text-muted-foreground/70 mt-1">{stat.description}</div>
+          )}
         </motion.div>
       ))}
     </div>

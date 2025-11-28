@@ -1,47 +1,16 @@
 import { useLanguage } from '@/lib/i18n';
 import { HeroEnterprise } from '@/components/marketing/hero-enterprise';
-import { LogoStrip } from '@/components/marketing/logo-strip';
 import { StatCounter } from '@/components/marketing/stat-counter';
 import { FeatureGrid } from '@/components/marketing/feature-grid';
-import { DemoInteractive } from '@/components/marketing/demo-interactive';
-import { ComparisonSection } from '@/components/marketing/comparison-section';
-import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
-import { SecuritySection } from '@/components/marketing/security-section';
-import { PricingSection } from '@/components/marketing/pricing-section';
 import { CTASection } from '@/components/marketing/cta-section';
 
 export default function Home() {
   const { t } = useLanguage();
 
   const stats = [
-    { value: '99.2', suffix: '%', label: t('stats.accuracy'), highlight: true },
-    { value: '50M', suffix: '+', label: t('stats.pages') },
-    { value: '500', suffix: '+', label: t('stats.enterprises') },
-    { value: '24', suffix: '/7', label: t('stats.support') },
-  ];
-
-  const testimonials = [
-    {
-      quote: t('testimonials.quote_1'),
-      author: t('testimonials.author_1'),
-      title: t('testimonials.title_1'),
-      company: t('testimonials.company_1'),
-      rating: 5,
-    },
-    {
-      quote: t('testimonials.quote_2'),
-      author: t('testimonials.author_2'),
-      title: t('testimonials.title_2'),
-      company: t('testimonials.company_2'),
-      rating: 5,
-    },
-    {
-      quote: t('testimonials.quote_3'),
-      author: t('testimonials.author_3'),
-      title: t('testimonials.title_3'),
-      company: t('testimonials.company_3'),
-      rating: 5,
-    },
+    { value: '99.2', suffix: '%', label: t('stats.accuracy'), description: t('stats.accuracyDesc'), highlight: true },
+    { value: '50M', suffix: '+', label: t('stats.pages'), description: t('stats.pagesDesc') },
+    { value: '24', suffix: '/7', label: t('stats.support'), description: t('stats.supportDesc') },
   ];
 
   return (
@@ -49,33 +18,25 @@ export default function Home() {
       {/* Section 1: Hero - Dark dramatic opening with floating cards */}
       <HeroEnterprise />
 
-      {/* Section 2: Social Proof - Logo strip + Stats */}
+      {/* Section 2: Social Proof - Stats */}
       <section className="py-16 lg:py-20 bg-cream">
         <div className="container mx-auto px-6">
-          <LogoStrip title={t('logos.title')} className="mb-16" />
+          <div className="text-center mb-12">
+            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+              {t('stats.eyebrow')}
+            </span>
+            <h2 className="text-3xl lg:text-4xl font-display text-foreground mt-3">
+              {t('stats.headline')}
+            </h2>
+          </div>
           <StatCounter stats={stats} />
         </div>
       </section>
 
-      {/* Section 3: Features - 6 capabilities grid */}
-      <FeatureGrid />
+      {/* Section 3: Features - Condensed 3 capabilities preview */}
+      <FeatureGrid condensed />
 
-      {/* Section 4: Demo - Interactive document extraction */}
-      <DemoInteractive />
-
-      {/* Section 5: Comparison - Before/After transformation */}
-      <ComparisonSection />
-
-      {/* Section 6: Testimonials - Customer success stories */}
-      <TestimonialCarousel testimonials={testimonials} />
-
-      {/* Section 7: Security - Trust & compliance */}
-      <SecuritySection />
-
-      {/* Section 8: Pricing - Two tiers */}
-      <PricingSection />
-
-      {/* Section 9: Final CTA - Call to action */}
+      {/* Section 4: Final CTA - Call to action */}
       <CTASection />
     </div>
   );
