@@ -3,9 +3,10 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UploadCloud, FileText, Loader2, CheckCircle2, AlertCircle, Download, ArrowLeft } from "lucide-react";
+import { UploadCloud, FileText, Loader2, Download, ArrowLeft } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { getTemplateById } from "@/lib/templates";
 import {
   Table,
   TableBody,
@@ -15,6 +16,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { processExtraction, saveExtraction } from "@/lib/api";
+import { useAuth } from "@/lib/mock-auth";
+import { toast } from "sonner";
 
 interface ExtractedField {
   key: string;
@@ -25,21 +29,43 @@ interface ExtractedField {
 export default function Extraction() {
   const { t } = useLanguage();
   const { type } = useParams();
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ExtractedField[] | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     setFile(uploadedFile);
     setIsProcessing(true);
     setResults(null);
 
-    // Simulate API processing
-    setTimeout(() => {
+    try {
+      // Call real API to process extraction
+      const response = await processExtraction({
+        fileName: uploadedFile.name,
+        documentType: type || 'general',
+      });
+
+      setResults(response.results);
+
+      // Save extraction to database
+      await saveExtraction({
+        fileName: uploadedFile.name,
+        fileSize: uploadedFile.size,
+        documentType: type || 'general',
+        pagesProcessed: response.pagesProcessed,
+        extractedData: response.results,
+        status: 'completed',
+      });
+
+      toast.success('Document extracted successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Extraction failed');
+      setResults(null);
+    } finally {
       setIsProcessing(false);
-      setResults(generateMockResults(type || 'general'));
-    }, 2500);
+    }
   }, [type]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
@@ -69,10 +95,17 @@ export default function Extraction() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-xl font-semibold capitalize">{t('nav.general')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {type === 'general' ? t('dash.general_desc') : `${t('nav.templates')}: ${type}`}
-          </p>
+          {(() => {
+            const template = getTemplateById(type || 'general', t);
+            const displayName = template?.name || t('nav.general');
+            const displayDesc = template?.desc || t('dash.general_desc');
+            return (
+              <>
+                <h1 className="text-xl font-semibold">{displayName}</h1>
+                <p className="text-sm text-muted-foreground">{displayDesc}</p>
+              </>
+            );
+          })()}
         </div>
       </div>
 

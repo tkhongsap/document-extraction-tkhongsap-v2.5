@@ -5,24 +5,43 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/mock-auth";
 import { Layout } from "@/components/layout";
+import { useEffect } from "react";
 
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Extraction from "@/pages/extraction";
 import History from "@/pages/history";
 import Templates from "@/pages/templates";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
+import LoginPage from "@/pages/login";
 
 function PrivateRoute({ component: Component, ...rest }: any) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Component {...rest} /> : <Redirect to="/" />;
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  return isAuthenticated ? <Component {...rest} /> : <Redirect to="/login" />;
 }
 
 function Router() {
+  const { checkAuth } = useAuth();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
   return (
     <Layout>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/login" component={LoginPage} />
         
         {/* Protected Routes */}
         <Route path="/dashboard">
@@ -41,9 +60,8 @@ function Router() {
           {() => <PrivateRoute component={Templates} />}
         </Route>
 
-        {/* Settings - just redirect to dashboard for now */}
         <Route path="/settings">
-          {() => <PrivateRoute component={Dashboard} />}
+          {() => <PrivateRoute component={Settings} />}
         </Route>
 
         <Route component={NotFound} />
