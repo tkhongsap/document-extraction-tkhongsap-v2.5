@@ -2,8 +2,6 @@ import { useLanguage } from '@/lib/i18n';
 import { HeroEnterprise } from '@/components/marketing/hero-enterprise';
 import { StatCounter } from '@/components/marketing/stat-counter';
 import { FeatureGrid } from '@/components/marketing/feature-grid';
-import { ComparisonSection } from '@/components/marketing/comparison-section';
-import { SecuritySection } from '@/components/marketing/security-section';
 import { CTASection } from '@/components/marketing/cta-section';
 
 export default function Home() {
@@ -35,16 +33,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 3: Features - 6 capabilities grid */}
-      <FeatureGrid />
+      {/* Section 3: Features - Condensed 3 capabilities preview */}
+      <FeatureGrid condensed />
 
-      {/* Section 4: Comparison - Before/After transformation */}
-      <ComparisonSection />
-
-      {/* Section 5: Security - Trust & compliance */}
-      <SecuritySection />
-
-      {/* Section 6: Final CTA - Call to action */}
+      {/* Section 4: Final CTA - Call to action */}
       <CTASection />
     </div>
   );

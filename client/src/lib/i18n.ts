@@ -13,6 +13,7 @@ export const translations: Translations = {
     // Navigation
     'nav.home': 'Home',
     'nav.usecases': 'Use Cases',
+    'nav.security': 'Security',
     'nav.pricing': 'Pricing',
     'nav.about': 'About',
     'nav.signin': 'Sign In',
@@ -128,14 +129,26 @@ export const translations: Translations = {
     'usecases.legal.docs': 'Contracts, Agreements, Legal Filings',
 
     // Security Section
-    'security.title': 'Enterprise-Grade Security',
-    'security.subtitle': 'Your documents are protected by the same security standards used by leading financial institutions',
+    'security.eyebrow': 'Security & Compliance',
+    'security.title': 'Enterprise-Grade Security You Can Trust',
+    'security.subtitle': 'Your documents are protected with bank-grade encryption and full regulatory compliance',
     'security.encryption_title': 'AES-256 Encryption',
     'security.encryption_desc': 'All documents are encrypted at rest and in transit using bank-grade AES-256 encryption.',
     'security.pdpa_title': 'PDPA Compliant',
     'security.pdpa_desc': 'Fully compliant with Thailand Personal Data Protection Act. Your data stays in your control.',
     'security.autodelete_title': 'Auto-Delete',
     'security.autodelete_desc': 'Documents are automatically deleted after processing. Choose retention periods that fit your policy.',
+    'security.certifications_eyebrow': 'Certifications',
+    'security.certifications_title': 'Industry-Leading Compliance',
+    'security.certifications_subtitle': 'We maintain the highest security standards and certifications',
+    'security.badge_ssl': 'SSL Secured',
+    'security.badge_soc2': 'SOC 2 Type II',
+    'security.badge_iso': 'ISO 27001',
+    'security.badge_pdpa': 'PDPA Compliant',
+    'security.cta_title': 'Ready to securely process your documents?',
+    'security.cta_subtitle': 'Start extracting data with enterprise-grade protection',
+    'security.cta_primary': 'Get Started',
+    'security.cta_secondary': 'View Pricing',
 
     // Pricing Section
     'pricing.title': 'Simple, Transparent Pricing',
@@ -161,9 +174,17 @@ export const translations: Translations = {
 
     // CTA Section
     'cta.title': 'Ready to Transform Your Document Workflow?',
-    'cta.subtitle': 'Join hundreds of Thai enterprises already saving time and reducing errors with AI-powered extraction.',
+    'cta.subtitle': 'Start saving time and reducing errors with AI-powered extraction.',
     'cta.button': 'Sign In',
     'cta.fine_print': 'Limited usage included. Extend anytime.',
+
+    // Capabilities Page
+    'capabilities.eyebrow': 'Capabilities',
+    'capabilities.title': 'Everything You Need for Document Intelligence',
+    'capabilities.subtitle': 'From simple invoices to complex contracts, our AI handles it all with enterprise-grade accuracy.',
+    'capabilities.cta_primary': 'Get Started',
+    'capabilities.cta_secondary': 'View Pricing',
+    'capabilities.view_all': 'View All Capabilities',
 
     // Auth
     'auth.welcome': 'Welcome Back',
@@ -203,11 +224,23 @@ export const translations: Translations = {
     // Common
     'common.upgrade': 'Upgrade Plan',
     'common.usage': 'Monthly Usage',
+
+    // Footer
+    'footer.description': 'Secure document extraction for Thai businesses. Extract structured data in seconds.',
+    'footer.product': 'Product',
+    'footer.security': 'Security',
+    'footer.security_encryption': 'Bank-grade Encryption',
+    'footer.security_pdpa': 'PDPA Compliant',
+    'footer.security_autodelete': 'Auto-delete in 24hrs',
+    'footer.security_soc2': 'SOC 2 Type II',
+    'footer.copyright': '© 2024 DocExtract. All rights reserved.',
   },
   th: {
     // Navigation
     'nav.home': 'หน้าแรก',
+    'nav.capabilities': 'ความสามารถ',
     'nav.usecases': 'กรณีการใช้งาน',
+    'nav.security': 'ความปลอดภัย',
     'nav.pricing': 'ราคา',
     'nav.about': 'เกี่ยวกับเรา',
     'nav.signin': 'เข้าสู่ระบบ',
@@ -323,14 +356,26 @@ export const translations: Translations = {
     'usecases.legal.docs': 'สัญญา, ข้อตกลง, เอกสารทางกฎหมาย',
 
     // Security Section
-    'security.title': 'ความปลอดภัยระดับองค์กร',
-    'security.subtitle': 'เอกสารของคุณได้รับการปกป้องด้วยมาตรฐานความปลอดภัยเดียวกับสถาบันการเงินชั้นนำ',
+    'security.eyebrow': 'ความปลอดภัยและการปฏิบัติตามกฎระเบียบ',
+    'security.title': 'ความปลอดภัยระดับองค์กรที่คุณไว้วางใจได้',
+    'security.subtitle': 'เอกสารของคุณได้รับการปกป้องด้วยการเข้ารหัสระดับธนาคารและการปฏิบัติตามกฎระเบียบอย่างครบถ้วน',
     'security.encryption_title': 'เข้ารหัส AES-256',
     'security.encryption_desc': 'เอกสารทั้งหมดถูกเข้ารหัสทั้งขณะจัดเก็บและส่งข้อมูลด้วยการเข้ารหัส AES-256 ระดับธนาคาร',
     'security.pdpa_title': 'สอดคล้อง PDPA',
     'security.pdpa_desc': 'ปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคลอย่างครบถ้วน ข้อมูลของคุณอยู่ในการควบคุมของคุณ',
     'security.autodelete_title': 'ลบอัตโนมัติ',
     'security.autodelete_desc': 'เอกสารถูกลบโดยอัตโนมัติหลังประมวลผล เลือกระยะเวลาเก็บรักษาที่เหมาะกับนโยบายของคุณ',
+    'security.certifications_eyebrow': 'การรับรอง',
+    'security.certifications_title': 'การปฏิบัติตามมาตรฐานชั้นนำ',
+    'security.certifications_subtitle': 'เรารักษามาตรฐานความปลอดภัยและการรับรองสูงสุด',
+    'security.badge_ssl': 'SSL Secured',
+    'security.badge_soc2': 'SOC 2 Type II',
+    'security.badge_iso': 'ISO 27001',
+    'security.badge_pdpa': 'PDPA Compliant',
+    'security.cta_title': 'พร้อมที่จะประมวลผลเอกสารอย่างปลอดภัย?',
+    'security.cta_subtitle': 'เริ่มดึงข้อมูลด้วยการปกป้องระดับองค์กร',
+    'security.cta_primary': 'เริ่มต้นใช้งาน',
+    'security.cta_secondary': 'ดูราคา',
 
     // Pricing Section
     'pricing.title': 'ราคาที่เรียบง่าย โปร่งใส',
@@ -356,9 +401,17 @@ export const translations: Translations = {
 
     // CTA Section
     'cta.title': 'พร้อมเปลี่ยนแปลง Workflow เอกสารของคุณ?',
-    'cta.subtitle': 'เข้าร่วมองค์กรไทยหลายร้อยแห่งที่ประหยัดเวลาและลดข้อผิดพลาดด้วยการดึงข้อมูลด้วย AI',
+    'cta.subtitle': 'เริ่มประหยัดเวลาและลดข้อผิดพลาดด้วยการดึงข้อมูลอัตโนมัติ',
     'cta.button': 'เข้าสู่ระบบ',
     'cta.fine_print': 'การใช้งานจำกัดรวมอยู่แล้ว ขยายได้ทุกเมื่อ',
+
+    // Capabilities Page
+    'capabilities.eyebrow': 'ความสามารถ',
+    'capabilities.title': 'ทุกสิ่งที่คุณต้องการสำหรับ Document Intelligence',
+    'capabilities.subtitle': 'ตั้งแต่ใบแจ้งหนี้ธรรมดาไปจนถึงสัญญาที่ซับซ้อน AI ของเราจัดการได้ทั้งหมดด้วยความแม่นยำระดับองค์กร',
+    'capabilities.cta_primary': 'เริ่มต้นใช้งาน',
+    'capabilities.cta_secondary': 'ดูราคา',
+    'capabilities.view_all': 'ดูความสามารถทั้งหมด',
 
     // Auth
     'auth.welcome': 'ยินดีต้อนรับกลับ',
@@ -398,6 +451,16 @@ export const translations: Translations = {
     // Common
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
+
+    // Footer
+    'footer.description': 'การดึงข้อมูลเอกสารที่ปลอดภัยสำหรับธุรกิจไทย ดึงข้อมูลที่มีโครงสร้างได้ในไม่กี่วินาที',
+    'footer.product': 'ผลิตภัณฑ์',
+    'footer.security': 'ความปลอดภัย',
+    'footer.security_encryption': 'เข้ารหัสระดับธนาคาร',
+    'footer.security_pdpa': 'สอดคล้อง PDPA',
+    'footer.security_autodelete': 'ลบอัตโนมัติภายใน 24 ชั่วโมง',
+    'footer.security_soc2': 'SOC 2 Type II',
+    'footer.copyright': '© 2024 DocExtract สงวนลิขสิทธิ์',
   }
 };
 
