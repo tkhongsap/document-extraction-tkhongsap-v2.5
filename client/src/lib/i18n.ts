@@ -26,7 +26,7 @@ export const translations: Translations = {
     'hero.accuracy_badge': '99.2% Extraction Accuracy',
     'hero.headline': 'Transform Documents into Actionable Data',
     'hero.subheadline': 'Enterprise-grade AI extracts data from Thai & English documents with unmatched precision. Process invoices, contracts, and bank statements in seconds.',
-    'hero.cta_primary': 'Start Free Trial',
+    'hero.cta_primary': 'Sign In',
     'hero.cta_secondary': 'Watch Demo',
     'hero.trust_encryption': 'Bank-grade encryption',
     'hero.trust_pdpa': 'PDPA compliant',
@@ -115,14 +115,14 @@ export const translations: Translations = {
 
     // Pricing Section
     'pricing.title': 'Simple, Transparent Pricing',
-    'pricing.subtitle': 'Start free, scale as you grow. No hidden fees, no surprises.',
+    'pricing.subtitle': 'Limited usage included. Extend anytime with flexible plans.',
     'pricing.starter_name': 'Starter',
     'pricing.starter_desc': 'Perfect for trying out the platform',
     'pricing.starter_feature_1': '100 pages per month',
     'pricing.starter_feature_2': 'All document types',
     'pricing.starter_feature_3': 'Excel & CSV export',
     'pricing.starter_feature_4': 'Email support',
-    'pricing.starter_cta': 'Get Started Free',
+    'pricing.starter_cta': 'Get Started',
     'pricing.business_name': 'Business',
     'pricing.business_desc': 'For teams processing at scale',
     'pricing.business_feature_1': '5,000 pages per month',
@@ -130,16 +130,16 @@ export const translations: Translations = {
     'pricing.business_feature_3': 'API access',
     'pricing.business_feature_4': 'Custom templates',
     'pricing.business_feature_5': 'Dedicated support',
-    'pricing.business_cta': 'Start Free Trial',
+    'pricing.business_cta': 'Sign In',
     'pricing.per_month': 'month',
     'pricing.popular_badge': 'Most Popular',
-    'pricing.guarantee': '14-day free trial. Cancel anytime.',
+    'pricing.guarantee': '',
 
     // CTA Section
     'cta.title': 'Ready to Transform Your Document Workflow?',
     'cta.subtitle': 'Join hundreds of Thai enterprises already saving time and reducing errors with AI-powered extraction.',
-    'cta.button': 'Start Your Free Trial',
-    'cta.fine_print': 'No credit card required. 100 pages free every month.',
+    'cta.button': 'Sign In',
+    'cta.fine_print': 'Limited usage included. Extend anytime.',
 
     // Auth
     'auth.welcome': 'Welcome Back',
@@ -197,7 +197,7 @@ export const translations: Translations = {
     'hero.accuracy_badge': 'ความแม่นยำในการดึงข้อมูล 99.2%',
     'hero.headline': 'เปลี่ยนเอกสารเป็นข้อมูลที่ใช้งานได้',
     'hero.subheadline': 'AI ระดับองค์กรดึงข้อมูลจากเอกสารภาษาไทยและอังกฤษด้วยความแม่นยำสูงสุด ประมวลผลใบแจ้งหนี้ สัญญา และรายการเดินบัญชีในไม่กี่วินาที',
-    'hero.cta_primary': 'เริ่มทดลองใช้ฟรี',
+    'hero.cta_primary': 'เข้าสู่ระบบ',
     'hero.cta_secondary': 'ดูตัวอย่าง',
     'hero.trust_encryption': 'เข้ารหัสระดับธนาคาร',
     'hero.trust_pdpa': 'สอดคล้อง PDPA',
@@ -286,14 +286,14 @@ export const translations: Translations = {
 
     // Pricing Section
     'pricing.title': 'ราคาที่เรียบง่าย โปร่งใส',
-    'pricing.subtitle': 'เริ่มต้นฟรี ขยายตามการเติบโต ไม่มีค่าใช้จ่ายแอบแฝง',
+    'pricing.subtitle': 'การใช้งานจำกัดรวมอยู่แล้ว ขยายได้ทุกเมื่อด้วยแผนที่ยืดหยุ่น',
     'pricing.starter_name': 'Starter',
     'pricing.starter_desc': 'เหมาะสำหรับทดลองใช้แพลตฟอร์ม',
     'pricing.starter_feature_1': '100 หน้าต่อเดือน',
     'pricing.starter_feature_2': 'เอกสารทุกประเภท',
     'pricing.starter_feature_3': 'ส่งออก Excel และ CSV',
     'pricing.starter_feature_4': 'สนับสนุนทางอีเมล',
-    'pricing.starter_cta': 'เริ่มต้นใช้งานฟรี',
+    'pricing.starter_cta': 'เริ่มต้นใช้งาน',
     'pricing.business_name': 'Business',
     'pricing.business_desc': 'สำหรับทีมที่ประมวลผลจำนวนมาก',
     'pricing.business_feature_1': '5,000 หน้าต่อเดือน',
@@ -301,16 +301,16 @@ export const translations: Translations = {
     'pricing.business_feature_3': 'เข้าถึง API',
     'pricing.business_feature_4': 'เทมเพลตกำหนดเอง',
     'pricing.business_feature_5': 'สนับสนุนเฉพาะทาง',
-    'pricing.business_cta': 'เริ่มทดลองใช้ฟรี',
+    'pricing.business_cta': 'เข้าสู่ระบบ',
     'pricing.per_month': 'เดือน',
     'pricing.popular_badge': 'ยอดนิยม',
-    'pricing.guarantee': 'ทดลองใช้ฟรี 14 วัน ยกเลิกได้ทุกเมื่อ',
+    'pricing.guarantee': '',
 
     // CTA Section
     'cta.title': 'พร้อมเปลี่ยนแปลง Workflow เอกสารของคุณ?',
     'cta.subtitle': 'เข้าร่วมองค์กรไทยหลายร้อยแห่งที่ประหยัดเวลาและลดข้อผิดพลาดด้วยการดึงข้อมูลด้วย AI',
-    'cta.button': 'เริ่มทดลองใช้ฟรี',
-    'cta.fine_print': 'ไม่ต้องใช้บัตรเครดิต ฟรี 100 หน้าทุกเดือน',
+    'cta.button': 'เข้าสู่ระบบ',
+    'cta.fine_print': 'การใช้งานจำกัดรวมอยู่แล้ว ขยายได้ทุกเมื่อ',
 
     // Auth
     'auth.welcome': 'ยินดีต้อนรับกลับ',

@@ -104,10 +104,6 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
           <div className="hidden md:flex items-center gap-3">
             <LanguageSwitcher />
             <Button variant="ghost" onClick={handleLogin} data-testid="button-signin">{t('nav.signin')}</Button>
-            <Button onClick={handleLogin} data-testid="button-get-started">
-              {t('hero.cta_primary')}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -132,7 +128,6 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             <Link href="/#about" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.about')}</Link>
             <div className="pt-4 space-y-3">
               <Button variant="outline" className="w-full" onClick={handleLogin}>{t('nav.signin')}</Button>
-              <Button className="w-full" onClick={handleLogin}>{t('hero.cta_primary')}</Button>
             </div>
           </motion.div>
         )}
