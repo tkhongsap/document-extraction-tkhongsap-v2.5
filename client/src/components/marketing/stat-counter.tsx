@@ -66,7 +66,7 @@ function AnimatedNumber({ value, suffix = '' }: { value: string; suffix?: string
 
 export function StatCounter({ stats, className }: StatCounterProps) {
   return (
-    <div className={cn('grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12', className)}>
+    <div className={cn('grid grid-cols-3 gap-8 lg:gap-12', className)}>
       {stats.map((stat, i) => (
         <motion.div
           key={i}
