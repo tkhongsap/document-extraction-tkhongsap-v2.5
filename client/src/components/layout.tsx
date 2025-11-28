@@ -63,9 +63,32 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [location] = useLocation();
 
   const handleLogin = () => {
     window.location.href = "/api/login";
+  };
+
+  const handleHashLink = (hash: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (location !== '/') {
+      // Navigate to home first, then scroll after navigation
+      window.location.href = `/${hash}`;
+    } else {
+      // Already on home page, scroll directly
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          const headerOffset = 80; // Account for sticky header
+          const elementPosition = element.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 0);
+    }
   };
 
   useEffect(() => {
@@ -75,6 +98,19 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Handle hash navigation when on home page
+  useEffect(() => {
+    if (location === '/' && window.location.hash) {
+      const hash = window.location.hash;
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col">
@@ -97,8 +133,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link href="/" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.home')}</Link>
-            <Link href="/#pricing" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.pricing')}</Link>
-            <Link href="/#about" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.about')}</Link>
+            <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.pricing')}</Link>
+            <Link href="/" onClick={(e) => handleHashLink('#about', e)} className="text-muted-foreground transition-colors hover:text-foreground cursor-pointer">{t('nav.about')}</Link>
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
@@ -124,8 +160,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0, height: 0 }}
           >
             <Link href="/" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.home')}</Link>
-            <Link href="/#pricing" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pricing')}</Link>
-            <Link href="/#about" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.about')}</Link>
+            <Link href="/pricing" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pricing')}</Link>
+            <Link href="/" className="block text-sm font-medium py-2" onClick={(e) => { setIsMobileMenuOpen(false); handleHashLink('#about', e); }}>{t('nav.about')}</Link>
             <div className="pt-4 space-y-3">
               <Button variant="outline" className="w-full" onClick={handleLogin}>{t('nav.signin')}</Button>
             </div>
@@ -133,12 +169,12 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
         )}
       </header>
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer handleHashLink={handleHashLink} />
     </div>
   );
 }
 
-function Footer() {
+function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.MouseEvent) => void }) {
   return (
     <footer className="border-t py-16 bg-muted/20">
       <div className="container px-6 mx-auto">
@@ -160,8 +196,8 @@ function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-sm">Product</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/#about" className="hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="/#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+              <li><Link href="/" onClick={(e) => handleHashLink('#about', e)} className="hover:text-foreground transition-colors cursor-pointer">Features</Link></li>
+              <li><Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
             </ul>
           </div>
 
@@ -169,7 +205,7 @@ function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-sm">Company</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/#about" className="hover:text-foreground transition-colors">About</Link></li>
+              <li><Link href="/" onClick={(e) => handleHashLink('#about', e)} className="hover:text-foreground transition-colors cursor-pointer">About</Link></li>
             </ul>
           </div>
 

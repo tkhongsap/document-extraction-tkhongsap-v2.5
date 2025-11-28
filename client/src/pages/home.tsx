@@ -6,7 +6,6 @@ import { DemoInteractive } from '@/components/marketing/demo-interactive';
 import { ComparisonSection } from '@/components/marketing/comparison-section';
 import { UseCasesCarousel } from '@/components/marketing/use-cases-carousel';
 import { SecuritySection } from '@/components/marketing/security-section';
-import { PricingSection } from '@/components/marketing/pricing-section';
 import { CTASection } from '@/components/marketing/cta-section';
 
 export default function Home() {
@@ -53,10 +52,7 @@ export default function Home() {
       {/* Section 7: Security - Trust & compliance */}
       <SecuritySection />
 
-      {/* Section 8: Pricing - Two tiers */}
-      <PricingSection />
-
-      {/* Section 9: Final CTA - Call to action */}
+      {/* Section 8: Final CTA - Call to action */}
       <CTASection />
     </div>
   );

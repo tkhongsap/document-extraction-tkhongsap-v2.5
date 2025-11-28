@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/layout";
 
 import Home from "@/pages/home";
+import Pricing from "@/pages/pricing";
 import Dashboard from "@/pages/dashboard";
 import Extraction from "@/pages/extraction";
 import History from "@/pages/history";
@@ -46,7 +47,9 @@ function Router() {
             <Redirect to="/dashboard" />
           </Route>
         )}
-        
+
+        <Route path="/pricing" component={Pricing} />
+
         {/* Protected Routes */}
         <Route path="/dashboard">
           {() => <PrivateRoute component={Dashboard} />}
