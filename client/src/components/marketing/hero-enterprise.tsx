@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n';
-import { useAuth } from '@/lib/mock-auth';
 import { Button } from '@/components/ui/button';
 import { Shield, Lock, FileCheck, Sparkles, ArrowRight, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,7 +41,10 @@ interface HeroEnterpriseProps {
 
 export function HeroEnterprise({ className }: HeroEnterpriseProps) {
   const { t } = useLanguage();
-  const { login } = useAuth();
+  
+  const handleLogin = () => {
+    window.location.href = "/api/login";
+  };
 
   const trustIndicators = [
     { icon: Lock, label: t('hero.trust_encryption') },
@@ -99,7 +101,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
             >
               <Button
                 size="lg"
-                onClick={() => login()}
+                onClick={handleLogin}
                 className="bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] h-12 px-8 text-base font-semibold shadow-lg shadow-[hsl(var(--gold))]/20"
               >
                 {t('hero.cta_primary')}

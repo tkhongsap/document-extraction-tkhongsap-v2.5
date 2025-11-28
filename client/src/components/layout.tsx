@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +14,6 @@ import {
   Menu,
   X,
   Check,
-  Lock,
-  ShieldCheck,
   ArrowRight,
   Plus
 } from "lucide-react";
@@ -27,7 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { progressAnimation } from "@/lib/animations";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -63,9 +61,12 @@ function LanguageSwitcher() {
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
-  const { login } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const handleLogin = () => {
+    window.location.href = "/api/login";
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -102,8 +103,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 
           <div className="hidden md:flex items-center gap-3">
             <LanguageSwitcher />
-            <Button variant="ghost" onClick={() => login()}>{t('nav.signin')}</Button>
-            <Button onClick={() => login()}>
+            <Button variant="ghost" onClick={handleLogin} data-testid="button-signin">{t('nav.signin')}</Button>
+            <Button onClick={handleLogin} data-testid="button-get-started">
               {t('hero.cta_primary')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -130,8 +131,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             <Link href="/#pricing" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pricing')}</Link>
             <Link href="/#about" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.about')}</Link>
             <div className="pt-4 space-y-3">
-              <Button variant="outline" className="w-full" onClick={() => login()}>{t('nav.signin')}</Button>
-              <Button className="w-full" onClick={() => login()}>{t('hero.cta_primary')}</Button>
+              <Button variant="outline" className="w-full" onClick={handleLogin}>{t('nav.signin')}</Button>
+              <Button className="w-full" onClick={handleLogin}>{t('hero.cta_primary')}</Button>
             </div>
           </motion.div>
         )}
@@ -211,9 +212,24 @@ function Footer() {
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  const displayName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.firstName || user?.email?.split('@')[0] || 'User';
+  
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
@@ -223,9 +239,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];
 
-  const usagePercent = (user!.monthlyUsage / user!.monthlyLimit) * 100;
+  const usagePercent = user ? (user.monthlyUsage / user.monthlyLimit) * 100 : 0;
 
-  // Mobile nav items (simplified for bottom bar)
   const mobileNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
     { href: '/extraction/general', icon: Plus, label: t('nav.general') },
@@ -259,7 +274,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                     : "text-sidebar-foreground/70",
                   item.isPrimary && "bg-sidebar-primary/10 text-sidebar-primary hover:bg-sidebar-primary/20 font-semibold"
                 )}>
-                  {/* Active indicator bar */}
                   {isActive && (
                     <motion.div
                       layoutId="activeNav"
@@ -281,7 +295,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <div className="flex justify-between mb-2 text-xs">
               <span className="text-sidebar-foreground/70">{t('common.usage')}</span>
               <span className="font-medium text-sidebar-foreground">
-                {user?.monthlyUsage} / {user?.monthlyLimit}
+                {user?.monthlyUsage || 0} / {user?.monthlyLimit || 100}
               </span>
             </div>
             <div className="h-2 w-full bg-sidebar-border rounded-full overflow-hidden">
@@ -304,19 +318,21 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           {/* User Profile */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-medium">
-                {user?.name.charAt(0)}
-              </div>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} className="object-cover" />
+                <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary font-medium">{initials}</AvatarFallback>
+              </Avatar>
               <div className="text-sm">
-                <div className="font-medium truncate max-w-[100px] text-sidebar-foreground">{user?.name}</div>
-                <div className="text-xs text-sidebar-foreground/50">Pro Plan</div>
+                <div className="font-medium truncate max-w-[100px] text-sidebar-foreground">{displayName}</div>
+                <div className="text-xs text-sidebar-foreground/50 capitalize">{user?.tier || 'Free'} Plan</div>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              onClick={logout}
+              onClick={handleLogout}
               className="text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-sidebar-logout"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -394,7 +410,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                   <div className="flex justify-between mb-2 text-xs">
                     <span className="text-muted-foreground">{t('common.usage')}</span>
                     <span className="font-medium">
-                      {user?.monthlyUsage} / {user?.monthlyLimit}
+                      {user?.monthlyUsage || 0} / {user?.monthlyLimit || 100}
                     </span>
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -408,15 +424,16 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium">
-                      {user?.name.charAt(0)}
-                    </div>
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} className="object-cover" />
+                      <AvatarFallback className="bg-primary/20 text-primary font-medium">{initials}</AvatarFallback>
+                    </Avatar>
                     <div className="text-sm">
-                      <div className="font-medium">{user?.name}</div>
-                      <div className="text-xs text-muted-foreground">Pro Plan</div>
+                      <div className="font-medium">{displayName}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{user?.tier || 'Free'} Plan</div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={logout}>
+                  <Button variant="ghost" size="icon" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" />
                   </Button>
                 </div>

@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { Check, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n';
-import { useAuth } from '@/lib/mock-auth';
 import { Button } from '@/components/ui/button';
 
 interface PricingSectionProps {
@@ -11,7 +10,10 @@ interface PricingSectionProps {
 
 export function PricingSection({ className }: PricingSectionProps) {
   const { t } = useLanguage();
-  const { login } = useAuth();
+  
+  const handleLogin = () => {
+    window.location.href = "/api/login";
+  };
 
   const starterFeatures = [
     t('pricing.starter_feature_1'),
@@ -82,7 +84,7 @@ export function PricingSection({ className }: PricingSectionProps) {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => login()}
+                onClick={handleLogin}
                 className="w-full h-12"
               >
                 {t('pricing.starter_cta')}
@@ -133,7 +135,7 @@ export function PricingSection({ className }: PricingSectionProps) {
 
               <Button
                 size="lg"
-                onClick={() => login()}
+                onClick={handleLogin}
                 className="w-full h-12 bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] font-semibold shadow-lg shadow-[hsl(var(--gold))]/20"
               >
                 {t('pricing.business_cta')}

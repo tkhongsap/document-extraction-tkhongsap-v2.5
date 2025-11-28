@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n';
-import { useAuth } from '@/lib/mock-auth';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,14 +49,16 @@ export default function Dashboard() {
     };
   });
 
-  const usagePercent = (user!.monthlyUsage / user!.monthlyLimit) * 100;
+  const usagePercent = user ? (user.monthlyUsage / user.monthlyLimit) * 100 : 0;
+  
+  const displayName = user?.firstName || user?.email?.split('@')[0] || 'User';
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-muted-foreground text-sm mb-1">Good morning, {user?.name.split(' ')[0]}</p>
+          <p className="text-muted-foreground text-sm mb-1">Good morning, {displayName}</p>
           <h1 className="text-3xl font-semibold tracking-tight">{t('dash.welcome')}</h1>
         </div>
         <Button asChild size="lg">

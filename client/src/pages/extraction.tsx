@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { processExtraction, saveExtraction } from "@/lib/api";
-import { useAuth } from "@/lib/mock-auth";
 import { toast } from "sonner";
 
 interface ExtractedField {
@@ -29,7 +28,6 @@ interface ExtractedField {
 export default function Extraction() {
   const { t } = useLanguage();
   const { type } = useParams();
-  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ExtractedField[] | null>(null);

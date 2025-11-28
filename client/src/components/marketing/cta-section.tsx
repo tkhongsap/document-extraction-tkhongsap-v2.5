@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n';
-import { useAuth } from '@/lib/mock-auth';
 import { Button } from '@/components/ui/button';
 
 interface CTASectionProps {
@@ -11,7 +10,10 @@ interface CTASectionProps {
 
 export function CTASection({ className }: CTASectionProps) {
   const { t } = useLanguage();
-  const { login } = useAuth();
+  
+  const handleLogin = () => {
+    window.location.href = "/api/login";
+  };
 
   return (
     <section className={cn('py-24 lg:py-32 bg-section-dark relative overflow-hidden', className)}>
@@ -55,7 +57,7 @@ export function CTASection({ className }: CTASectionProps) {
           >
             <Button
               size="lg"
-              onClick={() => login()}
+              onClick={handleLogin}
               className="h-14 px-10 text-lg bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] font-semibold shadow-xl shadow-[hsl(var(--gold))]/30 animate-pulse-glow"
             >
               {t('cta.button')}
