@@ -4,7 +4,7 @@ import { StatCounter } from '@/components/marketing/stat-counter';
 import { FeatureGrid } from '@/components/marketing/feature-grid';
 import { DemoInteractive } from '@/components/marketing/demo-interactive';
 import { ComparisonSection } from '@/components/marketing/comparison-section';
-import { TestimonialCarousel } from '@/components/marketing/testimonial-carousel';
+import { UseCasesCarousel } from '@/components/marketing/use-cases-carousel';
 import { SecuritySection } from '@/components/marketing/security-section';
 import { PricingSection } from '@/components/marketing/pricing-section';
 import { CTASection } from '@/components/marketing/cta-section';
@@ -16,30 +16,6 @@ export default function Home() {
     { value: '99.2', suffix: '%', label: t('stats.accuracy'), description: t('stats.accuracyDesc'), highlight: true },
     { value: '50M', suffix: '+', label: t('stats.pages'), description: t('stats.pagesDesc') },
     { value: '24', suffix: '/7', label: t('stats.support'), description: t('stats.supportDesc') },
-  ];
-
-  const testimonials = [
-    {
-      quote: t('testimonials.quote_1'),
-      author: t('testimonials.author_1'),
-      title: t('testimonials.title_1'),
-      company: t('testimonials.company_1'),
-      rating: 5,
-    },
-    {
-      quote: t('testimonials.quote_2'),
-      author: t('testimonials.author_2'),
-      title: t('testimonials.title_2'),
-      company: t('testimonials.company_2'),
-      rating: 5,
-    },
-    {
-      quote: t('testimonials.quote_3'),
-      author: t('testimonials.author_3'),
-      title: t('testimonials.title_3'),
-      company: t('testimonials.company_3'),
-      rating: 5,
-    },
   ];
 
   return (
@@ -71,8 +47,8 @@ export default function Home() {
       {/* Section 5: Comparison - Before/After transformation */}
       <ComparisonSection />
 
-      {/* Section 6: Testimonials - Customer success stories */}
-      <TestimonialCarousel testimonials={testimonials} />
+      {/* Section 6: Use Cases - Industry solutions */}
+      <UseCasesCarousel />
 
       {/* Section 7: Security - Trust & compliance */}
       <SecuritySection />
