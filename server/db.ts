@@ -6,7 +6,7 @@ import { readFileSync, existsSync } from "fs";
 
 neonConfig.webSocketConstructor = ws;
 
-function getDatabaseUrl(): string {
+export function getDatabaseUrl(): string {
   const replitDbPath = "/tmp/replitdb";
   
   if (existsSync(replitDbPath)) {
