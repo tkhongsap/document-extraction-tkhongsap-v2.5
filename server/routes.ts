@@ -1,76 +1,136 @@
 import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertExtractionSchema } from "@shared/schema";
+import { insertExtractionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectPermission } from "./objectAcl";
 
-export function registerRoutes(app: Express) {
-  // Auth endpoints
-  app.post("/api/auth/mock-login", async (req: Request, res: Response) => {
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup Replit Auth
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res: Response) => {
     try {
-      // Mock authentication - create or get user
-      const mockEmail = "somchai@example.com";
-      
-      let user = await storage.getUserByEmail(mockEmail);
-      
-      if (!user) {
-        user = await storage.createUser({
-          email: mockEmail,
-          name: "Somchai Jai-dee",
-          provider: "line",
-          providerId: "mock-line-id",
-          tier: "free",
-          monthlyUsage: 45,
-          monthlyLimit: 100,
-        });
-      }
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
 
-      // Store user in session
-      (req.session as any).userId = user.id;
-      
-      res.json({ user });
+  // Object storage - serve private objects with ACL check
+  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId: userId,
+        requestedPermission: ObjectPermission.READ,
+      });
+      if (!canAccess) {
+        return res.sendStatus(401);
+      }
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error checking object access:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  // Serve public objects
+  app.get("/public-objects/:filePath(*)", async (req: Request, res: Response) => {
+    const filePath = req.params.filePath;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const file = await objectStorageService.searchPublicObject(filePath);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      objectStorageService.downloadObject(file, res);
+    } catch (error) {
+      console.error("Error searching for public object:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get upload URL for documents
+  app.post("/api/objects/upload", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
     } catch (error: any) {
+      console.error("Error getting upload URL:", error);
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.session.destroy(() => {
-      res.json({ success: true });
-    });
-  });
-
-  app.get("/api/auth/me", async (req: Request, res: Response) => {
-    const userId = (req.session as any).userId;
+  // Save document after upload
+  app.post("/api/documents", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
     
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+    if (!req.body.uploadURL || !req.body.fileName || !req.body.fileSize || !req.body.mimeType) {
+      return res.status(400).json({ error: "uploadURL, fileName, fileSize, and mimeType are required" });
     }
 
     try {
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.uploadURL,
+        {
+          owner: userId,
+          visibility: "private",
+        }
+      );
 
-      res.json({ user });
+      const document = await storage.createDocument({
+        userId,
+        fileName: req.body.fileName,
+        fileSize: req.body.fileSize,
+        mimeType: req.body.mimeType,
+        objectPath,
+      });
+
+      res.status(201).json({ document });
+    } catch (error: any) {
+      console.error("Error saving document:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get user's documents
+  app.get("/api/documents", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const documents = await storage.getDocumentsByUserId(userId, limit);
+      res.json({ documents });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
   // Extraction endpoints
-  app.post("/api/extractions", async (req: Request, res: Response) => {
-    const userId = (req.session as any).userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
+  app.post("/api/extractions", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
 
     try {
-      // Validate request body
-      const validatedData = insertExtractionSchema.parse(req.body);
+      const validatedData = insertExtractionSchema.parse({
+        ...req.body,
+        userId,
+      });
 
-      // Check user's monthly limit
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -85,13 +145,7 @@ export function registerRoutes(app: Express) {
         });
       }
 
-      // Create extraction record
-      const extraction = await storage.createExtraction({
-        ...validatedData,
-        userId,
-      });
-
-      // Update user's usage
+      const extraction = await storage.createExtraction(validatedData);
       await storage.updateUserUsage(userId, validatedData.pagesProcessed);
 
       res.json({ extraction });
@@ -104,29 +158,20 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/extractions", async (req: Request, res: Response) => {
-    const userId = (req.session as any).userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
+  app.get("/api/extractions", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
 
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const extractions = await storage.getExtractionsByUserId(userId, limit);
-      
       res.json({ extractions });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
-  app.get("/api/extractions/:id", async (req: Request, res: Response) => {
-    const userId = (req.session as any).userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
+  app.get("/api/extractions/:id", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
 
     try {
       const extraction = await storage.getExtraction(req.params.id);
@@ -135,7 +180,6 @@ export function registerRoutes(app: Express) {
         return res.status(404).json({ message: "Extraction not found" });
       }
 
-      // Verify extraction belongs to user
       if (extraction.userId !== userId) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -147,17 +191,9 @@ export function registerRoutes(app: Express) {
   });
 
   // Mock extraction processor endpoint
-  app.post("/api/extract/process", async (req: Request, res: Response) => {
-    const userId = (req.session as any).userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-
+  app.post("/api/extract/process", isAuthenticated, async (req: any, res: Response) => {
     try {
-      const { fileName, documentType } = req.body;
-
-      // Simulate extraction processing
+      const { documentType } = req.body;
       const mockResults = generateMockExtraction(documentType || 'general');
 
       res.json({
@@ -169,9 +205,11 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ message: error.message });
     }
   });
+
+  const httpServer = createServer(app);
+  return httpServer;
 }
 
-// Helper function to generate mock extraction data
 function generateMockExtraction(type: string) {
   const common = [
     { key: 'document_date', value: '27 Nov 2023', confidence: 0.98 },
@@ -201,7 +239,6 @@ function generateMockExtraction(type: string) {
     ];
   }
 
-  // Default General
   return [
     ...common,
     { key: 'company_name', value: 'Tech Solutions Co., Ltd.', confidence: 0.91 },

@@ -45,3 +45,9 @@ waitForPort = 5000
 [agent]
 mockupState = "FULLSTACK"
 integrations = ["javascript_database:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+PRIVATE_OBJECT_DIR = "/docextract-storage/private"
+PUBLIC_OBJECT_SEARCH_PATHS = "/docextract-storage/public"

@@ -1,8 +1,8 @@
 import { useLanguage } from "@/lib/i18n";
-import { useAuth } from "@/lib/mock-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Globe, User, LogOut } from "lucide-react";
+import { Globe, User, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,10 +10,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function SettingsPage() {
   const { t, language, setLanguage } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  const displayName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.firstName || user?.email || 'User';
+  
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -69,20 +85,26 @@ export default function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Name</label>
-            <p className="text-sm mt-1">{user?.name}</p>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} className="object-cover" />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{displayName}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+            </div>
           </div>
           <Separator />
           <div>
             <label className="text-sm font-medium text-muted-foreground">Plan</label>
-            <p className="text-sm mt-1">Pro Plan</p>
+            <p className="text-sm mt-1 capitalize">{user?.tier || 'Free'} Plan</p>
           </div>
           <Separator />
           <div>
             <label className="text-sm font-medium text-muted-foreground">Monthly Usage</label>
             <p className="text-sm mt-1">
-              {user?.monthlyUsage} / {user?.monthlyLimit} pages
+              {user?.monthlyUsage || 0} / {user?.monthlyLimit || 100} pages
             </p>
           </div>
         </CardContent>
@@ -95,7 +117,7 @@ export default function SettingsPage() {
           <CardDescription>Irreversible actions</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" onClick={logout} className="w-full md:w-auto">
+          <Button variant="destructive" onClick={handleLogout} className="w-full md:w-auto" data-testid="button-logout">
             <LogOut className="mr-2 h-4 w-4" />
             Sign Out
           </Button>
@@ -104,5 +126,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-

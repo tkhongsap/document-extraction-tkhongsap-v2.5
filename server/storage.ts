@@ -1,14 +1,28 @@
-import { users, extractions, type User, type InsertUser, type Extraction, type InsertExtraction } from "@shared/schema";
+import { 
+  users, 
+  documents,
+  extractions, 
+  type User, 
+  type UpsertUser,
+  type Document,
+  type InsertDocument,
+  type Extraction, 
+  type InsertExtraction 
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations
+  // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
   updateUserUsage(userId: string, pagesUsed: number): Promise<void>;
   resetMonthlyUsage(userId: string): Promise<void>;
+
+  // Document operations
+  createDocument(document: InsertDocument): Promise<Document>;
+  getDocumentsByUserId(userId: string, limit?: number): Promise<Document[]>;
+  getDocument(id: string): Promise<Document | undefined>;
 
   // Extraction operations
   createExtraction(extraction: InsertExtraction): Promise<Extraction>;
@@ -17,18 +31,24 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations (mandatory for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
     return user;
   }
 
@@ -52,6 +72,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
+  // Document operations
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const [created] = await db.insert(documents).values(document).returning();
+    return created;
+  }
+
+  async getDocumentsByUserId(userId: string, limit: number = 50): Promise<Document[]> {
+    return await db
+      .select()
+      .from(documents)
+      .where(eq(documents.userId, userId))
+      .orderBy(desc(documents.createdAt))
+      .limit(limit);
+  }
+
+  async getDocument(id: string): Promise<Document | undefined> {
+    const [document] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, id));
+    return document || undefined;
+  }
+
+  // Extraction operations
   async createExtraction(extraction: InsertExtraction): Promise<Extraction> {
     const [created] = await db.insert(extractions).values(extraction).returning();
     return created;
