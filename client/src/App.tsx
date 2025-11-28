@@ -8,6 +8,7 @@ import { Layout } from "@/components/layout";
 
 import Home from "@/pages/home";
 import Pricing from "@/pages/pricing";
+import UseCases from "@/pages/use-cases";
 import Dashboard from "@/pages/dashboard";
 import Extraction from "@/pages/extraction";
 import History from "@/pages/history";
@@ -49,6 +50,7 @@ function Router() {
         )}
 
         <Route path="/pricing" component={Pricing} />
+        <Route path="/use-cases" component={UseCases} />
 
         {/* Protected Routes */}
         <Route path="/dashboard">
