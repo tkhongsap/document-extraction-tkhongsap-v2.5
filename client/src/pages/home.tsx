@@ -2,9 +2,7 @@ import { useLanguage } from '@/lib/i18n';
 import { HeroEnterprise } from '@/components/marketing/hero-enterprise';
 import { StatCounter } from '@/components/marketing/stat-counter';
 import { FeatureGrid } from '@/components/marketing/feature-grid';
-import { DemoInteractive } from '@/components/marketing/demo-interactive';
 import { ComparisonSection } from '@/components/marketing/comparison-section';
-import { UseCasesCarousel } from '@/components/marketing/use-cases-carousel';
 import { SecuritySection } from '@/components/marketing/security-section';
 import { CTASection } from '@/components/marketing/cta-section';
 
@@ -40,19 +38,13 @@ export default function Home() {
       {/* Section 3: Features - 6 capabilities grid */}
       <FeatureGrid />
 
-      {/* Section 4: Demo - Interactive document extraction */}
-      <DemoInteractive />
-
-      {/* Section 5: Comparison - Before/After transformation */}
+      {/* Section 4: Comparison - Before/After transformation */}
       <ComparisonSection />
 
-      {/* Section 6: Use Cases - Industry solutions */}
-      <UseCasesCarousel />
-
-      {/* Section 7: Security - Trust & compliance */}
+      {/* Section 5: Security - Trust & compliance */}
       <SecuritySection />
 
-      {/* Section 8: Final CTA - Call to action */}
+      {/* Section 6: Final CTA - Call to action */}
       <CTASection />
     </div>
   );

@@ -133,8 +133,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link href="/" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.home')}</Link>
+            <Link href="/use-cases" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.usecases')}</Link>
             <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.pricing')}</Link>
-            <Link href="/" onClick={(e) => handleHashLink('#about', e)} className="text-muted-foreground transition-colors hover:text-foreground cursor-pointer">{t('nav.about')}</Link>
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
@@ -160,8 +160,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0, height: 0 }}
           >
             <Link href="/" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.home')}</Link>
+            <Link href="/use-cases" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.usecases')}</Link>
             <Link href="/pricing" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pricing')}</Link>
-            <Link href="/" className="block text-sm font-medium py-2" onClick={(e) => { setIsMobileMenuOpen(false); handleHashLink('#about', e); }}>{t('nav.about')}</Link>
             <div className="pt-4 space-y-3">
               <Button variant="outline" className="w-full" onClick={handleLogin}>{t('nav.signin')}</Button>
             </div>
@@ -196,7 +196,7 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
           <div className="space-y-4">
             <h4 className="font-semibold text-sm">Product</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/" onClick={(e) => handleHashLink('#about', e)} className="hover:text-foreground transition-colors cursor-pointer">Features</Link></li>
+              <li><Link href="/use-cases" className="hover:text-foreground transition-colors">Use Cases</Link></li>
               <li><Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
             </ul>
           </div>
