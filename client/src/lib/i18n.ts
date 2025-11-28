@@ -12,6 +12,7 @@ export const translations: Translations = {
   en: {
     // Navigation
     'nav.home': 'Home',
+    'nav.capabilities': 'Capabilities',
     'nav.usecases': 'Use Cases',
     'nav.security': 'Security',
     'nav.pricing': 'Pricing',
