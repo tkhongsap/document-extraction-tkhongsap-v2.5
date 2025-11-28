@@ -19,8 +19,9 @@ localPort = 35451
 externalPort = 3000
 
 [[ports]]
-localPort = 40605
-externalPort = 3001
+localPort = 60336
+externalPort = 3002
+exposeLocalhost = true
 
 [env]
 PORT = "5000"
