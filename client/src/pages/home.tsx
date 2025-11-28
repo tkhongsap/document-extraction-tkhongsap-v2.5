@@ -13,9 +13,9 @@ export default function Home() {
   const { t } = useLanguage();
 
   const stats = [
-    { value: '99.2', suffix: '%', label: t('stats.accuracy'), highlight: true },
-    { value: '50M', suffix: '+', label: t('stats.pages') },
-    { value: '24', suffix: '/7', label: t('stats.support') },
+    { value: '99.2', suffix: '%', label: t('stats.accuracy'), description: t('stats.accuracyDesc'), highlight: true },
+    { value: '50M', suffix: '+', label: t('stats.pages'), description: t('stats.pagesDesc') },
+    { value: '24', suffix: '/7', label: t('stats.support'), description: t('stats.supportDesc') },
   ];
 
   const testimonials = [
@@ -50,6 +50,14 @@ export default function Home() {
       {/* Section 2: Social Proof - Stats */}
       <section className="py-16 lg:py-20 bg-cream">
         <div className="container mx-auto px-6">
+          <div className="text-center mb-12">
+            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+              {t('stats.eyebrow')}
+            </span>
+            <h2 className="text-3xl lg:text-4xl font-display text-foreground mt-3">
+              {t('stats.headline')}
+            </h2>
+          </div>
           <StatCounter stats={stats} />
         </div>
       </section>

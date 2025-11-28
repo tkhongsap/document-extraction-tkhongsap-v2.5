@@ -36,10 +36,15 @@ export const translations: Translations = {
     'logos.title': 'Trusted by leading Thai enterprises',
 
     // Stats Section
+    'stats.eyebrow': 'Proven Results',
+    'stats.headline': 'Proven Excellence in Document Processing',
     'stats.accuracy': 'Extraction Accuracy',
+    'stats.accuracyDesc': 'Industry-leading OCR precision',
     'stats.pages': 'Pages Processed',
+    'stats.pagesDesc': 'Documents processed and growing',
     'stats.enterprises': 'Enterprise Clients',
     'stats.support': 'Support Available',
+    'stats.supportDesc': 'Expert assistance whenever you need',
 
     // Features Section
     'features.eyebrow': 'Capabilities',
@@ -207,10 +212,15 @@ export const translations: Translations = {
     'logos.title': 'ได้รับความไว้วางใจจากองค์กรชั้นนำในไทย',
 
     // Stats Section
+    'stats.eyebrow': 'ผลลัพธ์ที่พิสูจน์แล้ว',
+    'stats.headline': 'ความเป็นเลิศที่พิสูจน์แล้วในการประมวลผลเอกสาร',
     'stats.accuracy': 'ความแม่นยำ',
+    'stats.accuracyDesc': 'ความแม่นยำ OCR ชั้นนำในอุตสาหกรรม',
     'stats.pages': 'หน้าที่ประมวลผลแล้ว',
+    'stats.pagesDesc': 'เอกสารที่ประมวลผลและเพิ่มขึ้นเรื่อยๆ',
     'stats.enterprises': 'ลูกค้าองค์กร',
     'stats.support': 'พร้อมให้บริการ',
+    'stats.supportDesc': 'ผู้เชี่ยวชาญพร้อมช่วยเหลือทุกเมื่อ',
 
     // Features Section
     'features.eyebrow': 'ความสามารถ',

@@ -7,6 +7,7 @@ interface Stat {
   label: string;
   suffix?: string;
   highlight?: boolean;
+  description?: string;
 }
 
 interface StatCounterProps {
@@ -85,6 +86,9 @@ export function StatCounter({ stats, className }: StatCounterProps) {
             <AnimatedNumber value={stat.value} suffix={stat.suffix} />
           </div>
           <div className="text-sm text-muted-foreground">{stat.label}</div>
+          {stat.description && (
+            <div className="text-sm text-muted-foreground/70 mt-1">{stat.description}</div>
+          )}
         </motion.div>
       ))}
     </div>
