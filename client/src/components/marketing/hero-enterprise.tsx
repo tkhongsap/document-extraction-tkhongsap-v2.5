@@ -104,7 +104,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
                 onClick={handleLogin}
                 className="bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] h-12 px-8 text-base font-semibold shadow-lg shadow-[hsl(var(--gold))]/20"
               >
-                {t('hero.cta_primary')}
+                {t('nav.signin')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
