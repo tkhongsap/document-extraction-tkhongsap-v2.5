@@ -1,6 +1,5 @@
 import { useLanguage } from '@/lib/i18n';
 import { HeroEnterprise } from '@/components/marketing/hero-enterprise';
-import { LogoStrip } from '@/components/marketing/logo-strip';
 import { StatCounter } from '@/components/marketing/stat-counter';
 import { FeatureGrid } from '@/components/marketing/feature-grid';
 import { DemoInteractive } from '@/components/marketing/demo-interactive';
@@ -16,7 +15,6 @@ export default function Home() {
   const stats = [
     { value: '99.2', suffix: '%', label: t('stats.accuracy'), highlight: true },
     { value: '50M', suffix: '+', label: t('stats.pages') },
-    { value: '500', suffix: '+', label: t('stats.enterprises') },
     { value: '24', suffix: '/7', label: t('stats.support') },
   ];
 
@@ -49,10 +47,9 @@ export default function Home() {
       {/* Section 1: Hero - Dark dramatic opening with floating cards */}
       <HeroEnterprise />
 
-      {/* Section 2: Social Proof - Logo strip + Stats */}
+      {/* Section 2: Social Proof - Stats */}
       <section className="py-16 lg:py-20 bg-cream">
         <div className="container mx-auto px-6">
-          <LogoStrip title={t('logos.title')} className="mb-16" />
           <StatCounter stats={stats} />
         </div>
       </section>
