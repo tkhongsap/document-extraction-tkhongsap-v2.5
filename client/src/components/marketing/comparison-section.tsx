@@ -25,7 +25,7 @@ export function ComparisonSection({ className }: ComparisonSectionProps) {
   ];
 
   return (
-    <section className={cn('py-24 lg:py-32 bg-cream', className)}>
+    <section className={cn('py-16 lg:py-20 bg-cream', className)}>
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <motion.div

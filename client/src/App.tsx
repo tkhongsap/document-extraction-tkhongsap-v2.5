@@ -7,6 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/layout";
 
 import Home from "@/pages/home";
+import Pricing from "@/pages/pricing";
+import UseCases from "@/pages/use-cases";
+import Security from "@/pages/security";
+import Capabilities from "@/pages/capabilities";
 import Dashboard from "@/pages/dashboard";
 import Extraction from "@/pages/extraction";
 import History from "@/pages/history";
@@ -46,7 +50,12 @@ function Router() {
             <Redirect to="/dashboard" />
           </Route>
         )}
-        
+
+        <Route path="/pricing" component={Pricing} />
+        <Route path="/use-cases" component={UseCases} />
+        <Route path="/security" component={Security} />
+        <Route path="/capabilities" component={Capabilities} />
+
         {/* Protected Routes */}
         <Route path="/dashboard">
           {() => <PrivateRoute component={Dashboard} />}

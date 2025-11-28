@@ -142,9 +142,11 @@ export function PricingSection({ className }: PricingSectionProps) {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
-              <p className="text-center text-xs text-muted-foreground mt-4">
-                {t('pricing.guarantee')}
-              </p>
+              {t('pricing.guarantee') && (
+                <p className="text-center text-xs text-muted-foreground mt-4">
+                  {t('pricing.guarantee')}
+                </p>
+              )}
             </div>
           </motion.div>
         </div>

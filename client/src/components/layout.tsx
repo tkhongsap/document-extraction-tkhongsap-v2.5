@@ -63,9 +63,32 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [location] = useLocation();
 
   const handleLogin = () => {
     window.location.href = "/api/login";
+  };
+
+  const handleHashLink = (hash: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (location !== '/') {
+      // Navigate to home first, then scroll after navigation
+      window.location.href = `/${hash}`;
+    } else {
+      // Already on home page, scroll directly
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          const headerOffset = 80; // Account for sticky header
+          const elementPosition = element.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 0);
+    }
   };
 
   useEffect(() => {
@@ -75,6 +98,19 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Handle hash navigation when on home page
+  useEffect(() => {
+    if (location === '/' && window.location.hash) {
+      const hash = window.location.hash;
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col">
@@ -97,17 +133,14 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link href="/" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.home')}</Link>
-            <Link href="/#pricing" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.pricing')}</Link>
-            <Link href="/#about" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.about')}</Link>
+            <Link href="/capabilities" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.capabilities')}</Link>
+            <Link href="/use-cases" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.usecases')}</Link>
+            <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">{t('nav.pricing')}</Link>
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
             <LanguageSwitcher />
             <Button variant="ghost" onClick={handleLogin} data-testid="button-signin">{t('nav.signin')}</Button>
-            <Button onClick={handleLogin} data-testid="button-get-started">
-              {t('hero.cta_primary')}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -128,83 +161,151 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0, height: 0 }}
           >
             <Link href="/" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.home')}</Link>
-            <Link href="/#pricing" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pricing')}</Link>
-            <Link href="/#about" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.about')}</Link>
+            <Link href="/capabilities" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.capabilities')}</Link>
+            <Link href="/use-cases" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.usecases')}</Link>
+            <Link href="/pricing" className="block text-sm font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pricing')}</Link>
             <div className="pt-4 space-y-3">
               <Button variant="outline" className="w-full" onClick={handleLogin}>{t('nav.signin')}</Button>
-              <Button className="w-full" onClick={handleLogin}>{t('hero.cta_primary')}</Button>
             </div>
           </motion.div>
         )}
       </header>
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer handleHashLink={handleHashLink} />
     </div>
   );
 }
 
-function Footer() {
+function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.MouseEvent) => void }) {
+  const { t } = useLanguage();
+  
   return (
-    <footer className="border-t py-16 bg-muted/20">
-      <div className="container px-6 mx-auto">
-        <div className="grid md:grid-cols-4 gap-12 mb-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 font-semibold text-lg">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white">
-                <FileText className="h-4 w-4" />
+    <footer className="relative border-t bg-gradient-to-b from-cream via-cream/95 to-cream/90 overflow-hidden">
+      {/* Decorative gold accent line at top */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/40 to-transparent" />
+      
+      {/* Subtle background glow effect */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[hsl(var(--gold))]/3 rounded-full blur-3xl opacity-50" />
+      
+      <div className="container relative px-6 mx-auto py-20 lg:py-24">
+        <div className="grid md:grid-cols-3 gap-16 lg:gap-20 mb-16">
+          {/* Brand Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="space-y-5"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="flex items-center gap-3 group"
+            >
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:shadow-primary/30 transition-all duration-300 group-hover:scale-105">
+                <FileText className="h-5 w-5" />
               </div>
-              DocExtract
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Secure document extraction for Thai businesses. Extract structured data in seconds.
+              <span className="font-display font-semibold text-xl tracking-tight text-foreground">DocExtract</span>
+            </motion.div>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+              {t('footer.description')}
             </p>
-          </div>
+          </motion.div>
 
-          {/* Product Links */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">Product</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/#about" className="hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="/#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+          {/* Product Links Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="space-y-5"
+          >
+            <h4 className="font-semibold text-sm uppercase tracking-wider text-foreground/90">
+              {t('footer.product')}
+            </h4>
+            <ul className="space-y-3.5">
+              <li>
+                <Link 
+                  href="/use-cases" 
+                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--gold))] transition-all duration-300 hover:translate-x-1"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--gold))]/0 group-hover:bg-[hsl(var(--gold))] mr-2 transition-all duration-300" />
+                  {t('nav.usecases')}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/security" 
+                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--gold))] transition-all duration-300 hover:translate-x-1"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--gold))]/0 group-hover:bg-[hsl(var(--gold))] mr-2 transition-all duration-300" />
+                  {t('nav.security')}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/pricing" 
+                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--gold))] transition-all duration-300 hover:translate-x-1"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--gold))]/0 group-hover:bg-[hsl(var(--gold))] mr-2 transition-all duration-300" />
+                  {t('nav.pricing')}
+                </Link>
+              </li>
             </ul>
-          </div>
+          </motion.div>
 
-          {/* Company Links */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">Company</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/#about" className="hover:text-foreground transition-colors">About</Link></li>
+          {/* Security Trust Indicators Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="space-y-5"
+          >
+            <h4 className="font-semibold text-sm uppercase tracking-wider text-foreground/90">
+              {t('footer.security')}
+            </h4>
+            <ul className="space-y-3.5">
+              {[
+                { key: 'footer.security_encryption', icon: Check },
+                { key: 'footer.security_pdpa', icon: Check },
+                { key: 'footer.security_autodelete', icon: Check },
+                { key: 'footer.security_soc2', icon: Check },
+              ].map((item, i) => (
+                <motion.li
+                  key={item.key}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: 0.2 + i * 0.05 }}
+                  className="flex items-center gap-3 group"
+                >
+                  <div className="h-5 w-5 rounded-md bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 flex items-center justify-center group-hover:bg-[hsl(var(--gold))]/20 group-hover:border-[hsl(var(--gold))]/30 transition-all duration-300">
+                    <item.icon className="h-3 w-3 text-[hsl(var(--gold))]" />
+                  </div>
+                  <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                    {t(item.key)}
+                  </span>
+                </motion.li>
+              ))}
             </ul>
-          </div>
-
-          {/* Security Trust Indicators */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">Security</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-emerald-500" />
-                Bank-grade Encryption
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-emerald-500" />
-                PDPA Compliant
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-emerald-500" />
-                Auto-delete in 24hrs
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-emerald-500" />
-                SOC 2 Type II
-              </li>
-            </ul>
-          </div>
+          </motion.div>
         </div>
 
-        <div className="pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>© 2024 DocExtract. All rights reserved.</p>
-        </div>
+        {/* Copyright Section */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="pt-8 border-t border-border/50"
+        >
+          <p className="text-center text-sm text-muted-foreground/80">
+            {t('footer.copyright')}
+          </p>
+        </motion.div>
       </div>
     </footer>
   );
