@@ -3,7 +3,8 @@
     "allow": [
       "Skill(frontend-design:frontend-design)",
       "Bash(cat:*)",
-      "WebFetch(domain:www.llamaindex.ai)"
+      "WebFetch(domain:www.llamaindex.ai)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
