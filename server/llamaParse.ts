@@ -77,6 +77,9 @@ export class LlamaParseService {
     this.apiKey = apiKey;
     this.maxRetries = 60; // Max 60 retries (5 minutes with 5s interval)
     this.pollIntervalMs = 5000; // Poll every 5 seconds
+    
+    // Log API key status (first 10 chars only for security)
+    console.log(`[LlamaParse] API key configured: ${apiKey.substring(0, 10)}...`);
   }
 
   /**
@@ -111,9 +114,8 @@ export class LlamaParseService {
     fileBuffer: Buffer,
     fileName: string
   ): Promise<string> {
+    // Use Node.js built-in FormData (available in Node 18+)
     const formData = new FormData();
-    
-    // Create a Blob from the buffer
     const blob = new Blob([fileBuffer], { type: this.getMimeType(fileName) });
     formData.append("file", blob, fileName);
 
@@ -122,14 +124,17 @@ export class LlamaParseService {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         Accept: "application/json",
+        // Don't set Content-Type - fetch will set it automatically with boundary
       },
       body: formData,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[LlamaParse] Upload failed: ${response.status} - ${errorText}`);
+      console.error(`[LlamaParse] API Key prefix: ${this.apiKey.substring(0, 10)}...`);
       throw new LlamaParseError(
-        `Failed to upload file: ${errorText}`,
+        `Failed to upload file to LlamaParse: ${errorText}`,
         response.status
       );
     }

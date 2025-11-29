@@ -4,7 +4,9 @@
       "Skill(frontend-design:frontend-design)",
       "Bash(cat:*)",
       "WebFetch(domain:www.llamaindex.ai)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "WebFetch(domain:developers.llamaindex.ai)",
+      "WebFetch(domain:docs.cloud.llamaindex.ai)"
     ],
     "deny": [],
     "ask": []
