@@ -207,7 +207,9 @@ export const translations: Translations = {
 
     // Extraction
     'extract.upload_title': 'Drop your document here',
-    'extract.upload_desc': 'PDF, JPG, or PNG - we handle them all',
+    'extract.upload_desc': 'Documents, images, spreadsheets, audio - we parse them all',
+    'extract.upload_formats': 'PDF, DOCX, PPTX, XLSX, CSV, JPG, PNG, GIF, MP3, WAV and more',
+    'extract.upload_size_limit': 'Most files up to 10MB, Audio up to 20MB',
     'extract.processing': 'Extracting...',
     'extract.processing_sub': 'This usually takes just a few seconds',
     'extract.results': "Here's what we found",
@@ -216,6 +218,13 @@ export const translations: Translations = {
     'extract.field': 'Field',
     'extract.value': 'Value',
     'extract.success': 'All done! Your data is ready',
+    'extract.parse_button': 'Parse Document',
+    'extract.parsing': 'Parsing document...',
+    'extract.parsing_sub': 'This may take a moment for larger documents',
+    'extract.ready_to_parse': 'Ready to parse',
+    'extract.click_parse': 'Click "Parse Document" to extract content',
+    'extract.upload_prompt': 'Upload a document to see results',
+    'extract.drag_drop_hint': 'Drag and drop a file or click to browse',
 
     // Empty states
     'empty.no_history': 'No documents yet',
@@ -223,6 +232,7 @@ export const translations: Translations = {
     'empty.get_started': "Let's extract something",
 
     // Common
+    'common.back': 'Back',
     'common.upgrade': 'Upgrade Plan',
     'common.usage': 'Monthly Usage',
 
@@ -434,7 +444,9 @@ export const translations: Translations = {
 
     // Extraction
     'extract.upload_title': 'วางเอกสารของคุณที่นี่',
-    'extract.upload_desc': 'PDF, JPG หรือ PNG - เราจัดการได้ทั้งหมด',
+    'extract.upload_desc': 'เอกสาร, รูปภาพ, สเปรดชีต, เสียง - เราแยกวิเคราะห์ได้ทั้งหมด',
+    'extract.upload_formats': 'PDF, DOCX, PPTX, XLSX, CSV, JPG, PNG, GIF, MP3, WAV และอื่นๆ',
+    'extract.upload_size_limit': 'ไฟล์ส่วนใหญ่สูงสุด 10MB, ไฟล์เสียงสูงสุด 20MB',
     'extract.processing': 'กำลังดึงข้อมูล...',
     'extract.processing_sub': 'ปกติใช้เวลาไม่กี่วินาที',
     'extract.results': 'นี่คือข้อมูลที่เราพบ',
@@ -443,6 +455,13 @@ export const translations: Translations = {
     'extract.field': 'ฟิลด์',
     'extract.value': 'ค่า',
     'extract.success': 'เสร็จแล้ว! ข้อมูลพร้อมใช้งาน',
+    'extract.parse_button': 'แยกวิเคราะห์เอกสาร',
+    'extract.parsing': 'กำลังแยกวิเคราะห์เอกสาร...',
+    'extract.parsing_sub': 'อาจใช้เวลาสักครู่สำหรับเอกสารขนาดใหญ่',
+    'extract.ready_to_parse': 'พร้อมแยกวิเคราะห์',
+    'extract.click_parse': 'คลิก "แยกวิเคราะห์เอกสาร" เพื่อดึงเนื้อหา',
+    'extract.upload_prompt': 'อัปโหลดเอกสารเพื่อดูผลลัพธ์',
+    'extract.drag_drop_hint': 'ลากและวางไฟล์หรือคลิกเพื่อเลือก',
 
     // Empty states
     'empty.no_history': 'ยังไม่มีเอกสาร',
@@ -450,6 +469,7 @@ export const translations: Translations = {
     'empty.get_started': 'เริ่มดึงข้อมูลกันเถอะ',
 
     // Common
+    'common.back': 'ย้อนกลับ',
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
 

@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UploadCloud, FileText, Loader2, Download, ArrowLeft } from "lucide-react";
+import { UploadCloud, FileText, Loader2, Download, ArrowLeft, Play, X } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { getTemplateById } from "@/lib/templates";
@@ -16,8 +16,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { processExtraction, saveExtraction } from "@/lib/api";
+import { 
+  processExtraction, 
+  processGeneralExtraction, 
+  saveExtraction,
+  type GeneralExtractionResponse 
+} from "@/lib/api";
 import { toast } from "sonner";
+import { DocumentPreview } from "@/components/DocumentPreview";
+import { MarkdownViewer } from "@/components/MarkdownViewer";
 
 interface ExtractedField {
   key: string;
@@ -30,24 +37,41 @@ export default function Extraction() {
   const { type } = useParams();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [results, setResults] = useState<ExtractedField[] | null>(null);
+  
+  // Template-based extraction results (key-value pairs)
+  const [templateResults, setTemplateResults] = useState<ExtractedField[] | null>(null);
+  
+  // General extraction results (markdown-based from LlamaParse)
+  const [generalResults, setGeneralResults] = useState<GeneralExtractionResponse | null>(null);
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  // Check if this is a general extraction
+  const isGeneralExtraction = !type || type === 'general';
+
+  // Handle file drop - just store file for preview (two-phase UX)
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     setFile(uploadedFile);
-    setIsProcessing(true);
-    setResults(null);
+    // Clear any previous results
+    setTemplateResults(null);
+    setGeneralResults(null);
+    
+    // For template-based extraction, auto-process on drop (existing behavior)
+    if (!isGeneralExtraction) {
+      handleTemplateExtraction(uploadedFile);
+    }
+  }, [isGeneralExtraction]);
 
+  // Handle template-based extraction (auto on drop)
+  const handleTemplateExtraction = async (uploadedFile: File) => {
+    setIsProcessing(true);
     try {
-      // Call real API to process extraction
       const response = await processExtraction({
         fileName: uploadedFile.name,
         documentType: type || 'general',
       });
 
-      setResults(response.results);
+      setTemplateResults(response.results);
 
-      // Save extraction to database
       await saveExtraction({
         fileName: uploadedFile.name,
         fileSize: uploadedFile.size,
@@ -60,36 +84,95 @@ export default function Extraction() {
       toast.success('Document extracted successfully!');
     } catch (error: any) {
       toast.error(error.message || 'Extraction failed');
-      setResults(null);
+      setTemplateResults(null);
     } finally {
       setIsProcessing(false);
     }
-  }, [type]);
+  };
+
+  // Handle general extraction with LlamaParse (on button click)
+  const handleParseDocument = async () => {
+    if (!file) return;
+    
+    setIsProcessing(true);
+    setGeneralResults(null);
+
+    try {
+      const response = await processGeneralExtraction(file);
+      setGeneralResults(response);
+
+      await saveExtraction({
+        fileName: file.name,
+        fileSize: file.size,
+        documentType: 'general',
+        pagesProcessed: response.pageCount,
+        extractedData: { 
+          markdown: response.markdown, 
+          text: response.text,
+          pages: response.pages 
+        },
+        status: 'completed',
+      });
+
+      toast.success(`Document parsed successfully! ${response.pageCount} page(s) processed.`);
+    } catch (error: any) {
+      toast.error(error.message || 'Extraction failed');
+      setGeneralResults(null);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle removing the file
+  const handleRemoveFile = () => {
+    setFile(null);
+    setTemplateResults(null);
+    setGeneralResults(null);
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg']
-    },
+    accept: isGeneralExtraction 
+      ? {
+          'application/pdf': ['.pdf'],
+          'image/png': ['.png'],
+          'image/jpeg': ['.jpg', '.jpeg'],
+          'image/gif': ['.gif'],
+          'image/webp': ['.webp'],
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+          'application/msword': ['.doc'],
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+          'application/vnd.ms-excel': ['.xls'],
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+          'application/vnd.ms-powerpoint': ['.ppt'],
+          'text/plain': ['.txt'],
+          'text/csv': ['.csv'],
+        }
+      : {
+          'application/pdf': ['.pdf'],
+          'image/png': ['.png'],
+          'image/jpeg': ['.jpg', '.jpeg']
+        },
     maxFiles: 1
   });
 
   const handleValueChange = (index: number, newValue: string) => {
-    if (!results) return;
-    const newResults = [...results];
+    if (!templateResults) return;
+    const newResults = [...templateResults];
     newResults[index].value = newValue;
-    setResults(newResults);
+    setTemplateResults(newResults);
   };
+
+  const hasResults = isGeneralExtraction ? !!generalResults : !!templateResults;
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
+      {/* Header */}
       <div className="mb-4 flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t('common.back') || 'Back'}
           </Link>
         </Button>
         <div>
@@ -107,17 +190,31 @@ export default function Extraction() {
         </div>
       </div>
 
+      {/* Main Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
         {/* Left Panel: Upload/Preview */}
         <Card className="flex flex-col overflow-hidden h-full">
           <CardHeader className="border-b bg-muted/30 py-3">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <UploadCloud className="mr-2 h-4 w-4" />
-              {file ? file.name : t('extract.upload_title')}
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <span className="flex items-center">
+                <UploadCloud className="mr-2 h-4 w-4" />
+                {file ? file.name : t('extract.upload_title')}
+              </span>
+              {file && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                  onClick={handleRemoveFile}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 p-0 relative bg-muted/10">
+          <CardContent className="flex-1 p-0 relative bg-muted/10 overflow-hidden">
             {!file ? (
+              // Upload dropzone
               <div 
                 {...getRootProps()} 
                 className={cn(
@@ -133,29 +230,45 @@ export default function Extraction() {
                 <p className="text-sm text-muted-foreground text-center max-w-xs">
                   {t('extract.upload_desc')}
                 </p>
-                <p className="text-xs text-muted-foreground mt-4">PDF, JPG, PNG up to 10MB</p>
+                <p className="text-xs text-muted-foreground mt-4">
+                  {isGeneralExtraction 
+                    ? t('extract.upload_formats')
+                    : 'PDF, JPG, PNG'
+                  } • {t('extract.upload_size_limit')}
+                </p>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center p-8 relative">
-                {/* Mock Document Preview */}
-                <div className="w-full h-full bg-white shadow-sm p-8 border overflow-auto max-w-md mx-auto">
-                    <div className="space-y-4 opacity-50">
-                        <div className="h-8 bg-slate-200 w-1/3 mb-8"></div>
-                        <div className="h-4 bg-slate-200 w-full"></div>
-                        <div className="h-4 bg-slate-200 w-full"></div>
-                        <div className="h-4 bg-slate-200 w-2/3"></div>
-                        <div className="h-32 bg-slate-100 w-full mt-8 border"></div>
-                        <div className="flex justify-end mt-8">
-                             <div className="h-4 bg-slate-200 w-1/4"></div>
-                        </div>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                         <p className="text-slate-400 font-medium bg-white/80 px-4 py-2 rounded backdrop-blur-sm">Preview Mode</p>
-                    </div>
+              // Document preview with action buttons
+              <div className="h-full flex flex-col">
+                <div className="flex-1 p-4 min-h-0">
+                  <DocumentPreview file={file} className="h-full" />
                 </div>
-                <Button variant="destructive" size="sm" className="absolute top-4 right-4 z-10" onClick={() => setFile(null)}>
-                  Remove
-                </Button>
+                
+                {/* Action buttons for general extraction */}
+                {isGeneralExtraction && !generalResults && (
+                  <div className="border-t bg-muted/20 p-4 flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </div>
+                    <Button
+                      onClick={handleParseDocument}
+                      disabled={isProcessing}
+                      className="gap-2"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {t('extract.parsing') || 'Parsing...'}
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4" />
+                          {t('extract.parse_button') || 'Parse Document'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -167,27 +280,46 @@ export default function Extraction() {
             <CardTitle className="text-sm font-medium">
               {t('extract.results')}
             </CardTitle>
-            {results && (
+            {/* Template extraction download buttons */}
+            {!isGeneralExtraction && templateResults && (
               <div className="flex gap-2">
-                 <Button variant="outline" size="sm" className="h-8 text-xs">
-                   <Download className="mr-2 h-3 w-3" />
-                   JSON
-                 </Button>
-                 <Button variant="default" size="sm" className="h-8 text-xs">
-                   <Download className="mr-2 h-3 w-3" />
-                   Excel
-                 </Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs">
+                  <Download className="mr-2 h-3 w-3" />
+                  JSON
+                </Button>
+                <Button variant="default" size="sm" className="h-8 text-xs">
+                  <Download className="mr-2 h-3 w-3" />
+                  Excel
+                </Button>
               </div>
             )}
           </CardHeader>
-          <CardContent className="flex-1 p-0 overflow-auto">
-            {isProcessing ? (
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            {isProcessing && isGeneralExtraction ? (
+              // Loading state for general extraction
+              <div className="h-full flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="text-center">
+                  <p className="text-muted-foreground font-medium">
+                    {t('extract.parsing') || 'Parsing document with LlamaParse...'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('extract.parsing_sub') || 'This may take a moment for larger documents'}
+                  </p>
+                </div>
+              </div>
+            ) : isProcessing && !isGeneralExtraction ? (
+              // Loading state for template extraction
               <div className="h-full flex flex-col items-center justify-center space-y-4">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <p className="text-muted-foreground font-medium">{t('extract.processing')}</p>
               </div>
-            ) : results ? (
-              <div className="min-w-full inline-block align-middle">
+            ) : isGeneralExtraction && generalResults ? (
+              // Markdown results using MarkdownViewer
+              <MarkdownViewer data={generalResults} className="h-full" />
+            ) : templateResults ? (
+              // Table results for template-based extraction
+              <div className="min-w-full inline-block align-middle overflow-auto h-full">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -197,7 +329,7 @@ export default function Extraction() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {results.map((field, i) => (
+                    {templateResults.map((field, i) => (
                       <TableRow key={i}>
                         <TableCell className="font-medium text-muted-foreground text-xs uppercase tracking-wider align-middle">
                           {field.key}
@@ -225,11 +357,23 @@ export default function Extraction() {
                 </Table>
               </div>
             ) : (
+              // Empty state
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
                 <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
                   <FileText className="h-6 w-6 text-muted-foreground/50" />
                 </div>
-                <p>Upload a document to see extracted data here</p>
+                <p className="font-medium">
+                  {file && isGeneralExtraction 
+                    ? (t('extract.ready_to_parse') || 'Ready to parse')
+                    : (t('extract.upload_prompt') || 'Upload a document to see results')
+                  }
+                </p>
+                <p className="text-sm mt-1">
+                  {file && isGeneralExtraction 
+                    ? (t('extract.click_parse') || 'Click "Parse Document" to extract content')
+                    : (t('extract.drag_drop_hint') || 'Drag and drop a file or click to browse')
+                  }
+                </p>
               </div>
             )}
           </CardContent>
@@ -237,44 +381,4 @@ export default function Extraction() {
       </div>
     </div>
   );
-}
-
-function generateMockResults(type: string): ExtractedField[] {
-  const common = [
-    { key: 'document_date', value: '27 Nov 2023', confidence: 0.98 },
-    { key: 'document_id', value: 'INV-2023-001', confidence: 0.95 },
-  ];
-
-  if (type === 'bank') {
-    return [
-      { key: 'bank_name', value: 'Siam Commercial Bank', confidence: 0.99 },
-      { key: 'account_number', value: '123-4-56789-0', confidence: 0.97 },
-      { key: 'account_holder', value: 'Somchai Jai-dee', confidence: 0.92 },
-      { key: 'statement_period', value: '01 Oct 2023 - 31 Oct 2023', confidence: 0.94 },
-      { key: 'opening_balance', value: '50,000.00 THB', confidence: 0.96 },
-      { key: 'closing_balance', value: '45,200.00 THB', confidence: 0.96 },
-    ];
-  }
-
-  if (type === 'invoice') {
-    return [
-      ...common,
-      { key: 'vendor_name', value: 'Tech Solutions Co., Ltd.', confidence: 0.99 },
-      { key: 'vendor_tax_id', value: '0105551234567', confidence: 0.98 },
-      { key: 'customer_name', value: 'Acme Corp', confidence: 0.95 },
-      { key: 'total_amount', value: '15,000.00 THB', confidence: 0.99 },
-      { key: 'vat_amount', value: '1,050.00 THB', confidence: 0.97 },
-      { key: 'grand_total', value: '16,050.00 THB', confidence: 0.99 },
-    ];
-  }
-
-  // Default General
-  return [
-    ...common,
-    { key: 'company_name', value: 'Tech Solutions Co., Ltd.', confidence: 0.91 },
-    { key: 'address', value: '123 Silom Road, Bangrak, Bangkok 10500', confidence: 0.88 },
-    { key: 'email', value: 'contact@techsolutions.co.th', confidence: 0.95 },
-    { key: 'phone', value: '02-123-4567', confidence: 0.96 },
-    { key: 'total_amount', value: '16,050.00', confidence: 0.92 },
-  ];
 }

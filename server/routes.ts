@@ -1,11 +1,42 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
 import { insertExtractionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
+import { createLlamaParseService, LlamaParseError } from "./llamaParse";
+
+// Configure multer for memory storage (files stored in buffer)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept common document formats
+    const allowedMimes = [
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.ms-powerpoint",
+      "text/plain",
+      "text/html",
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
@@ -190,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mock extraction processor endpoint
+  // Mock extraction processor endpoint (used for template-based extractions)
   app.post("/api/extract/process", isAuthenticated, async (req: any, res: Response) => {
     try {
       const { documentType } = req.body;
@@ -205,6 +236,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+
+  // General extraction endpoint using LlamaParse
+  // This is specifically for the "New Extraction" feature (type='general')
+  app.post(
+    "/api/extract/general",
+    isAuthenticated,
+    upload.single("file"),
+    async (req: any, res: Response) => {
+      const userId = req.user?.claims?.sub;
+
+      try {
+        // Validate file was uploaded
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const { buffer, originalname, size, mimetype } = req.file;
+
+        // Check user's monthly limit before processing
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        // Parse the document using LlamaParse
+        const llamaParseService = createLlamaParseService();
+        const parsedDocument = await llamaParseService.parseDocument(
+          buffer,
+          originalname
+        );
+
+        // Check if parsing would exceed monthly limit
+        const newUsage = user.monthlyUsage + parsedDocument.pageCount;
+        if (newUsage > user.monthlyLimit) {
+          return res.status(403).json({
+            message: "Monthly page limit exceeded",
+            usage: user.monthlyUsage,
+            limit: user.monthlyLimit,
+            pagesRequired: parsedDocument.pageCount,
+          });
+        }
+
+        // Return the parsed document
+        res.json({
+          success: true,
+          markdown: parsedDocument.markdown,
+          text: parsedDocument.text,
+          pageCount: parsedDocument.pageCount,
+          pages: parsedDocument.pages,
+          fileName: originalname,
+          fileSize: size,
+          mimeType: mimetype,
+        });
+      } catch (error: any) {
+        console.error("[General Extraction] Error:", error);
+
+        if (error instanceof LlamaParseError) {
+          return res.status(error.statusCode || 500).json({
+            message: error.message,
+            type: "LlamaParseError",
+          });
+        }
+
+        res.status(500).json({ message: error.message || "Extraction failed" });
+      }
+    }
+  );
 
   const httpServer = createServer(app);
   return httpServer;

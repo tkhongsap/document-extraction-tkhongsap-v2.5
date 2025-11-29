@@ -67,6 +67,48 @@ export async function processExtraction(data: ProcessExtractionRequest): Promise
   return res.json();
 }
 
+// General Extraction API (LlamaParse-based parsing for "New Extraction" feature)
+export interface GeneralExtractionPage {
+  pageNumber: number;
+  markdown: string;
+  text: string;
+}
+
+export interface GeneralExtractionResponse {
+  success: boolean;
+  markdown: string;
+  text: string;
+  pageCount: number;
+  pages: GeneralExtractionPage[];
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+/**
+ * Process a document using LlamaParse for general extraction.
+ * This is specifically for the "New Extraction" (general) feature.
+ * @param file - The file to process
+ * @returns Parsed document with markdown content
+ */
+export async function processGeneralExtraction(file: File): Promise<GeneralExtractionResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("/api/extract/general", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "General extraction failed");
+  }
+
+  return res.json();
+}
+
 export interface SaveExtractionRequest {
   fileName: string;
   fileSize: number;

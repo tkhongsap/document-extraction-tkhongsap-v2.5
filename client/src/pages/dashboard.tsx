@@ -103,7 +103,7 @@ export default function Dashboard() {
                   {t('extract.upload_title')}
                 </p>
                 <p className="text-xs text-muted-foreground/70">
-                  {t('extract.upload_desc')}
+                  {t('extract.upload_formats')}
                 </p>
               </motion.div>
             </Link>
