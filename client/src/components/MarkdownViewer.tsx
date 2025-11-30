@@ -44,6 +44,8 @@ export function MarkdownViewer({ data, className }: MarkdownViewerProps) {
             pages: data.pages,
             markdown: data.markdown,
             text: data.text,
+            overallConfidence: data.overallConfidence,
+            confidenceStats: data.confidenceStats,
           },
           null,
           2
@@ -225,9 +227,36 @@ export function MarkdownViewer({ data, className }: MarkdownViewerProps) {
 
       {/* Footer with page info and download options */}
       <div className="flex items-center justify-between border-t px-4 py-2 bg-muted/20">
-        <span className="text-xs text-muted-foreground">
-          {data.pageCount} page{data.pageCount !== 1 ? "s" : ""} • {data.fileName}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {data.pageCount} page{data.pageCount !== 1 ? "s" : ""} • {data.fileName}
+          </span>
+          {/* Confidence score display */}
+          {data.overallConfidence !== undefined ? (
+            <span 
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-help",
+                data.overallConfidence >= 0.9 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                data.overallConfidence >= 0.7 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+              )}
+              title={
+                data.confidenceStats 
+                  ? `Extraction Confidence: ${Math.round(data.overallConfidence * 100)}% (Range: ${Math.round(data.confidenceStats.min * 100)}% - ${Math.round(data.confidenceStats.max * 100)}%)`
+                  : `Extraction Confidence: ${Math.round(data.overallConfidence * 100)}%`
+              }
+            >
+              {Math.round(data.overallConfidence * 100)}% confidence
+            </span>
+          ) : (
+            <span 
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground cursor-help"
+              title="Confidence data unavailable for this document"
+            >
+              Confidence unavailable
+            </span>
+          )}
+        </div>
         <div className="flex gap-1">
           <Button
             variant="outline"
