@@ -35,33 +35,50 @@ export async function getCurrentUser(): Promise<{ user: User }> {
   return res.json();
 }
 
-// Extraction API
-export interface ProcessExtractionRequest {
-  fileName: string;
-  documentType: string;
+// Template Extraction API (LlamaExtract-based for Bank, Invoice, PO, Contract)
+export type DocumentType = "bank" | "invoice" | "po" | "contract";
+
+export interface ExtractedField {
+  key: string;
+  value: string;
+  confidence: number;
 }
 
-export interface ProcessExtractionResponse {
+export interface TemplateExtractionResponse {
   success: boolean;
-  results: Array<{
-    key: string;
-    value: string;
-    confidence: number;
-  }>;
+  headerFields: ExtractedField[];
+  lineItems?: Array<Record<string, unknown>>;
+  extractedData: Record<string, unknown>;
   pagesProcessed: number;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
 }
 
-export async function processExtraction(data: ProcessExtractionRequest): Promise<ProcessExtractionResponse> {
+/**
+ * Process a document using LlamaExtract for template-based extraction.
+ * Used for Bank Statement, Invoice, Purchase Order, and Contract templates.
+ * @param file - The file to process
+ * @param documentType - The type of document (bank, invoice, po, contract)
+ * @returns Extracted structured data with header fields and line items
+ */
+export async function processTemplateExtraction(
+  file: File,
+  documentType: DocumentType
+): Promise<TemplateExtractionResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("documentType", documentType);
+
   const res = await fetch("/api/extract/process", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(data),
+    body: formData,
   });
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.message || "Extraction failed");
+    throw new Error(error.message || "Template extraction failed");
   }
 
   return res.json();
