@@ -1,0 +1,50 @@
+Add Agentic Preset Configuration to LlamaParse SDK
+Overview
+Currently, the LlamaParse SDK doesn't send any preset configuration parameters to the API, relying on defaults. We need to explicitly configure the Agentic preset with all required parameters.
+
+Implementation Plan
+1. Add Parsing Configuration Interface
+Create a LlamaParseConfig interface in server/llamaParse.ts with optional fields:
+parseMode: "parse_page_with_llm" | "parse_page_with_agent"
+model: string (e.g., "openai-gpt-4-1-mini")
+highResOcr: boolean
+adaptiveLongTable: boolean
+outlinedTableExtraction: boolean
+outputTablesAsHtml: boolean
+Create a helper function to get default Agentic preset configuration
+2. Update LlamaParseService Class
+Add a private config property to store parsing configuration
+Update constructor to accept optional LlamaParseConfig parameter
+Set default configuration to Agentic preset values:
+parseMode: "parse_page_with_agent"
+model: "openai-gpt-4-1-mini"
+highResOcr: true
+adaptiveLongTable: true
+outlinedTableExtraction: true
+outputTablesAsHtml: true
+3. Update uploadFile Method
+Modify uploadFile() in server/llamaParse.ts to append all configuration parameters to FormData:
+parse_mode (from config.parseMode)
+model (from config.model, only if parseMode is "parse_page_with_agent")
+high_res_ocr (from config.highResOcr as string "true"/"false")
+adaptive_long_table (from config.adaptiveLongTable as string)
+outlined_table_extraction (from config.outlinedTableExtraction as string)
+output_tables_as_HTML (from config.outputTablesAsHtml as string)
+4. Update Factory Function (Optional)
+Keep createLlamaParseService() simple - it will use default Agentic preset
+If needed in future, allow passing config: createLlamaParseService(config?)
+Files to Modify
+server/llamaParse.ts
+Add LlamaParseConfig interface
+Add getDefaultAgenticConfig() helper function
+Update LlamaParseService class constructor
+Update uploadFile() method to include form parameters
+Testing Considerations
+Verify that all form parameters are correctly sent to the API
+Ensure boolean values are converted to "true"/"false" strings as required by the API
+Confirm that the model parameter is only sent when using agent mode
+Test that default configuration works without requiring explicit config
+Notes
+The implementation will default to Agentic preset, matching the user's requirement
+Configuration is flexible for future changes (e.g., switching to Agentic Plus or Cost-effective)
+No changes needed to server/routes.ts as it already uses the factory function correctly
