@@ -8,6 +8,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { createLlamaParseService, LlamaParseError } from "./llamaParse";
+import { createLlamaExtractService, LlamaExtractError } from "./llamaExtract";
+import type { DocumentType } from "./extractionSchemas";
 
 // Configure multer for memory storage (files stored in buffer)
 const upload = multer({
@@ -221,21 +223,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mock extraction processor endpoint (used for template-based extractions)
-  app.post("/api/extract/process", isAuthenticated, async (req: any, res: Response) => {
-    try {
-      const { documentType } = req.body;
-      const mockResults = generateMockExtraction(documentType || 'general');
+  // Template-based extraction endpoint using LlamaExtract
+  // Used for Bank Statement, Invoice, Purchase Order, and Contract templates
+  app.post(
+    "/api/extract/process",
+    isAuthenticated,
+    upload.single("file"),
+    async (req: any, res: Response) => {
+      const userId = req.user?.claims?.sub;
 
-      res.json({
-        success: true,
-        results: mockResults,
-        pagesProcessed: 1,
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      try {
+        // Validate file was uploaded
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const { buffer, originalname, size, mimetype } = req.file;
+        const documentType = req.body.documentType as DocumentType;
+
+        // Validate document type
+        const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract"];
+        if (!documentType || !validTypes.includes(documentType)) {
+          return res.status(400).json({
+            message: `Invalid document type. Must be one of: ${validTypes.join(", ")}`,
+          });
+        }
+
+        // Check user's monthly limit before processing
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check if extraction would exceed monthly limit (1 page per extraction)
+        const newUsage = user.monthlyUsage + 1;
+        if (newUsage > user.monthlyLimit) {
+          return res.status(403).json({
+            message: "Monthly page limit exceeded",
+            usage: user.monthlyUsage,
+            limit: user.monthlyLimit,
+          });
+        }
+
+        // Extract structured data using LlamaExtract
+        const llamaExtractService = createLlamaExtractService();
+        const extractionResult = await llamaExtractService.extractDocument(
+          buffer,
+          originalname,
+          documentType
+        );
+
+        // Return the extraction result
+        res.json({
+          success: extractionResult.success,
+          headerFields: extractionResult.headerFields,
+          lineItems: extractionResult.lineItems,
+          extractedData: extractionResult.extractedData,
+          pagesProcessed: extractionResult.pagesProcessed,
+          fileName: originalname,
+          fileSize: size,
+          mimeType: mimetype,
+        });
+      } catch (error: any) {
+        console.error("[Template Extraction] Error:", error);
+
+        if (error instanceof LlamaExtractError) {
+          return res.status(error.statusCode || 500).json({
+            message: error.message,
+            type: "LlamaExtractError",
+          });
+        }
+
+        res.status(500).json({ message: error.message || "Extraction failed" });
+      }
     }
-  });
+  );
 
   // General extraction endpoint using LlamaParse
   // This is specifically for the "New Extraction" feature (type='general')
@@ -308,43 +370,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   return httpServer;
-}
-
-function generateMockExtraction(type: string) {
-  const common = [
-    { key: 'document_date', value: '27 Nov 2023', confidence: 0.98 },
-    { key: 'document_id', value: 'INV-2023-001', confidence: 0.95 },
-  ];
-
-  if (type === 'bank') {
-    return [
-      { key: 'bank_name', value: 'Siam Commercial Bank', confidence: 0.99 },
-      { key: 'account_number', value: '123-4-56789-0', confidence: 0.97 },
-      { key: 'account_holder', value: 'Somchai Jai-dee', confidence: 0.92 },
-      { key: 'statement_period', value: '01 Oct 2023 - 31 Oct 2023', confidence: 0.94 },
-      { key: 'opening_balance', value: '50,000.00 THB', confidence: 0.96 },
-      { key: 'closing_balance', value: '45,200.00 THB', confidence: 0.96 },
-    ];
-  }
-
-  if (type === 'invoice') {
-    return [
-      ...common,
-      { key: 'vendor_name', value: 'Tech Solutions Co., Ltd.', confidence: 0.99 },
-      { key: 'vendor_tax_id', value: '0105551234567', confidence: 0.98 },
-      { key: 'customer_name', value: 'Acme Corp', confidence: 0.95 },
-      { key: 'total_amount', value: '15,000.00 THB', confidence: 0.99 },
-      { key: 'vat_amount', value: '1,050.00 THB', confidence: 0.97 },
-      { key: 'grand_total', value: '16,050.00 THB', confidence: 0.99 },
-    ];
-  }
-
-  return [
-    ...common,
-    { key: 'company_name', value: 'Tech Solutions Co., Ltd.', confidence: 0.91 },
-    { key: 'address', value: '123 Silom Road, Bangrak, Bangkok 10500', confidence: 0.88 },
-    { key: 'email', value: 'contact@techsolutions.co.th', confidence: 0.95 },
-    { key: 'phone', value: '02-123-4567', confidence: 0.96 },
-    { key: 'total_amount', value: '16,050.00', confidence: 0.92 },
-  ];
 }

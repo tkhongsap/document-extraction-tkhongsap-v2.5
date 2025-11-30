@@ -4,34 +4,22 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { UploadCloud, FileText, Loader2, Download, ArrowLeft, Play, X } from "lucide-react";
+import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { getTemplateById } from "@/lib/templates";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { 
-  processExtraction, 
+  processTemplateExtraction, 
   processGeneralExtraction, 
   saveExtraction,
-  type GeneralExtractionResponse 
+  type GeneralExtractionResponse,
+  type TemplateExtractionResponse,
+  type DocumentType,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
-
-interface ExtractedField {
-  key: string;
-  value: string;
-  confidence: number;
-}
+import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 
 export default function Extraction() {
   const { t } = useLanguage();
@@ -39,8 +27,8 @@ export default function Extraction() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Template-based extraction results (key-value pairs)
-  const [templateResults, setTemplateResults] = useState<ExtractedField[] | null>(null);
+  // Template-based extraction results (structured data from LlamaExtract)
+  const [templateResults, setTemplateResults] = useState<TemplateExtractionResponse | null>(null);
   
   // General extraction results (markdown-based from LlamaParse)
   const [generalResults, setGeneralResults] = useState<GeneralExtractionResponse | null>(null);
@@ -48,37 +36,40 @@ export default function Extraction() {
   // Check if this is a general extraction
   const isGeneralExtraction = !type || type === 'general';
 
-  // Handle file drop - just store file for preview (two-phase UX)
+  // Handle file drop - just store file for preview (two-phase UX for all types)
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     setFile(uploadedFile);
     // Clear any previous results
     setTemplateResults(null);
     setGeneralResults(null);
+    // Two-phase UX: don't auto-process, wait for user to click Extract button
+  }, []);
+
+  // Handle template-based extraction with LlamaExtract (on button click)
+  const handleTemplateExtraction = async () => {
+    if (!file || !type) return;
     
-    // For template-based extraction, auto-process on drop (existing behavior)
-    if (!isGeneralExtraction) {
-      handleTemplateExtraction(uploadedFile);
+    // Validate document type
+    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract"];
+    if (!validTypes.includes(type as DocumentType)) {
+      toast.error("Invalid document type");
+      return;
     }
-  }, [isGeneralExtraction]);
 
-  // Handle template-based extraction (auto on drop)
-  const handleTemplateExtraction = async (uploadedFile: File) => {
     setIsProcessing(true);
-    try {
-      const response = await processExtraction({
-        fileName: uploadedFile.name,
-        documentType: type || 'general',
-      });
+    setTemplateResults(null);
 
-      setTemplateResults(response.results);
+    try {
+      const response = await processTemplateExtraction(file, type as DocumentType);
+      setTemplateResults(response);
 
       await saveExtraction({
-        fileName: uploadedFile.name,
-        fileSize: uploadedFile.size,
-        documentType: type || 'general',
+        fileName: file.name,
+        fileSize: file.size,
+        documentType: type,
         pagesProcessed: response.pagesProcessed,
-        extractedData: response.results,
+        extractedData: response.extractedData,
         status: 'completed',
       });
 
@@ -157,11 +148,12 @@ export default function Extraction() {
     maxFiles: 1
   });
 
-  const handleValueChange = (index: number, newValue: string) => {
+  // Handle field value changes for template results
+  const handleFieldChange = (index: number, newValue: string) => {
     if (!templateResults) return;
-    const newResults = [...templateResults];
-    newResults[index].value = newValue;
-    setTemplateResults(newResults);
+    const newHeaderFields = [...templateResults.headerFields];
+    newHeaderFields[index] = { ...newHeaderFields[index], value: newValue };
+    setTemplateResults({ ...templateResults, headerFields: newHeaderFields });
   };
 
   const hasResults = isGeneralExtraction ? !!generalResults : !!templateResults;
@@ -246,26 +238,32 @@ export default function Extraction() {
                   <DocumentPreview file={file} className="h-full" />
                 </div>
                 
-                {/* Action buttons for general extraction */}
-                {isGeneralExtraction && !generalResults && (
+                {/* Action buttons - show for both general and template extraction (two-phase UX) */}
+                {!hasResults && (
                   <div className="border-t bg-muted/20 p-4 flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">
                       {(file.size / 1024).toFixed(1)} KB
                     </div>
                     <Button
-                      onClick={handleParseDocument}
+                      onClick={isGeneralExtraction ? handleParseDocument : handleTemplateExtraction}
                       disabled={isProcessing}
                       className="gap-2"
                     >
                       {isProcessing ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          {t('extract.parsing') || 'Parsing...'}
+                          {isGeneralExtraction 
+                            ? (t('extract.parsing') || 'Parsing...')
+                            : (t('extract.extracting') || 'Extracting...')
+                          }
                         </>
                       ) : (
                         <>
                           <Play className="h-4 w-4" />
-                          {t('extract.parse_button') || 'Parse Document'}
+                          {isGeneralExtraction 
+                            ? (t('extract.parse_button') || 'Parse Document')
+                            : (t('extract.extract_button') || 'Extract Data')
+                          }
                         </>
                       )}
                     </Button>
@@ -318,19 +316,6 @@ export default function Extraction() {
                 )
               )}
             </div>
-            {/* Template extraction download buttons */}
-            {!isGeneralExtraction && templateResults && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="h-8 text-xs">
-                  <Download className="mr-2 h-3 w-3" />
-                  JSON
-                </Button>
-                <Button variant="default" size="sm" className="h-8 text-xs">
-                  <Download className="mr-2 h-3 w-3" />
-                  Excel
-                </Button>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isGeneralExtraction ? (
@@ -356,44 +341,14 @@ export default function Extraction() {
               // Markdown results using MarkdownViewer
               <MarkdownViewer data={generalResults} className="h-full" />
             ) : templateResults ? (
-              // Table results for template-based extraction
-              <div className="min-w-full inline-block align-middle overflow-auto h-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[35%]">{t('extract.field')}</TableHead>
-                      <TableHead>{t('extract.value')}</TableHead>
-                      <TableHead className="w-[80px] text-right">{t('extract.confidence')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {templateResults.map((field, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium text-muted-foreground text-xs uppercase tracking-wider align-middle">
-                          {field.key}
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Input 
-                            value={field.value} 
-                            onChange={(e) => handleValueChange(i, e.target.value)}
-                            className="h-8 bg-transparent border-transparent hover:border-input focus:border-primary focus:bg-background transition-all"
-                          />
-                        </TableCell>
-                        <TableCell className="text-right align-middle">
-                          <span className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-help",
-                            field.confidence > 0.9 ? "bg-green-100 text-green-800" :
-                            field.confidence > 0.7 ? "bg-yellow-100 text-yellow-800" :
-                            "bg-red-100 text-red-800"
-                          )} title={`Confidence Score: ${field.confidence * 100}%`}>
-                            {Math.round(field.confidence * 100)}%
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              // Structured results for template-based extraction
+              <StructuredResultsViewer
+                headerFields={templateResults.headerFields}
+                lineItems={templateResults.lineItems}
+                documentType={type as DocumentType}
+                onFieldChange={handleFieldChange}
+                className="h-full"
+              />
             ) : (
               // Empty state
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
