@@ -6,7 +6,10 @@
       "WebFetch(domain:www.llamaindex.ai)",
       "Bash(tree:*)",
       "WebFetch(domain:developers.llamaindex.ai)",
-      "WebFetch(domain:docs.cloud.llamaindex.ai)"
+      "WebFetch(domain:docs.cloud.llamaindex.ai)",
+      "Bash(git -C /home/runner/workspace log --oneline -50)",
+      "Bash(git -C /home/runner/workspace log --format=\"%h %s\" -1 4a8e9f8)",
+      "Bash(git -C /home/runner/workspace log --format=\"%h %s\" -1 0a6bc82)"
     ],
     "deny": [],
     "ask": []
