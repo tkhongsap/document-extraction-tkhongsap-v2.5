@@ -208,8 +208,10 @@ export class LlamaExtractService {
         body: JSON.stringify({
           name,
           data_schema: schema,
-          extraction_mode: "MULTIMODAL",
-          extraction_target: "PER_DOC",
+          config: {
+            extraction_mode: "MULTIMODAL",
+            extraction_target: "PER_DOC",
+          },
         }),
       }
     );
@@ -217,10 +219,24 @@ export class LlamaExtractService {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[LlamaExtract] Failed to create agent: ${response.status} - ${errorText}`);
-      throw new LlamaExtractError(
-        `Failed to create extraction agent: ${errorText}`,
-        response.status
-      );
+      
+      // Try to parse error details for better error messages
+      let errorMessage = `Failed to create extraction agent`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.detail && Array.isArray(errorJson.detail) && errorJson.detail.length > 0) {
+          const firstError = errorJson.detail[0];
+          errorMessage = `${errorMessage}: ${firstError.msg || firstError.type || 'Unknown error'}`;
+        } else if (errorJson.message) {
+          errorMessage = `${errorMessage}: ${errorJson.message}`;
+        } else {
+          errorMessage = `${errorMessage}: ${errorText}`;
+        }
+      } catch {
+        errorMessage = `${errorMessage}: ${errorText}`;
+      }
+      
+      throw new LlamaExtractError(errorMessage, response.status);
     }
 
     return (await response.json()) as LlamaExtractAgentResponse;
