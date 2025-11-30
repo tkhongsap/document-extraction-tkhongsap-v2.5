@@ -244,7 +244,7 @@ export const translations: Translations = {
     'footer.security_pdpa': 'PDPA Compliant',
     'footer.security_autodelete': 'Auto-delete in 24hrs',
     'footer.security_soc2': 'SOC 2 Type II',
-    'footer.copyright': '© 2024 DocExtract. All rights reserved.',
+    'footer.copyright': '© 2025 DocExtract. All rights reserved.',
   },
   th: {
     // Navigation
@@ -481,7 +481,7 @@ export const translations: Translations = {
     'footer.security_pdpa': 'สอดคล้อง PDPA',
     'footer.security_autodelete': 'ลบอัตโนมัติภายใน 24 ชั่วโมง',
     'footer.security_soc2': 'SOC 2 Type II',
-    'footer.copyright': '© 2024 DocExtract สงวนลิขสิทธิ์',
+    'footer.copyright': '© 2025 DocExtract สงวนลิขสิทธิ์',
   }
 };
 

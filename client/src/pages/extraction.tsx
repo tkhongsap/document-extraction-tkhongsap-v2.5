@@ -194,7 +194,7 @@ export default function Extraction() {
       {/* Main Resizable Panels */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left Panel: Upload/Preview */}
-        <ResizablePanel defaultSize={50} minSize={30}>
+        <ResizablePanel defaultSize={35} minSize={30}>
           <Card className="flex flex-col overflow-hidden h-full">
           <CardHeader className="border-b bg-muted/30 py-3">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -283,7 +283,7 @@ export default function Extraction() {
         />
 
         {/* Right Panel: Results */}
-        <ResizablePanel defaultSize={50} minSize={30}>
+        <ResizablePanel defaultSize={65} minSize={30}>
           <Card className="flex flex-col overflow-hidden h-full">
           <CardHeader className="border-b bg-muted/30 py-3 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">
