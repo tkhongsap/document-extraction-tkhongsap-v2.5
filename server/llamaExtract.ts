@@ -5,8 +5,6 @@
  * Used for template-based extractions (Bank Statement, Invoice, PO, Contract).
  */
 
-import FormData from "form-data";
-import { Readable } from "stream";
 import { getSchemaForType, type DocumentType } from "./extractionSchemas";
 
 const LLAMA_EXTRACT_API_BASE = "https://api.cloud.llamaindex.ai/api/v1";
@@ -245,24 +243,47 @@ export class LlamaExtractService {
   }
 
   /**
+   * Get MIME type based on file extension
+   */
+  private getMimeType(fileName: string): string {
+    const ext = fileName.toLowerCase().split(".").pop();
+    const mimeTypes: Record<string, string> = {
+      pdf: "application/pdf",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ppt: "application/vnd.ms-powerpoint",
+      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      txt: "text/plain",
+      html: "text/html",
+    };
+    return mimeTypes[ext || ""] || "application/octet-stream";
+  }
+
+  /**
    * Upload a file to LlamaCloud
    */
   private async uploadFile(
     fileBuffer: Buffer,
     fileName: string
   ): Promise<string> {
+    // Use Node.js built-in FormData (available in Node 18+)
     const formData = new FormData();
-    const stream = Readable.from(fileBuffer);
-    formData.append("upload_file", stream, fileName);
+    const mimeType = this.getMimeType(fileName);
+    const blob = new Blob([fileBuffer], { type: mimeType });
+    formData.append("upload_file", blob, fileName);
 
     const response = await fetch(`${LLAMA_EXTRACT_API_BASE}/files`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         Accept: "application/json",
-        ...formData.getHeaders(),
       },
-      body: formData as any,
+      body: formData,
     });
 
     if (!response.ok) {
