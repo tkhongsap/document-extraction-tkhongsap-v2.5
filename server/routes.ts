@@ -288,6 +288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileName: originalname,
           fileSize: size,
           mimeType: mimetype,
+          overallConfidence: parsedDocument.overallConfidence,
+          confidenceStats: parsedDocument.confidenceStats,
         });
       } catch (error: any) {
         console.error("[General Extraction] Error:", error);

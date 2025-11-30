@@ -8,6 +8,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +44,8 @@ export function MarkdownViewer({ data, className }: MarkdownViewerProps) {
             pages: data.pages,
             markdown: data.markdown,
             text: data.text,
+            overallConfidence: data.overallConfidence,
+            confidenceStats: data.confidenceStats,
           },
           null,
           2
@@ -153,26 +156,59 @@ export function MarkdownViewer({ data, className }: MarkdownViewerProps) {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto">
         {activeTab === "markdown" && (
-          <div
-            className={cn(
-              "prose prose-sm max-w-none dark:prose-invert",
-              "prose-headings:font-semibold prose-headings:tracking-tight",
-              "prose-p:leading-relaxed",
-              "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
-              showHighlights && [
-                "prose-table:border prose-table:border-amber-200 dark:prose-table:border-amber-900",
-                "prose-th:bg-amber-50 dark:prose-th:bg-amber-950/50",
-                "prose-td:border prose-td:border-amber-100 dark:prose-td:border-amber-900/50",
-                "[&_table]:rounded-lg [&_table]:overflow-hidden",
-                "[&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2",
-              ]
-            )}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {data.markdown || "No content available"}
-            </ReactMarkdown>
+          <div className="h-full bg-background">
+            <div
+              className={cn(
+                "prose prose-base max-w-none dark:prose-invert",
+                "prose-headings:font-semibold prose-headings:tracking-tight",
+                "prose-headings:text-foreground",
+                "prose-h1:text-3xl prose-h1:mt-8 prose-h1:mb-6 prose-h1:pb-3 prose-h1:border-b prose-h1:border-border prose-h1:font-bold",
+                "prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:font-semibold",
+                "prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3 prose-h3:font-semibold",
+                "prose-h4:text-lg prose-h4:mt-5 prose-h4:mb-2 prose-h4:font-semibold",
+                "prose-p:leading-relaxed prose-p:my-5 prose-p:text-foreground prose-p:text-[15px]",
+                "prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium",
+                "prose-strong:text-foreground prose-strong:font-semibold",
+                "prose-em:text-foreground prose-em:italic",
+                "prose-code:text-sm prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none",
+                "prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:my-4",
+                "prose-pre:shadow-sm",
+                "prose-code:prose-pre:bg-transparent prose-code:prose-pre:p-0 prose-code:prose-pre:border-0",
+                "prose-ul:my-4 prose-ul:pl-6 prose-ul:list-disc prose-ul:marker:text-muted-foreground",
+                "prose-ol:my-4 prose-ol:pl-6 prose-ol:list-decimal prose-ol:marker:text-muted-foreground",
+                "prose-li:my-2 prose-li:leading-relaxed",
+                "prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:my-4 prose-blockquote:italic prose-blockquote:text-muted-foreground",
+                "prose-hr:border-border prose-hr:my-6",
+                // Default table styling (always applied)
+                "prose-table:w-full prose-table:border-collapse prose-table:my-6",
+                "[&_table]:border [&_table]:border-border [&_table]:rounded-lg [&_table]:overflow-hidden [&_table]:shadow-sm [&_table]:bg-background",
+                "[&_thead]:bg-muted/60",
+                "[&_th]:border-b [&_th]:border-border [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-[15px] [&_th]:text-foreground [&_th]:bg-muted/60",
+                "[&_td]:border-b [&_td]:border-border/50 [&_td]:px-5 [&_td]:py-3.5 [&_td]:text-[15px] [&_td]:text-foreground [&_td]:leading-relaxed",
+                "[&_tbody_tr:last-child_td]:border-b-0",
+                "[&_tbody_tr:hover]:bg-muted/40",
+                "[&_tbody_tr:nth-child(even)]:bg-muted/20",
+                // Highlights enhancement (optional)
+                showHighlights && [
+                  "[&_table]:border-amber-200 dark:[&_table]:border-amber-900/50",
+                  "[&_th]:bg-amber-50 dark:[&_th]:bg-amber-950/30",
+                  "[&_th]:border-amber-200 dark:[&_th]:border-amber-900/50",
+                  "[&_td]:border-amber-100 dark:[&_td]:border-amber-900/30",
+                  "[&_tbody_tr:hover]:bg-amber-50/50 dark:[&_tbody_tr:hover]:bg-amber-950/20",
+                ],
+                // Document container styling
+                "px-8 py-8 max-w-5xl mx-auto"
+              )}
+            >
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+              >
+                {data.markdown || "No content available"}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
 
@@ -191,9 +227,36 @@ export function MarkdownViewer({ data, className }: MarkdownViewerProps) {
 
       {/* Footer with page info and download options */}
       <div className="flex items-center justify-between border-t px-4 py-2 bg-muted/20">
-        <span className="text-xs text-muted-foreground">
-          {data.pageCount} page{data.pageCount !== 1 ? "s" : ""} • {data.fileName}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {data.pageCount} page{data.pageCount !== 1 ? "s" : ""} • {data.fileName}
+          </span>
+          {/* Confidence score display */}
+          {data.overallConfidence !== undefined ? (
+            <span 
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-help",
+                data.overallConfidence >= 0.9 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                data.overallConfidence >= 0.7 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+              )}
+              title={
+                data.confidenceStats 
+                  ? `Extraction Confidence: ${Math.round(data.overallConfidence * 100)}% (Range: ${Math.round(data.confidenceStats.min * 100)}% - ${Math.round(data.confidenceStats.max * 100)}%)`
+                  : `Extraction Confidence: ${Math.round(data.overallConfidence * 100)}%`
+              }
+            >
+              {Math.round(data.overallConfidence * 100)}% confidence
+            </span>
+          ) : (
+            <span 
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground cursor-help"
+              title="Confidence data unavailable for this document"
+            >
+              Confidence unavailable
+            </span>
+          )}
+        </div>
         <div className="flex gap-1">
           <Button
             variant="outline"
