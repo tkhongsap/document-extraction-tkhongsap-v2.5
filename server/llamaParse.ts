@@ -49,6 +49,39 @@ export interface ParsedDocument {
   }>;
 }
 
+/**
+ * Configuration for LlamaParse parsing options
+ */
+export interface LlamaParseConfig {
+  parseMode: "parse_page_with_llm" | "parse_page_with_agent";
+  model: string; // Required when parseMode is "parse_page_with_agent"
+  highResOcr: boolean;
+  adaptiveLongTable: boolean;
+  outlinedTableExtraction: boolean;
+  outputTablesAsHtml: boolean;
+}
+
+/**
+ * Convert boolean to "true" or "false" string for form data
+ */
+function booleanToString(value: boolean): "true" | "false" {
+  return value ? "true" : "false";
+}
+
+/**
+ * Get default Agentic preset configuration
+ */
+function getDefaultAgenticConfig(): LlamaParseConfig {
+  return {
+    parseMode: "parse_page_with_agent",
+    model: "openai-gpt-4-1-mini",
+    highResOcr: true,
+    adaptiveLongTable: true,
+    outlinedTableExtraction: true,
+    outputTablesAsHtml: true,
+  };
+}
+
 export class LlamaParseError extends Error {
   constructor(
     message: string,
@@ -66,8 +99,9 @@ export class LlamaParseService {
   private apiKey: string;
   private maxRetries: number;
   private pollIntervalMs: number;
+  private config: LlamaParseConfig;
 
-  constructor() {
+  constructor(config?: LlamaParseConfig) {
     const apiKey = process.env.LLAMA_CLOUD_API_KEY;
     if (!apiKey) {
       throw new LlamaParseError(
@@ -78,8 +112,19 @@ export class LlamaParseService {
     this.maxRetries = 60; // Max 60 retries (5 minutes with 5s interval)
     this.pollIntervalMs = 5000; // Poll every 5 seconds
     
+    // Set configuration - use provided config or default to Agentic preset
+    this.config = config || getDefaultAgenticConfig();
+    
+    // Validate configuration: if agent mode is selected, model must be provided
+    if (this.config.parseMode === "parse_page_with_agent" && !this.config.model) {
+      throw new LlamaParseError(
+        "Model is required when using parse_page_with_agent mode"
+      );
+    }
+    
     // Log API key status (first 10 chars only for security)
     console.log(`[LlamaParse] API key configured: ${apiKey.substring(0, 10)}...`);
+    console.log(`[LlamaParse] Using parse mode: ${this.config.parseMode}`);
   }
 
   /**
@@ -118,6 +163,25 @@ export class LlamaParseService {
     const formData = new FormData();
     const blob = new Blob([fileBuffer], { type: this.getMimeType(fileName) });
     formData.append("file", blob, fileName);
+
+    // Add parsing configuration parameters
+    formData.append("parse_mode", this.config.parseMode);
+    
+    // Model parameter is only required/sent when using agent mode
+    if (this.config.parseMode === "parse_page_with_agent") {
+      if (!this.config.model) {
+        throw new LlamaParseError(
+          "Model is required when using parse_page_with_agent mode"
+        );
+      }
+      formData.append("model", this.config.model);
+    }
+    
+    // Convert boolean values to "true"/"false" strings as required by API
+    formData.append("high_res_ocr", booleanToString(this.config.highResOcr));
+    formData.append("adaptive_long_table", booleanToString(this.config.adaptiveLongTable));
+    formData.append("outlined_table_extraction", booleanToString(this.config.outlinedTableExtraction));
+    formData.append("output_tables_as_HTML", booleanToString(this.config.outputTablesAsHtml));
 
     const response = await fetch(`${LLAMA_PARSE_API_BASE}/upload`, {
       method: "POST",
