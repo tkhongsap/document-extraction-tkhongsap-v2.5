@@ -1,0 +1,43 @@
+LlamaExtract] API key configured: llx-4aQe9i...
+[LlamaExtract] Starting extraction for sample-invoice-01.pdf with type: bank
+[LlamaExtract] Found existing agent: 4f30c036-f1c7-4c89-a763-de11378f2c0e
+[LlamaExtract] Using agent: 4f30c036-f1c7-4c89-a763-de11378f2c0e
+[LlamaExtract] File upload failed: 400 - {"detail":"There was an error parsing the body"}
+[Template Extraction] Error: LlamaExtractError: Failed to upload file: {"detail":"There was an error parsing the body"}
+    at LlamaExtractService.uploadFile (/home/runner/workspace/server/llamaExtract.ts:269:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async LlamaExtractService.extractDocument (/home/runner/workspace/server/llamaExtract.ts:110:20)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:270:34) {
+  statusCode: 400,
+  errorCode: undefined
+}
+9:55:09 AM [express] POST /api/extract/process 400 in 2013ms :: {"message":"Failed to upload file: {\"detail\":\"There was an error parsing the body\"}","type":"LlamaExtractError"}
+[LlamaExtract] API key configured: llx-4aQe9i...
+[LlamaExtract] Starting extraction for sample-invoice-01.pdf with type: bank
+[LlamaExtract] Found existing agent: 4f30c036-f1c7-4c89-a763-de11378f2c0e
+[LlamaExtract] Using agent: 4f30c036-f1c7-4c89-a763-de11378f2c0e
+[LlamaExtract] File upload failed: 400 - {"detail":"There was an error parsing the body"}
+[Template Extraction] Error: LlamaExtractError: Failed to upload file: {"detail":"There was an error parsing the body"}
+    at LlamaExtractService.uploadFile (/home/runner/workspace/server/llamaExtract.ts:269:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async LlamaExtractService.extractDocument (/home/runner/workspace/server/llamaExtract.ts:110:20)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:270:34) {
+  statusCode: 400,
+  errorCode: undefined
+}
+9:55:16 AM [express] POST /api/extract/process 400 in 871ms :: {"message":"Failed to upload file: {\"detail\":\"There was an error parsing the body\"}","type":"LlamaExtractError"}
+[LlamaExtract] API key configured: llx-4aQe9i...
+[LlamaExtract] Starting extraction for sample-invoice-02.pdf with type: invoice
+[LlamaExtract] Found existing agent: 06d4cdc9-df32-4cd5-b7ec-6258a5412a0d
+[LlamaExtract] Using agent: 06d4cdc9-df32-4cd5-b7ec-6258a5412a0d
+[LlamaExtract] File upload failed: 400 - {"detail":"There was an error parsing the body"}
+[Template Extraction] Error: LlamaExtractError: Failed to upload file: {"detail":"There was an error parsing the body"}
+    at LlamaExtractService.uploadFile (/home/runner/workspace/server/llamaExtract.ts:269:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async LlamaExtractService.extractDocument (/home/runner/workspace/server/llamaExtract.ts:110:20)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:270:34) {
+  statusCode: 400,
+  errorCode: undefined
+}
+9:55:37 AM [express] POST /api/extract/process 400 in 1310ms :: {"message":"Failed to upload file: {\"detail\":\"There was an error parsing the body\"}","type":"LlamaExtractError"}
+9:55:57 AM [express] GET /api/auth/user 200 in 398ms :: {"id":"36691541","email":"ta.khongsap@gmail.com","firstName":"Ta","lastName":"Khongsap","profileImageUrl":"https://storage.googleapis.com/replit/images/1736375313419_2b2ddc1cecf9b44d7f11e83c5beeea86.png","tier":"free","monthlyUsage":18,"monthlyLimit":100,"createdAt":"2025-11-28T03:16:06.471Z","updatedAt":"2025-11-30T06:43:41.948Z","lastResetAt":"2025-11-28T03:16:06.471Z"}
