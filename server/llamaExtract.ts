@@ -523,26 +523,6 @@ export class LlamaExtractService {
   }
 
   /**
-   * Get MIME type from file name
-   */
-  private getMimeType(fileName: string): string {
-    const extension = fileName.split(".").pop()?.toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      pdf: "application/pdf",
-      png: "image/png",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      doc: "application/msword",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      xls: "application/vnd.ms-excel",
-      txt: "text/plain",
-    };
-
-    return mimeTypes[extension || ""] || "application/octet-stream";
-  }
-
-  /**
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
