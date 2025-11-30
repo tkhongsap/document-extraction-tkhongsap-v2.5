@@ -286,9 +286,38 @@ export default function Extraction() {
         <ResizablePanel defaultSize={65} minSize={30}>
           <Card className="flex flex-col overflow-hidden h-full">
           <CardHeader className="border-b bg-muted/30 py-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">
-              {t('extract.results')}
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-sm font-medium">
+                {t('extract.results')}
+              </CardTitle>
+              {/* Confidence badge for general extraction */}
+              {isGeneralExtraction && generalResults && (
+                generalResults.overallConfidence !== undefined ? (
+                  <span 
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-help",
+                      generalResults.overallConfidence >= 0.9 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                      generalResults.overallConfidence >= 0.7 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                    )} 
+                    title={
+                      generalResults.confidenceStats 
+                        ? `Confidence: ${Math.round(generalResults.overallConfidence * 100)}% (Range: ${Math.round(generalResults.confidenceStats.min * 100)}% - ${Math.round(generalResults.confidenceStats.max * 100)}%)`
+                        : `Confidence: ${Math.round(generalResults.overallConfidence * 100)}%`
+                    }
+                  >
+                    {Math.round(generalResults.overallConfidence * 100)}% confidence
+                  </span>
+                ) : (
+                  <span 
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground cursor-help"
+                    title="Confidence data unavailable for this document. Layout extraction may not have returned element-level data."
+                  >
+                    Confidence unavailable
+                  </span>
+                )
+              )}
+            </div>
             {/* Template extraction download buttons */}
             {!isGeneralExtraction && templateResults && (
               <div className="flex gap-2">
