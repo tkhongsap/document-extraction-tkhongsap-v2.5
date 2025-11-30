@@ -262,7 +262,7 @@ export default function Extraction() {
                           <Play className="h-4 w-4" />
                           {isGeneralExtraction 
                             ? (t('extract.parse_button') || 'Parse Document')
-                            : (t('extract.extract_button') || 'Extract Data')
+                            : 'Extract'
                           }
                         </>
                       )}
