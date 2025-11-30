@@ -65,8 +65,28 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [location] = useLocation();
 
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const handleLogin = async () => {
+    // Use mock login in development
+    if (import.meta.env.DEV) {
+      try {
+        const res = await fetch('/api/auth/mock-login', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (res.ok) {
+          window.location.href = '/dashboard';
+        } else {
+          console.error('Mock login failed');
+          window.location.href = "/api/login";
+        }
+      } catch (error) {
+        console.error('Mock login error:', error);
+        window.location.href = "/api/login";
+      }
+    } else {
+      window.location.href = "/api/login";
+    }
   };
 
   const handleHashLink = (hash: string, e: React.MouseEvent) => {

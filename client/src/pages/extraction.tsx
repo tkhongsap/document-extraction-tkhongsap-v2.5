@@ -57,12 +57,19 @@ export default function Extraction() {
       return;
     }
 
+    console.log('[Extraction] Starting template extraction for:', file.name, 'type:', type);
     setIsProcessing(true);
     setTemplateResults(null);
 
     try {
+      console.log('[Extraction] Calling processTemplateExtraction API...');
       const response = await processTemplateExtraction(file, type as DocumentType);
+      console.log('[Extraction] API Response received:', response);
+      console.log('[Extraction] Response headerFields:', response.headerFields);
+      console.log('[Extraction] Response lineItems:', response.lineItems);
+      
       setTemplateResults(response);
+      console.log('[Extraction] templateResults state updated');
 
       await saveExtraction({
         fileName: file.name,
@@ -75,10 +82,12 @@ export default function Extraction() {
 
       toast.success('Document extracted successfully!');
     } catch (error: any) {
+      console.error('[Extraction] Error during extraction:', error);
       toast.error(error.message || 'Extraction failed');
       setTemplateResults(null);
     } finally {
       setIsProcessing(false);
+      console.log('[Extraction] Processing complete, isProcessing set to false');
     }
   };
 
