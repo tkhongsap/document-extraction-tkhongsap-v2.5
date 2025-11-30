@@ -371,9 +371,11 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                   "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    ? item.isPrimary
+                      ? "bg-sidebar-primary/10 text-sidebar-primary hover:bg-sidebar-primary/20 font-semibold"
+                      : "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/70",
-                  item.isPrimary && "bg-sidebar-primary/10 text-sidebar-primary hover:bg-sidebar-primary/20 font-semibold"
+                  item.isPrimary && !isActive && "font-semibold"
                 )}>
                   {isActive && (
                     <motion.div
