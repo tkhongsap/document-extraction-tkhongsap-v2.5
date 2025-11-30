@@ -68,10 +68,20 @@ export async function processExtraction(data: ProcessExtractionRequest): Promise
 }
 
 // General Extraction API (LlamaParse-based parsing for "New Extraction" feature)
+export interface LlamaParseLayoutElement {
+  bbox: { x: number; y: number; w: number; h: number };
+  image?: string;
+  confidence: number; // 0-1 range
+  label: "text" | "table" | "figure" | "title" | "list";
+  isLikelyNoise: boolean;
+}
+
 export interface GeneralExtractionPage {
   pageNumber: number;
   markdown: string;
   text: string;
+  layout?: LlamaParseLayoutElement[];
+  confidence?: number; // Average confidence for this page
 }
 
 export interface GeneralExtractionResponse {
@@ -83,6 +93,12 @@ export interface GeneralExtractionResponse {
   fileName: string;
   fileSize: number;
   mimeType: string;
+  overallConfidence?: number; // Average confidence across all pages
+  confidenceStats?: {
+    min: number;
+    max: number;
+    average: number;
+  };
 }
 
 /**
