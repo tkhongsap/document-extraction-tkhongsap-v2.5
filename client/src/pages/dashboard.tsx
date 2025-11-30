@@ -8,7 +8,6 @@ import {
   FileText,
   ArrowRight,
   Clock,
-  UploadCloud,
   BarChart3,
 } from 'lucide-react';
 import { Link } from 'wouter';
@@ -86,25 +85,21 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <Link href="/extraction/general">
-              <motion.div
-                className={cn(
-                  'h-40 rounded-2xl border-2 border-dashed border-border/70',
-                  'flex flex-col items-center justify-center gap-3',
-                  'bg-muted/30 hover:bg-muted/50 hover:border-primary/30',
-                  'transition-all duration-200 cursor-pointer group'
-                )}
-                whileHover={{ scale: 1.005 }}
-                whileTap={{ scale: 0.995 }}
-              >
-                <div className="h-12 w-12 rounded-2xl bg-background shadow-sm flex items-center justify-center group-hover:shadow-md transition-shadow">
-                  <UploadCloud className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                  {t('extract.upload_title')}
-                </p>
-                <p className="text-xs text-muted-foreground/70">
-                  {t('extract.upload_formats')}
-                </p>
+              <motion.div {...cardHover}>
+                <Card className="hover:border-primary/30 transition-all duration-200 cursor-pointer group">
+                  <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                    <div
+                      className={cn(
+                        'h-14 w-14 rounded-2xl flex items-center justify-center',
+                        'transition-transform duration-200 group-hover:scale-110',
+                        'bg-primary/10 text-primary'
+                      )}
+                    >
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <span className="font-medium text-sm">{t('nav.general')}</span>
+                  </CardContent>
+                </Card>
               </motion.div>
             </Link>
           </CardContent>
