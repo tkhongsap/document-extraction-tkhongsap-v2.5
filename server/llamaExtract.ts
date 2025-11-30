@@ -251,7 +251,7 @@ export class LlamaExtractService {
   ): Promise<string> {
     const formData = new FormData();
     const blob = new Blob([fileBuffer], { type: this.getMimeType(fileName) });
-    formData.append("file", blob, fileName);
+    formData.append("upload_file", blob, fileName);
 
     const response = await fetch(`${LLAMA_EXTRACT_API_BASE}/files`, {
       method: "POST",
