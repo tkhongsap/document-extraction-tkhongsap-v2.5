@@ -51,10 +51,11 @@ export interface ParsedDocument {
 
 /**
  * Configuration for LlamaParse parsing options
+ * Always uses agentic mode (parse_page_with_agent) for AI-powered parsing
  */
 export interface LlamaParseConfig {
-  parseMode: "parse_page_with_llm" | "parse_page_with_agent";
-  model: string; // Required when parseMode is "parse_page_with_agent"
+  parseMode: "parse_page_with_agent"; // Always use agentic mode for AI parsing
+  model: string; // Required - agentic mode always requires a model
   highResOcr: boolean;
   adaptiveLongTable: boolean;
   outlinedTableExtraction: boolean;
@@ -115,10 +116,10 @@ export class LlamaParseService {
     // Set configuration - use provided config or default to Agentic preset
     this.config = config || getDefaultAgenticConfig();
     
-    // Validate configuration: if agent mode is selected, model must be provided
-    if (this.config.parseMode === "parse_page_with_agent" && !this.config.model) {
+    // Validate configuration: model is always required for agentic mode
+    if (!this.config.model) {
       throw new LlamaParseError(
-        "Model is required when using parse_page_with_agent mode"
+        "Model is required for agentic parsing mode"
       );
     }
     
@@ -165,17 +166,16 @@ export class LlamaParseService {
     formData.append("file", blob, fileName);
 
     // Add parsing configuration parameters
+    // Always use agentic mode for AI-powered parsing
     formData.append("parse_mode", this.config.parseMode);
     
-    // Model parameter is only required/sent when using agent mode
-    if (this.config.parseMode === "parse_page_with_agent") {
-      if (!this.config.model) {
-        throw new LlamaParseError(
-          "Model is required when using parse_page_with_agent mode"
-        );
-      }
-      formData.append("model", this.config.model);
+    // Model is always required for agentic mode
+    if (!this.config.model) {
+      throw new LlamaParseError(
+        "Model is required for agentic parsing mode"
+      );
     }
+    formData.append("model", this.config.model);
     
     // Convert boolean values to "true"/"false" strings as required by API
     formData.append("high_res_ocr", booleanToString(this.config.highResOcr));
