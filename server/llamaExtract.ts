@@ -313,14 +313,18 @@ export class LlamaExtractService {
    * Poll for job completion
    */
   private async waitForCompletion(jobId: string): Promise<void> {
+    console.log(`[LlamaExtract] Starting to poll for job ${jobId} completion...`);
     for (let i = 0; i < this.maxRetries; i++) {
       const status = await this.getJobStatus(jobId);
+      console.log(`[LlamaExtract] Poll ${i + 1}/${this.maxRetries} - Job ${jobId} status: ${status}`);
 
       if (status === "SUCCESS") {
+        console.log(`[LlamaExtract] Job ${jobId} completed successfully`);
         return;
       }
 
       if (status === "ERROR" || status === "CANCELLED") {
+        console.error(`[LlamaExtract] Job ${jobId} failed with status: ${status}`);
         throw new LlamaExtractError(`Job ${jobId} failed with status: ${status}`);
       }
 
@@ -328,6 +332,7 @@ export class LlamaExtractService {
       await this.sleep(this.pollIntervalMs);
     }
 
+    console.error(`[LlamaExtract] Job ${jobId} timed out after ${this.maxRetries} polls`);
     throw new LlamaExtractError(
       `Job ${jobId} timed out after ${(this.maxRetries * this.pollIntervalMs) / 1000} seconds`
     );
@@ -393,6 +398,9 @@ export class LlamaExtractService {
     result: LlamaExtractResultResponse,
     documentType: DocumentType
   ): TemplateExtractionResult {
+    console.log(`[LlamaExtract] Formatting result for document type: ${documentType}`);
+    console.log(`[LlamaExtract] Raw result data:`, JSON.stringify(result.data, null, 2));
+    
     const data = result.data || {};
     const confidenceScores = result.extraction_metadata?.confidence_scores || {};
 
@@ -403,6 +411,12 @@ export class LlamaExtractService {
     // Build header fields (exclude line items array)
     const headerFields: ExtractedField[] = [];
     this.flattenObject(data, "", headerFields, confidenceScores, lineItemsKey);
+
+    console.log(`[LlamaExtract] Formatted ${headerFields.length} header fields`);
+    console.log(`[LlamaExtract] Header fields:`, JSON.stringify(headerFields, null, 2));
+    if (lineItems) {
+      console.log(`[LlamaExtract] Line items count: ${lineItems.length}`);
+    }
 
     return {
       success: true,

@@ -44,6 +44,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
 
+  // Mock login endpoint for development
+  app.post('/api/auth/mock-login', async (req: any, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ message: 'Mock login disabled in production' });
+    }
+
+    try {
+      // Get the first user from the database for testing
+      const testUserId = "36691541"; // Default test user
+      const user = await storage.getUser(testUserId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Test user not found' });
+      }
+
+      // Set up a mock session
+      req.login({
+        claims: {
+          sub: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          profile_image_url: user.profileImageUrl,
+        },
+        expires_at: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+      }, (err: any) => {
+        if (err) {
+          console.error('[Mock Login] Error:', err);
+          return res.status(500).json({ message: 'Login failed' });
+        }
+        console.log('[Mock Login] Successfully logged in as:', user.email);
+        res.json({ user });
+      });
+    } catch (error: any) {
+      console.error('[Mock Login] Error:', error);
+      res.status(500).json({ message: error.message || 'Mock login failed' });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res: Response) => {
     try {
@@ -274,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         // Return the extraction result
-        res.json({
+        const responsePayload = {
           success: extractionResult.success,
           headerFields: extractionResult.headerFields,
           lineItems: extractionResult.lineItems,
@@ -283,7 +322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileName: originalname,
           fileSize: size,
           mimeType: mimetype,
-        });
+        };
+        console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields`);
+        res.json(responsePayload);
       } catch (error: any) {
         console.error("[Template Extraction] Error:", error);
 
