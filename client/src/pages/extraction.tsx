@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { UploadCloud, FileText, Loader2, Download, ArrowLeft, Play, X } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -190,10 +191,11 @@ export default function Extraction() {
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+      {/* Main Resizable Panels */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left Panel: Upload/Preview */}
-        <Card className="flex flex-col overflow-hidden h-full">
+        <ResizablePanel defaultSize={50} minSize={30}>
+          <Card className="flex flex-col overflow-hidden h-full">
           <CardHeader className="border-b bg-muted/30 py-3">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
               <span className="flex items-center">
@@ -212,13 +214,13 @@ export default function Extraction() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 p-0 relative bg-muted/10 overflow-hidden">
+          <CardContent className="flex-1 p-4 relative bg-muted/10 overflow-hidden">
             {!file ? (
               // Upload dropzone
               <div 
                 {...getRootProps()} 
                 className={cn(
-                  "h-full flex flex-col items-center justify-center p-8 border-2 border-dashed m-4 rounded-lg transition-all cursor-pointer",
+                  "h-full flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg transition-all cursor-pointer",
                   isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
                 )}
               >
@@ -226,11 +228,11 @@ export default function Extraction() {
                 <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
                   <UploadCloud className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-lg font-medium mb-2">{t('extract.upload_title')}</p>
+                <p className="text-lg font-medium mb-2 text-center">{t('extract.upload_title')}</p>
                 <p className="text-sm text-muted-foreground text-center max-w-xs">
                   {t('extract.upload_desc')}
                 </p>
-                <p className="text-xs text-muted-foreground mt-4">
+                <p className="text-xs text-muted-foreground mt-4 text-center">
                   {isGeneralExtraction 
                     ? t('extract.upload_formats')
                     : 'PDF, JPG, PNG'
@@ -272,10 +274,17 @@ export default function Extraction() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </ResizablePanel>
+
+        <ResizableHandle 
+          withHandle 
+          className="w-1.5 bg-border/30 hover:bg-border/60 cursor-col-resize transition-colors"
+        />
 
         {/* Right Panel: Results */}
-        <Card className="flex flex-col overflow-hidden h-full">
+        <ResizablePanel defaultSize={50} minSize={30}>
+          <Card className="flex flex-col overflow-hidden h-full">
           <CardHeader className="border-b bg-muted/30 py-3 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">
               {t('extract.results')}
@@ -377,8 +386,9 @@ export default function Extraction() {
               </div>
             )}
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
