@@ -208,10 +208,8 @@ export class LlamaExtractService {
         body: JSON.stringify({
           name,
           data_schema: schema,
-          config: {
-            extraction_mode: "MULTIMODAL",
-            extraction_target: "PER_DOC",
-          },
+          extraction_mode: "MULTIMODAL",
+          extraction_target: "PER_DOC",
         }),
       }
     );
