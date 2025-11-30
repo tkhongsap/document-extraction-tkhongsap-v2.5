@@ -5,6 +5,7 @@
  * Used for template-based extractions (Bank Statement, Invoice, PO, Contract).
  */
 
+import FormData from "form-data";
 import { getSchemaForType, type DocumentType } from "./extractionSchemas";
 
 const LLAMA_EXTRACT_API_BASE = "https://api.cloud.llamaindex.ai/api/v1";
@@ -250,16 +251,16 @@ export class LlamaExtractService {
     fileName: string
   ): Promise<string> {
     const formData = new FormData();
-    const blob = new Blob([fileBuffer], { type: this.getMimeType(fileName) });
-    formData.append("upload_file", blob, fileName);
+    formData.append("upload_file", fileBuffer, { filename: fileName });
 
     const response = await fetch(`${LLAMA_EXTRACT_API_BASE}/files`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         Accept: "application/json",
+        ...formData.getHeaders(),
       },
-      body: formData,
+      body: formData as unknown as BodyInit,
     });
 
     if (!response.ok) {
