@@ -162,3 +162,20 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return;
   }
 };
+
+export const ensureUsageReset: RequestHandler = async (req: any, res, next) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return next();
+    }
+
+    // Check and reset if needed, cache user for downstream handlers
+    const user = await storage.checkAndResetIfNeeded(userId);
+    req.userWithUsage = user;
+    next();
+  } catch (error) {
+    console.error("Error checking/resetting usage:", error);
+    next(); // Don't block request on reset failure
+  }
+};
