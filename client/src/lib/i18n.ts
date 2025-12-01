@@ -21,7 +21,7 @@ export const translations: Translations = {
     'nav.dashboard': 'Dashboard',
     'nav.general': 'New Extraction',
     'nav.templates': 'Browse Templates',
-    'nav.history': 'Your Documents',
+    'nav.history': 'Extraction History',
     'nav.settings': 'Preferences',
     'nav.logout': 'Sign Out',
 
@@ -231,6 +231,30 @@ export const translations: Translations = {
     'empty.no_history_desc': "Upload your first document and we'll remember it here",
     'empty.get_started': "Let's extract something",
 
+    // Documents
+    'docs.title': 'Extraction History',
+    'docs.subtitle': 'View your past extraction results',
+    'docs.search_placeholder': 'Search documents...',
+    'docs.upload_new': 'New Upload',
+    'docs.extractions_count': 'extraction(s)',
+    'docs.view': 'View',
+    'docs.reextract': 'Re-extract',
+    'docs.download': 'Download',
+    'docs.empty_title': 'No documents yet',
+    'docs.empty_desc': 'Upload your first document to get started',
+    'docs.no_results': 'No documents found',
+    'docs.no_results_desc': 'Try a different search term',
+    'docs.original_document': 'Original Document',
+    'docs.no_original': 'Original document not available',
+    'docs.no_original_desc': 'This extraction was created before document storage was implemented',
+
+    // Export
+    'export.json': 'JSON',
+    'export.csv': 'CSV',
+    'export.excel': 'Excel',
+    'export.markdown': 'Markdown',
+    'export.text': 'Text',
+
     // Common
     'common.back': 'Back',
     'common.upgrade': 'Upgrade Plan',
@@ -258,7 +282,7 @@ export const translations: Translations = {
     'nav.dashboard': 'แดชบอร์ด',
     'nav.general': 'ดึงข้อมูลใหม่',
     'nav.templates': 'เรียกดูเทมเพลต',
-    'nav.history': 'เอกสารของคุณ',
+    'nav.history': 'ประวัติการดึงข้อมูล',
     'nav.settings': 'ตั้งค่า',
     'nav.logout': 'ออกจากระบบ',
 
@@ -468,6 +492,30 @@ export const translations: Translations = {
     'empty.no_history_desc': 'อัปโหลดเอกสารแรกของคุณ แล้วเราจะจดจำไว้ที่นี่',
     'empty.get_started': 'เริ่มดึงข้อมูลกันเถอะ',
 
+    // Documents
+    'docs.title': 'ประวัติการดึงข้อมูล',
+    'docs.subtitle': 'ดูผลการดึงข้อมูลที่ผ่านมา',
+    'docs.search_placeholder': 'ค้นหาเอกสาร...',
+    'docs.upload_new': 'อัปโหลดใหม่',
+    'docs.extractions_count': 'การดึงข้อมูล',
+    'docs.view': 'ดู',
+    'docs.reextract': 'ดึงข้อมูลใหม่',
+    'docs.download': 'ดาวน์โหลด',
+    'docs.empty_title': 'ยังไม่มีเอกสาร',
+    'docs.empty_desc': 'อัปโหลดเอกสารแรกของคุณเพื่อเริ่มต้น',
+    'docs.no_results': 'ไม่พบเอกสาร',
+    'docs.no_results_desc': 'ลองใช้คำค้นหาอื่น',
+    'docs.original_document': 'เอกสารต้นฉบับ',
+    'docs.no_original': 'ไม่มีเอกสารต้นฉบับ',
+    'docs.no_original_desc': 'การดึงข้อมูลนี้ถูกสร้างก่อนที่จะมีการจัดเก็บเอกสาร',
+
+    // Export
+    'export.json': 'JSON',
+    'export.csv': 'CSV',
+    'export.excel': 'Excel',
+    'export.markdown': 'Markdown',
+    'export.text': 'ข้อความ',
+
     // Common
     'common.back': 'ย้อนกลับ',
     'common.upgrade': 'อัปเกรดแผน',
@@ -488,12 +536,14 @@ export const translations: Translations = {
 interface LanguageState {
   language: Language;
   setLanguage: (lang: Language) => void;
+  initializeLanguage: (lang: Language) => void;
   t: (key: string) => string;
 }
 
 export const useLanguage = create<LanguageState>((set, get) => ({
   language: 'en',
   setLanguage: (lang) => set({ language: lang }),
+  initializeLanguage: (lang) => set({ language: lang }),
   t: (key) => {
     const lang = get().language;
     return translations[lang][key] || key;

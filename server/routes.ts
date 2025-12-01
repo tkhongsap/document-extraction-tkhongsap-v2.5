@@ -10,6 +10,7 @@ import { ObjectPermission } from "./objectAcl";
 import { createLlamaParseService, LlamaParseError } from "./llamaParse";
 import { createLlamaExtractService, LlamaExtractError } from "./llamaExtract";
 import type { DocumentType } from "./extractionSchemas";
+import { randomUUID } from "crypto";
 
 // Configure multer for memory storage (files stored in buffer)
 const upload = multer({
@@ -39,6 +40,54 @@ const upload = multer({
     }
   },
 });
+
+// Helper function to upload file buffer to GCS and create document record
+async function uploadDocumentAndCreateRecord(
+  buffer: Buffer,
+  fileName: string,
+  fileSize: number,
+  mimeType: string,
+  userId: string
+): Promise<{ documentId: string; objectPath: string }> {
+  const objectStorageService = new ObjectStorageService();
+  
+  // Get upload URL
+  const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+  
+  // Upload file buffer to GCS
+  const uploadResponse = await fetch(uploadURL, {
+    method: "PUT",
+    body: buffer,
+    headers: {
+      "Content-Type": mimeType,
+      "Content-Length": fileSize.toString(),
+    },
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload file to GCS: ${uploadResponse.statusText}`);
+  }
+
+  // Set ACL policy and get normalized path
+  const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+    uploadURL,
+    {
+      owner: userId,
+      visibility: "private",
+    }
+  );
+
+  // Create document record
+  const document = await storage.createDocument({
+    userId,
+    fileName,
+    fileSize,
+    mimeType,
+    objectPath,
+  });
+
+  return { documentId: document.id, objectPath };
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
@@ -193,6 +242,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get a specific document by ID
+  app.get("/api/documents/:id", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    
+    try {
+      const document = await storage.getDocument(req.params.id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      if (document.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json({ document });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Extraction endpoints
   app.post("/api/extractions", isAuthenticated, async (req: any, res: Response) => {
     const userId = req.user?.claims?.sub;
@@ -262,6 +332,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get documents grouped by filename with their extractions
+  app.get("/api/documents-with-extractions", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const documents = await storage.getExtractionsGroupedByDocument(userId, limit);
+      res.json({ documents });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update user language preference
+  app.patch("/api/user/language", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const { language } = req.body;
+
+    try {
+      // Validate language
+      if (!language || (language !== 'en' && language !== 'th')) {
+        return res.status(400).json({ message: "Language must be 'en' or 'th'" });
+      }
+
+      await storage.updateUserLanguage(userId, language);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Template-based extraction endpoint using LlamaExtract
   // Used for Bank Statement, Invoice, Purchase Order, and Contract templates
   app.post(
@@ -304,6 +405,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Upload document to GCS and create document record
+        let documentId: string | undefined;
+        try {
+          const { documentId: docId } = await uploadDocumentAndCreateRecord(
+            buffer,
+            originalname,
+            size,
+            mimetype,
+            userId
+          );
+          documentId = docId;
+        } catch (error: any) {
+          console.error("[Template Extraction] Failed to store document:", error);
+          // Continue with extraction even if document storage fails
+        }
+
         // Extract structured data using LlamaExtract
         const llamaExtractService = createLlamaExtractService();
         const extractionResult = await llamaExtractService.extractDocument(
@@ -322,6 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileName: originalname,
           fileSize: size,
           mimeType: mimetype,
+          documentId, // Include documentId so frontend can link it
         };
         console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields`);
         res.json(responsePayload);
@@ -363,6 +481,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "User not found" });
         }
 
+        // Upload document to GCS and create document record
+        let documentId: string | undefined;
+        try {
+          const { documentId: docId } = await uploadDocumentAndCreateRecord(
+            buffer,
+            originalname,
+            size,
+            mimetype,
+            userId
+          );
+          documentId = docId;
+        } catch (error: any) {
+          console.error("[General Extraction] Failed to store document:", error);
+          // Continue with extraction even if document storage fails
+        }
+
         // Parse the document using LlamaParse
         const llamaParseService = createLlamaParseService();
         const parsedDocument = await llamaParseService.parseDocument(
@@ -393,6 +527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mimeType: mimetype,
           overallConfidence: parsedDocument.overallConfidence,
           confidenceStats: parsedDocument.confidenceStats,
+          documentId, // Include documentId so frontend can link it
         });
       } catch (error: any) {
         console.error("[General Extraction] Error:", error);

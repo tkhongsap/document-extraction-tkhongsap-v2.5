@@ -26,6 +26,7 @@ export const users = pgTable("users", {
   tier: text("tier").notNull().default('free'),
   monthlyUsage: integer("monthly_usage").notNull().default(0),
   monthlyLimit: integer("monthly_limit").notNull().default(100),
+  language: varchar("language", { length: 2 }).notNull().default('en'),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   lastResetAt: timestamp("last_reset_at").defaultNow(),
@@ -79,3 +80,13 @@ export const insertExtractionSchema = createInsertSchema(extractions).omit({
 });
 export type InsertExtraction = z.infer<typeof insertExtractionSchema>;
 export type Extraction = typeof extractions.$inferSelect;
+
+// Type for grouped extractions by document
+export interface DocumentWithExtractions {
+  fileName: string;
+  fileSize: number;
+  documentType: string;
+  extractions: Extraction[];
+  latestExtraction: Extraction;
+  totalExtractions: number;
+}

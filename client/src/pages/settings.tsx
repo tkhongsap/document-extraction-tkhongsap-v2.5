@@ -1,5 +1,6 @@
 import { useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, User, LogOut } from "lucide-react";
@@ -13,7 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function SettingsPage() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t } = useLanguage();
+  const { language, syncLanguage } = useLanguageSync();
   const { user } = useAuth();
 
   const handleLogout = () => {
@@ -60,10 +62,10 @@ export default function SettingsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setLanguage('en')}>
+              <DropdownMenuItem onClick={() => syncLanguage('en')}>
                 English {language === 'en' && '✓'}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLanguage('th')}>
+              <DropdownMenuItem onClick={() => syncLanguage('th')}>
                 ไทย (Thai) {language === 'th' && '✓'}
               </DropdownMenuItem>
             </DropdownMenuContent>

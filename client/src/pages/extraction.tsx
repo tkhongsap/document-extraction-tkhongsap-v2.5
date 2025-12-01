@@ -76,8 +76,13 @@ export default function Extraction() {
         fileSize: file.size,
         documentType: type,
         pagesProcessed: response.pagesProcessed,
-        extractedData: response.extractedData,
+        extractedData: {
+          ...response.extractedData,
+          headerFields: response.headerFields,
+          lineItems: response.lineItems,
+        },
         status: 'completed',
+        documentId: response.documentId,
       });
 
       toast.success('Document extracted successfully!');
@@ -113,6 +118,7 @@ export default function Extraction() {
           pages: response.pages 
         },
         status: 'completed',
+        documentId: response.documentId,
       });
 
       toast.success(`Document parsed successfully! ${response.pageCount} page(s) processed.`);
