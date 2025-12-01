@@ -14,6 +14,7 @@ import Capabilities from "@/pages/capabilities";
 import Dashboard from "@/pages/dashboard";
 import Extraction from "@/pages/extraction";
 import History from "@/pages/history";
+import ExtractionDetail from "@/pages/extraction-detail";
 import Templates from "@/pages/templates";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
@@ -67,6 +68,10 @@ function Router() {
 
         <Route path="/history">
           {() => <PrivateRoute component={History} />}
+        </Route>
+
+        <Route path="/history/:id">
+          {() => <PrivateRoute component={ExtractionDetail} />}
         </Route>
 
         <Route path="/templates">

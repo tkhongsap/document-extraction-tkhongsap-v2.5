@@ -79,3 +79,13 @@ export const insertExtractionSchema = createInsertSchema(extractions).omit({
 });
 export type InsertExtraction = z.infer<typeof insertExtractionSchema>;
 export type Extraction = typeof extractions.$inferSelect;
+
+// Type for grouped extractions by document
+export interface DocumentWithExtractions {
+  fileName: string;
+  fileSize: number;
+  documentType: string;
+  extractions: Extraction[];
+  latestExtraction: Extraction;
+  totalExtractions: number;
+}
