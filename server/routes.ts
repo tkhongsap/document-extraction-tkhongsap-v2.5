@@ -4,7 +4,7 @@ import multer from "multer";
 import { storage } from "./storage";
 import { insertExtractionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, ensureUsageReset } from "./replitAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { createLlamaParseService, LlamaParseError } from "./llamaParse";
@@ -264,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Extraction endpoints
-  app.post("/api/extractions", isAuthenticated, async (req: any, res: Response) => {
+  app.post("/api/extractions", isAuthenticated, ensureUsageReset, async (req: any, res: Response) => {
     const userId = req.user?.claims?.sub;
 
     try {
@@ -273,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
       });
 
-      const user = await storage.getUser(userId);
+      const user = req.userWithUsage || await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -368,6 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/extract/process",
     isAuthenticated,
+    ensureUsageReset,
     upload.single("file"),
     async (req: any, res: Response) => {
       const userId = req.user?.claims?.sub;
@@ -390,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Check user's monthly limit before processing
-        const user = await storage.getUser(userId);
+        const user = req.userWithUsage || await storage.getUser(userId);
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
@@ -463,6 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/extract/general",
     isAuthenticated,
+    ensureUsageReset,
     upload.single("file"),
     async (req: any, res: Response) => {
       const userId = req.user?.claims?.sub;
@@ -476,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { buffer, originalname, size, mimetype } = req.file;
 
         // Check user's monthly limit before processing
-        const user = await storage.getUser(userId);
+        const user = req.userWithUsage || await storage.getUser(userId);
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }

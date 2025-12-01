@@ -1,7 +1,8 @@
 import { 
   users, 
   documents,
-  extractions, 
+  extractions,
+  usageHistory,
   type User, 
   type UpsertUser,
   type Document,
@@ -19,6 +20,8 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserUsage(userId: string, pagesUsed: number): Promise<void>;
   resetMonthlyUsage(userId: string): Promise<void>;
+  checkAndResetIfNeeded(userId: string): Promise<User>;
+  saveUsageHistory(userId: string, month: string, pagesUsed: number, tier: string, monthlyLimit: number): Promise<void>;
 
   // Document operations
   createDocument(document: InsertDocument): Promise<Document>;
@@ -33,6 +36,24 @@ export interface IStorage {
   
   // User preferences
   updateUserLanguage(userId: string, language: string): Promise<void>;
+}
+
+/**
+ * Helper function to check if monthly usage should be reset
+ * Compares lastResetAt to current month/year using UTC for timezone safety
+ */
+function shouldResetUsage(lastResetAt: Date | null): boolean {
+  if (!lastResetAt) return true;
+
+  const now = new Date();
+  const lastReset = new Date(lastResetAt);
+
+  // Check if lastResetAt is in a previous calendar month (UTC)
+  return (
+    lastReset.getUTCFullYear() < now.getUTCFullYear() ||
+    (lastReset.getUTCFullYear() === now.getUTCFullYear() &&
+      lastReset.getUTCMonth() < now.getUTCMonth())
+  );
 }
 
 export class DatabaseStorage implements IStorage {
@@ -75,6 +96,36 @@ export class DatabaseStorage implements IStorage {
         lastResetAt: new Date()
       })
       .where(eq(users.id, userId));
+  }
+
+  async saveUsageHistory(userId: string, month: string, pagesUsed: number, tier: string, monthlyLimit: number): Promise<void> {
+    await db.insert(usageHistory).values({
+      userId,
+      month,
+      pagesUsed,
+      tier,
+      monthlyLimit,
+    });
+  }
+
+  async checkAndResetIfNeeded(userId: string): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+
+    if (shouldResetUsage(user.lastResetAt)) {
+      // Save current usage to history before resetting
+      if (user.lastResetAt && user.monthlyUsage > 0) {
+        const lastReset = new Date(user.lastResetAt);
+        const month = `${lastReset.getUTCFullYear()}-${String(lastReset.getUTCMonth() + 1).padStart(2, '0')}`;
+        await this.saveUsageHistory(userId, month, user.monthlyUsage, user.tier, user.monthlyLimit);
+      }
+
+      // Reset usage
+      await this.resetMonthlyUsage(userId);
+      return await this.getUser(userId) as User;
+    }
+
+    return user;
   }
 
   // Document operations
