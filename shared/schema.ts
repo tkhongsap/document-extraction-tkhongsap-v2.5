@@ -90,3 +90,14 @@ export interface DocumentWithExtractions {
   latestExtraction: Extraction;
   totalExtractions: number;
 }
+
+// Usage history table - stores monthly usage snapshots
+export const usageHistory = pgTable("usage_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  month: varchar("month", { length: 7 }).notNull(), // Format: "2025-01"
+  pagesUsed: integer("pages_used").notNull(),
+  tier: text("tier").notNull(),
+  monthlyLimit: integer("monthly_limit").notNull(),
+  recordedAt: timestamp("recorded_at").notNull().defaultNow(),
+});
