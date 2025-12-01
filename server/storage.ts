@@ -195,9 +195,9 @@ export class DatabaseStorage implements IStorage {
 
     // Convert to DocumentWithExtractions format
     const result: DocumentWithExtractions[] = [];
-    for (const [fileName, extractionList] of groupedMap.entries()) {
+    for (const [fileName, extractionList] of Array.from(groupedMap.entries())) {
       // Sort by createdAt descending to get latest first
-      const sorted = extractionList.sort((a, b) => 
+      const sorted = extractionList.sort((a: Extraction, b: Extraction) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       
