@@ -61,6 +61,54 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
+/**
+ * Recursively searches in extracted data
+ * @param data - The data to search in
+ * @param query - The search query
+ * @param depth - Current recursion depth
+ * @param visited - WeakSet to prevent circular references
+ * @returns true if query is found
+ */
+function searchInExtractedData(data: any, query: string, depth: number = 0, visited: WeakSet<object> = new WeakSet()): boolean {
+  // Prevent infinite recursion with depth limit
+  if (depth > 10) return false;
+  
+  if (data === null || data === undefined) return false;
+  
+  // Handle circular references
+  if (typeof data === 'object' && data !== null) {
+    if (visited.has(data)) return false;
+    visited.add(data);
+  }
+  
+  if (typeof data === 'string') {
+    return data.toLowerCase().includes(query);
+  }
+  
+  if (typeof data === 'number') {
+    return data.toString().includes(query);
+  }
+  
+  if (typeof data === 'boolean') {
+    return false; // Skip boolean values
+  }
+  
+  if (Array.isArray(data)) {
+    // Early exit if array is empty
+    if (data.length === 0) return false;
+    return data.some(item => searchInExtractedData(item, query, depth + 1, visited));
+  }
+  
+  if (typeof data === 'object') {
+    const values = Object.values(data);
+    // Early exit if object has no values
+    if (values.length === 0) return false;
+    return values.some(value => searchInExtractedData(value, query, depth + 1, visited));
+  }
+  
+  return false;
+}
+
 export default function History() {
   const { t } = useLanguage();
   const { formatDate, formatRelativeTime } = useDateFormatter();
