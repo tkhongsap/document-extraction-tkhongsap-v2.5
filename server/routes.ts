@@ -337,8 +337,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.user?.claims?.sub;
 
     try {
-      const documents = await storage.getExtractionsGroupedByDocument(userId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const documents = await storage.getExtractionsGroupedByDocument(userId, limit);
       res.json({ documents });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update user language preference
+  app.patch("/api/user/language", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const { language } = req.body;
+
+    try {
+      // Validate language
+      if (!language || (language !== 'en' && language !== 'th')) {
+        return res.status(400).json({ message: "Language must be 'en' or 'th'" });
+      }
+
+      await storage.updateUserLanguage(userId, language);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

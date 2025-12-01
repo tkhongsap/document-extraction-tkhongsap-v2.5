@@ -29,7 +29,10 @@ export interface IStorage {
   createExtraction(extraction: InsertExtraction): Promise<Extraction>;
   getExtractionsByUserId(userId: string, limit?: number): Promise<Extraction[]>;
   getExtraction(id: string): Promise<Extraction | undefined>;
-  getExtractionsGroupedByDocument(userId: string): Promise<DocumentWithExtractions[]>;
+  getExtractionsGroupedByDocument(userId: string, limit?: number): Promise<DocumentWithExtractions[]>;
+  
+  // User preferences
+  updateUserLanguage(userId: string, language: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -120,7 +123,7 @@ export class DatabaseStorage implements IStorage {
     return extraction || undefined;
   }
 
-  async getExtractionsGroupedByDocument(userId: string): Promise<DocumentWithExtractions[]> {
+  async getExtractionsGroupedByDocument(userId: string, limit: number = 20): Promise<DocumentWithExtractions[]> {
     // Get all extractions for the user
     const allExtractions = await db
       .select()
@@ -160,10 +163,23 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Sort by latest extraction date descending
-    return result.sort((a, b) => 
+    const sorted = result.sort((a, b) => 
       new Date(b.latestExtraction.createdAt).getTime() - 
       new Date(a.latestExtraction.createdAt).getTime()
     );
+
+    // Apply limit
+    return sorted.slice(0, limit);
+  }
+
+  async updateUserLanguage(userId: string, language: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        language,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 }
 

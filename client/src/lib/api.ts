@@ -195,8 +195,9 @@ export async function getExtraction(id: string): Promise<{ extraction: Extractio
   return res.json();
 }
 
-export async function getDocumentsWithExtractions(): Promise<{ documents: DocumentWithExtractions[] }> {
-  const res = await fetch("/api/documents-with-extractions", {
+export async function getDocumentsWithExtractions(limit: number = 20): Promise<{ documents: DocumentWithExtractions[] }> {
+  const url = limit ? `/api/documents-with-extractions?limit=${limit}` : "/api/documents-with-extractions";
+  const res = await fetch(url, {
     credentials: "include",
   });
 
