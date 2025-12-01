@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Download, 
-  Eye, 
   FileText, 
   RefreshCw, 
   Search,
@@ -43,7 +42,7 @@ export default function History() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['documents-with-extractions'],
-    queryFn: () => getDocumentsWithExtractions(),
+    queryFn: () => getDocumentsWithExtractions(20),
   });
 
   const documents = data?.documents || [];
@@ -60,19 +59,11 @@ export default function History() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('nav.history')}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('docs.subtitle') || 'View and manage your extracted documents'}
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/extraction/general">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('docs.upload_new') || 'New Upload'}
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t('nav.history')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t('docs.subtitle') || 'View and manage your extracted documents'}
+        </p>
       </div>
 
       {/* Search */}
@@ -171,16 +162,6 @@ export default function History() {
                         size="sm"
                         asChild
                       >
-                        <Link href={`/history/${latest.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          {t('docs.view') || 'View'}
-                        </Link>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        asChild
-                      >
                         <Link href={`/extraction/${doc.documentType}`}>
                           <RefreshCw className="mr-2 h-4 w-4" />
                           {t('docs.reextract') || 'Re-extract'}
@@ -188,25 +169,25 @@ export default function History() {
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" disabled>
                             <Download className="mr-2 h-4 w-4" />
                             {t('docs.download') || 'Download'}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => exportToJSON(doc.latestExtraction)}>
+                          <DropdownMenuItem disabled onClick={() => exportToJSON(doc.latestExtraction)}>
                             {t('export.json') || 'JSON'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => exportToCSV(doc.latestExtraction)}>
+                          <DropdownMenuItem disabled onClick={() => exportToCSV(doc.latestExtraction)}>
                             {t('export.csv') || 'CSV'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => exportToExcel(doc.latestExtraction)}>
+                          <DropdownMenuItem disabled onClick={() => exportToExcel(doc.latestExtraction)}>
                             {t('export.excel') || 'Excel'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => exportToMarkdown(doc.latestExtraction)}>
+                          <DropdownMenuItem disabled onClick={() => exportToMarkdown(doc.latestExtraction)}>
                             {t('export.markdown') || 'Markdown'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => exportToText(doc.latestExtraction)}>
+                          <DropdownMenuItem disabled onClick={() => exportToText(doc.latestExtraction)}>
                             {t('export.text') || 'Text'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>

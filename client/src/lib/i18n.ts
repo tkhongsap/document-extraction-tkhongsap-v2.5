@@ -21,7 +21,7 @@ export const translations: Translations = {
     'nav.dashboard': 'Dashboard',
     'nav.general': 'New Extraction',
     'nav.templates': 'Browse Templates',
-    'nav.history': 'Your Documents',
+    'nav.history': 'Extraction History',
     'nav.settings': 'Preferences',
     'nav.logout': 'Sign Out',
 
@@ -232,8 +232,8 @@ export const translations: Translations = {
     'empty.get_started': "Let's extract something",
 
     // Documents
-    'docs.title': 'Your Documents',
-    'docs.subtitle': 'View and manage your extracted documents',
+    'docs.title': 'Extraction History',
+    'docs.subtitle': 'View your past extraction results',
     'docs.search_placeholder': 'Search documents...',
     'docs.upload_new': 'New Upload',
     'docs.extractions_count': 'extraction(s)',
@@ -282,7 +282,7 @@ export const translations: Translations = {
     'nav.dashboard': 'แดชบอร์ด',
     'nav.general': 'ดึงข้อมูลใหม่',
     'nav.templates': 'เรียกดูเทมเพลต',
-    'nav.history': 'เอกสารของคุณ',
+    'nav.history': 'ประวัติการดึงข้อมูล',
     'nav.settings': 'ตั้งค่า',
     'nav.logout': 'ออกจากระบบ',
 
@@ -493,8 +493,8 @@ export const translations: Translations = {
     'empty.get_started': 'เริ่มดึงข้อมูลกันเถอะ',
 
     // Documents
-    'docs.title': 'เอกสารของคุณ',
-    'docs.subtitle': 'ดูและจัดการเอกสารที่ดึงข้อมูลแล้ว',
+    'docs.title': 'ประวัติการดึงข้อมูล',
+    'docs.subtitle': 'ดูผลการดึงข้อมูลที่ผ่านมา',
     'docs.search_placeholder': 'ค้นหาเอกสาร...',
     'docs.upload_new': 'อัปโหลดใหม่',
     'docs.extractions_count': 'การดึงข้อมูล',
@@ -536,12 +536,14 @@ export const translations: Translations = {
 interface LanguageState {
   language: Language;
   setLanguage: (lang: Language) => void;
+  initializeLanguage: (lang: Language) => void;
   t: (key: string) => string;
 }
 
 export const useLanguage = create<LanguageState>((set, get) => ({
   language: 'en',
   setLanguage: (lang) => set({ language: lang }),
+  initializeLanguage: (lang) => set({ language: lang }),
   t: (key) => {
     const lang = get().language;
     return translations[lang][key] || key;
