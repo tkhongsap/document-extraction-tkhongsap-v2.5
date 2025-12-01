@@ -26,6 +26,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -370,51 +382,47 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="hidden w-64 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
+    <SidebarProvider defaultOpen={true}>
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg text-sidebar-foreground">
             <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
               <FileText className="h-4 w-4" />
             </div>
-            DocExtract
+            <span className="group-data-[collapsible=icon]:hidden">DocExtract</span>
           </Link>
-        </div>
+          <SidebarTrigger />
+        </SidebarHeader>
 
-        <nav className="flex-1 py-6 px-3 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href));
-            return (
-              <Link key={item.href} href={item.href}>
-                <div className={cn(
-                  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer",
-                  isActive
-                    ? item.isPrimary
-                      ? "bg-sidebar-primary/10 text-sidebar-primary hover:bg-sidebar-primary/20 font-semibold"
-                      : "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70",
-                  item.isPrimary && !isActive && "font-semibold"
-                )}>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeNav"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-sidebar-primary"
-                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  )}
-                  <item.icon className="h-4 w-4 ml-1" />
-                  {item.label}
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
+        <SidebarContent>
+          <SidebarMenu>
+            {navItems.map((item) => {
+              const isActive = location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href));
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.label}
+                    className={cn(
+                      item.isPrimary && !isActive && "font-semibold",
+                      isActive && item.isPrimary && "font-semibold"
+                    )}
+                  >
+                    <Link href={item.href}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarContent>
 
-        <div className="p-4 border-t border-sidebar-border space-y-4">
+        <SidebarFooter className="border-t border-sidebar-border p-4 space-y-4">
           {/* Usage Widget */}
-          <div className="p-4 rounded-xl bg-sidebar-accent/50">
+          <div className="p-4 rounded-xl bg-sidebar-accent/50 group-data-[collapsible=icon]:hidden">
             <div className="flex justify-between mb-2 text-xs">
               <span className="text-sidebar-foreground/70">{t('common.usage')}</span>
               <span className="font-medium text-sidebar-foreground">
@@ -445,7 +453,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} className="object-cover" />
                 <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary font-medium">{initials}</AvatarFallback>
               </Avatar>
-              <div className="text-sm">
+              <div className="text-sm group-data-[collapsible=icon]:hidden">
                 <div className="font-medium truncate max-w-[100px] text-sidebar-foreground">{displayName}</div>
                 <div className="text-xs text-sidebar-foreground/50 capitalize">{user?.tier || 'Free'} Plan</div>
               </div>
@@ -460,11 +468,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </aside>
+        </SidebarFooter>
+      </Sidebar>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <SidebarInset className="flex flex-col overflow-hidden h-screen">
         {/* Mobile Header */}
         <header className="md:hidden flex h-16 items-center justify-between border-b bg-background px-4">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
@@ -492,6 +499,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           </h1>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
+            <SidebarTrigger />
           </div>
         </header>
 
@@ -565,7 +573,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           </motion.div>
         )}
 
-        <main className="flex-1 overflow-auto p-6 bg-muted/20 pb-20 md:pb-6">
+        <div className="flex-1 overflow-auto p-6 bg-muted/20 pb-20 md:pb-6">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -573,7 +581,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           >
             {children}
           </motion.div>
-        </main>
+        </div>
 
         {/* Mobile Bottom Navigation */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-40">
@@ -596,7 +604,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
