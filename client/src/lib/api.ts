@@ -1,4 +1,4 @@
-import type { User, Extraction } from "@shared/schema";
+import type { User, Extraction, DocumentWithExtractions } from "@shared/schema";
 
 // Auth API
 export async function login(): Promise<{ user: User }> {
@@ -53,6 +53,7 @@ export interface TemplateExtractionResponse {
   fileName: string;
   fileSize: number;
   mimeType: string;
+  documentId?: string; // Optional documentId if document was stored
 }
 
 /**
@@ -116,6 +117,7 @@ export interface GeneralExtractionResponse {
     max: number;
     average: number;
   };
+  documentId?: string; // Optional documentId if document was stored
 }
 
 /**
@@ -149,6 +151,7 @@ export interface SaveExtractionRequest {
   pagesProcessed: number;
   extractedData: any;
   status: string;
+  documentId?: string; // Optional documentId to link to stored document
 }
 
 export async function saveExtraction(data: SaveExtractionRequest): Promise<{ extraction: Extraction }> {
@@ -187,6 +190,19 @@ export async function getExtraction(id: string): Promise<{ extraction: Extractio
 
   if (!res.ok) {
     throw new Error("Failed to fetch extraction");
+  }
+
+  return res.json();
+}
+
+export async function getDocumentsWithExtractions(limit: number = 20): Promise<{ documents: DocumentWithExtractions[] }> {
+  const url = limit ? `/api/documents-with-extractions?limit=${limit}` : "/api/documents-with-extractions";
+  const res = await fetch(url, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch documents with extractions");
   }
 
   return res.json();

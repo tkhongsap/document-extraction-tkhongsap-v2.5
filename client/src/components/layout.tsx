@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/i18n";
+import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -348,6 +349,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Initialize language from user data
+  useLanguageSync();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
