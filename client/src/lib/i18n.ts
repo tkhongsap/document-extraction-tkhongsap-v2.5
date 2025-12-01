@@ -231,6 +231,30 @@ export const translations: Translations = {
     'empty.no_history_desc': "Upload your first document and we'll remember it here",
     'empty.get_started': "Let's extract something",
 
+    // Documents
+    'docs.title': 'Your Documents',
+    'docs.subtitle': 'View and manage your extracted documents',
+    'docs.search_placeholder': 'Search documents...',
+    'docs.upload_new': 'New Upload',
+    'docs.extractions_count': 'extraction(s)',
+    'docs.view': 'View',
+    'docs.reextract': 'Re-extract',
+    'docs.download': 'Download',
+    'docs.empty_title': 'No documents yet',
+    'docs.empty_desc': 'Upload your first document to get started',
+    'docs.no_results': 'No documents found',
+    'docs.no_results_desc': 'Try a different search term',
+    'docs.original_document': 'Original Document',
+    'docs.no_original': 'Original document not available',
+    'docs.no_original_desc': 'This extraction was created before document storage was implemented',
+
+    // Export
+    'export.json': 'JSON',
+    'export.csv': 'CSV',
+    'export.excel': 'Excel',
+    'export.markdown': 'Markdown',
+    'export.text': 'Text',
+
     // Common
     'common.back': 'Back',
     'common.upgrade': 'Upgrade Plan',
@@ -467,6 +491,30 @@ export const translations: Translations = {
     'empty.no_history': 'ยังไม่มีเอกสาร',
     'empty.no_history_desc': 'อัปโหลดเอกสารแรกของคุณ แล้วเราจะจดจำไว้ที่นี่',
     'empty.get_started': 'เริ่มดึงข้อมูลกันเถอะ',
+
+    // Documents
+    'docs.title': 'เอกสารของคุณ',
+    'docs.subtitle': 'ดูและจัดการเอกสารที่ดึงข้อมูลแล้ว',
+    'docs.search_placeholder': 'ค้นหาเอกสาร...',
+    'docs.upload_new': 'อัปโหลดใหม่',
+    'docs.extractions_count': 'การดึงข้อมูล',
+    'docs.view': 'ดู',
+    'docs.reextract': 'ดึงข้อมูลใหม่',
+    'docs.download': 'ดาวน์โหลด',
+    'docs.empty_title': 'ยังไม่มีเอกสาร',
+    'docs.empty_desc': 'อัปโหลดเอกสารแรกของคุณเพื่อเริ่มต้น',
+    'docs.no_results': 'ไม่พบเอกสาร',
+    'docs.no_results_desc': 'ลองใช้คำค้นหาอื่น',
+    'docs.original_document': 'เอกสารต้นฉบับ',
+    'docs.no_original': 'ไม่มีเอกสารต้นฉบับ',
+    'docs.no_original_desc': 'การดึงข้อมูลนี้ถูกสร้างก่อนที่จะมีการจัดเก็บเอกสาร',
+
+    // Export
+    'export.json': 'JSON',
+    'export.csv': 'CSV',
+    'export.excel': 'Excel',
+    'export.markdown': 'Markdown',
+    'export.text': 'ข้อความ',
 
     // Common
     'common.back': 'ย้อนกลับ',

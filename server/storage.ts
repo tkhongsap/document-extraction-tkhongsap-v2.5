@@ -7,7 +7,8 @@ import {
   type Document,
   type InsertDocument,
   type Extraction, 
-  type InsertExtraction 
+  type InsertExtraction,
+  type DocumentWithExtractions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -28,6 +29,7 @@ export interface IStorage {
   createExtraction(extraction: InsertExtraction): Promise<Extraction>;
   getExtractionsByUserId(userId: string, limit?: number): Promise<Extraction[]>;
   getExtraction(id: string): Promise<Extraction | undefined>;
+  getExtractionsGroupedByDocument(userId: string): Promise<DocumentWithExtractions[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -116,6 +118,52 @@ export class DatabaseStorage implements IStorage {
       .from(extractions)
       .where(eq(extractions.id, id));
     return extraction || undefined;
+  }
+
+  async getExtractionsGroupedByDocument(userId: string): Promise<DocumentWithExtractions[]> {
+    // Get all extractions for the user
+    const allExtractions = await db
+      .select()
+      .from(extractions)
+      .where(eq(extractions.userId, userId))
+      .orderBy(desc(extractions.createdAt));
+
+    // Group by fileName (since multiple extractions can be from the same file)
+    const groupedMap = new Map<string, Extraction[]>();
+    
+    for (const extraction of allExtractions) {
+      const key = extraction.fileName;
+      if (!groupedMap.has(key)) {
+        groupedMap.set(key, []);
+      }
+      groupedMap.get(key)!.push(extraction);
+    }
+
+    // Convert to DocumentWithExtractions format
+    const result: DocumentWithExtractions[] = [];
+    for (const [fileName, extractionList] of groupedMap.entries()) {
+      // Sort by createdAt descending to get latest first
+      const sorted = extractionList.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      const latestExtraction = sorted[0];
+      
+      result.push({
+        fileName,
+        fileSize: latestExtraction.fileSize,
+        documentType: latestExtraction.documentType,
+        extractions: sorted,
+        latestExtraction,
+        totalExtractions: sorted.length,
+      });
+    }
+
+    // Sort by latest extraction date descending
+    return result.sort((a, b) => 
+      new Date(b.latestExtraction.createdAt).getTime() - 
+      new Date(a.latestExtraction.createdAt).getTime()
+    );
   }
 }
 
