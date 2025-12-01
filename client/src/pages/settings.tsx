@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Globe, User, LogOut } from "lucide-react";
+import { Globe, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +17,6 @@ export default function SettingsPage() {
   const { t } = useLanguage();
   const { language, syncLanguage } = useLanguageSync();
   const { user } = useAuth();
-
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
-  };
 
   const displayName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
@@ -112,19 +108,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="destructive" onClick={handleLogout} className="w-full md:w-auto" data-testid="button-logout">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }
