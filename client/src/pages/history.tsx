@@ -3,17 +3,19 @@ import { useDateFormatter } from "@/lib/date-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { 
   Download, 
   FileText, 
   RefreshCw, 
   Search,
-  Plus
+  Plus,
+  X
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getDocumentsWithExtractions } from "@/lib/api";
 import { Link } from "wouter";
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
+import { useDebouncedValue } from "@/hooks/useDebounce";
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -35,10 +38,34 @@ function getDocumentTypeIcon(type: string) {
   return FileText; // Default icon, can be enhanced later
 }
 
+/**
+ * Highlights matching text in a string
+ * @param text - The text to highlight
+ * @param query - The search query
+ * @returns JSX with highlighted matches
+ */
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return parts.map((part, index) => 
+    regex.test(part) ? (
+      <mark key={index} className="bg-yellow-200 dark:bg-yellow-900/50 px-0.5 rounded">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
+
 export default function History() {
   const { t } = useLanguage();
   const { formatDate, formatRelativeTime } = useDateFormatter();
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['documents-with-extractions'],
@@ -46,15 +73,103 @@ export default function History() {
   });
 
   const documents = data?.documents || [];
+  
+  // Debounce search query to improve performance
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
 
-  // Filter documents by filename
+  // Optimized helper function to recursively search in extracted data
+  // Added depth limit and visited set to prevent infinite loops
+  const searchInExtractedData = (data: any, query: string, depth: number = 0, visited: WeakSet<object> = new WeakSet()): boolean => {
+    // Prevent infinite recursion with depth limit
+    if (depth > 10) return false;
+    
+    if (data === null || data === undefined) return false;
+    
+    // Handle circular references
+    if (typeof data === 'object' && data !== null) {
+      if (visited.has(data)) return false;
+      visited.add(data);
+    }
+    
+    if (typeof data === 'string') {
+      return data.toLowerCase().includes(query);
+    }
+    
+    if (typeof data === 'number') {
+      return data.toString().includes(query);
+    }
+    
+    if (typeof data === 'boolean') {
+      return false; // Skip boolean values
+    }
+    
+    if (Array.isArray(data)) {
+      // Early exit if array is empty
+      if (data.length === 0) return false;
+      return data.some(item => searchInExtractedData(item, query, depth + 1, visited));
+    }
+    
+    if (typeof data === 'object') {
+      const values = Object.values(data);
+      // Early exit if object has no values
+      if (values.length === 0) return false;
+      return values.some(value => searchInExtractedData(value, query, depth + 1, visited));
+    }
+    
+    return false;
+  };
+
+  // Filter documents by multiple fields: filename, documentType, status, and extractedData
   const filteredDocuments = useMemo(() => {
-    if (!searchQuery.trim()) return documents;
-    const query = searchQuery.toLowerCase();
-    return documents.filter(doc => 
-      doc.fileName.toLowerCase().includes(query)
-    );
-  }, [documents, searchQuery]);
+    if (!debouncedSearchQuery.trim()) {
+      return documents;
+    }
+    
+    const query = debouncedSearchQuery.toLowerCase().trim();
+    
+    return documents.filter(doc => {
+      // Search in fileName
+      if (doc.fileName.toLowerCase().includes(query)) return true;
+      
+      // Search in documentType
+      if (doc.documentType.toLowerCase().includes(query)) return true;
+      
+      // Search in status
+      if (doc.latestExtraction.status.toLowerCase().includes(query)) return true;
+      
+      // Search in extractedData (recursive search through JSON structure)
+      if (doc.latestExtraction.extractedData && searchInExtractedData(doc.latestExtraction.extractedData, query)) {
+        return true;
+      }
+      
+      return false;
+    });
+  }, [documents, debouncedSearchQuery]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K to focus search input
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      
+      // Escape to clear search when input is focused
+      if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {
+        setSearchQuery("");
+        searchInputRef.current?.blur();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    searchInputRef.current?.focus();
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -69,15 +184,50 @@ export default function History() {
       {/* Search */}
       <Card>
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t('docs.search_placeholder') || 'Search documents...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-transparent pl-10 pr-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder={t('docs.search_placeholder') || 'Search by filename, type, status, or content... (Ctrl+K)'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  "pl-10",
+                  searchQuery.trim() ? "pr-10" : "pr-4"
+                )}
+                aria-label="Search documents"
+              />
+              {searchQuery.trim() && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              {searchQuery.trim() && searchQuery.trim() !== debouncedSearchQuery.trim() && (
+                <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-muted-foreground border-t-transparent" />
+                </div>
+              )}
+            </div>
+            {debouncedSearchQuery.trim() && !isLoading && (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs text-muted-foreground">
+                  {filteredDocuments.length === 0 
+                    ? 'No results found'
+                    : `Found ${filteredDocuments.length} ${filteredDocuments.length === 1 ? 'document' : 'documents'}`
+                  }
+                </p>
+                {searchQuery.trim() && searchQuery.trim() !== debouncedSearchQuery.trim() && (
+                  <p className="text-xs text-muted-foreground italic">Searching...</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -96,18 +246,18 @@ export default function History() {
               <FileText className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-lg mb-2">
-              {searchQuery 
+              {debouncedSearchQuery 
                 ? (t('docs.no_results') || 'No documents found')
                 : (t('docs.empty_title') || 'No documents yet')
               }
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              {searchQuery
+              {debouncedSearchQuery
                 ? (t('docs.no_results_desc') || 'Try a different search term')
                 : (t('docs.empty_desc') || 'Upload your first document to get started')
               }
             </p>
-            {!searchQuery && (
+            {!debouncedSearchQuery && (
               <Button asChild>
                 <Link href="/extraction/general">
                   <Plus className="mr-2 h-4 w-4" />
@@ -133,9 +283,19 @@ export default function History() {
                         <TypeIcon className="h-6 w-6 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base mb-1 truncate">{doc.fileName}</h3>
+                        <h3 className="font-semibold text-base mb-1 truncate">
+                          {debouncedSearchQuery.trim() 
+                            ? highlightText(doc.fileName, debouncedSearchQuery)
+                            : doc.fileName
+                          }
+                        </h3>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                          <span className="capitalize">{doc.documentType}</span>
+                          <span className="capitalize">
+                            {debouncedSearchQuery.trim() && doc.documentType.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+                              ? highlightText(doc.documentType, debouncedSearchQuery)
+                              : doc.documentType
+                            }
+                          </span>
                           <span>•</span>
                           <span>{formatFileSize(doc.fileSize)}</span>
                         </div>
