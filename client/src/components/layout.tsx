@@ -472,115 +472,117 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset className="flex flex-col overflow-hidden h-screen">
-        {/* Mobile Header */}
-        <header className="md:hidden flex h-16 items-center justify-between border-b bg-background px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
-              <FileText className="h-4 w-4" />
-            </div>
-            <span className="tracking-tight">DocExtract</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X /> : <Menu />}
-            </Button>
-          </div>
-        </header>
-
-        {/* Desktop Header */}
-        <header className="hidden md:flex h-16 items-center justify-between border-b bg-background px-6">
-          <h1 className="text-lg font-semibold tracking-tight">
-            {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'DocExtract'}
-          </h1>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <SidebarTrigger />
-          </div>
-        </header>
-
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <motion.div
-            className="md:hidden fixed inset-0 z-50 bg-background"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="flex flex-col h-full">
-              <div className="flex h-16 items-center justify-between border-b px-4">
-                <span className="font-semibold text-lg">Menu</span>
-                <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-                  <X />
-                </Button>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Mobile Header */}
+          <header className="md:hidden flex h-16 items-center justify-between border-b bg-background px-4">
+            <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
+              <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
+                <FileText className="h-4 w-4" />
               </div>
-              <nav className="flex-1 py-6 px-4 space-y-2">
-                {navItems.map((item) => {
-                  const isActive = location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href));
-                  return (
-                    <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
-                      <div className={cn(
-                        "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-all",
-                        isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-foreground/70 hover:bg-muted"
-                      )}>
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
-              <div className="border-t p-4 space-y-4">
-                <div className="p-4 rounded-xl bg-muted/50">
-                  <div className="flex justify-between mb-2 text-xs">
-                    <span className="text-muted-foreground">{t('common.usage')}</span>
-                    <span className="font-medium">
-                      {user?.monthlyUsage || 0} / {user?.monthlyLimit || 100}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${usagePercent}%` }}
-                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} className="object-cover" />
-                      <AvatarFallback className="bg-primary/20 text-primary font-medium">{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-sm">
-                      <div className="font-medium">{displayName}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{user?.tier || 'Free'} Plan</div>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4" />
+              <span className="tracking-tight">DocExtract</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? <X /> : <Menu />}
+              </Button>
+            </div>
+          </header>
+
+          {/* Desktop Header */}
+          <header className="hidden md:flex h-16 items-center justify-between border-b bg-background px-6">
+            <h1 className="text-lg font-semibold tracking-tight">
+              {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'DocExtract'}
+            </h1>
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+              <SidebarTrigger />
+            </div>
+          </header>
+
+          {/* Mobile Menu Overlay */}
+          {isMobileMenuOpen && (
+            <motion.div
+              className="md:hidden fixed inset-0 z-50 bg-background"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="flex flex-col h-full">
+                <div className="flex h-16 items-center justify-between border-b px-4">
+                  <span className="font-semibold text-lg">Menu</span>
+                  <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+                    <X />
                   </Button>
                 </div>
+                <nav className="flex-1 py-6 px-4 space-y-2">
+                  {navItems.map((item) => {
+                    const isActive = location === item.href || (item.href !== '/dashboard' && location.startsWith(item.href));
+                    return (
+                      <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                        <div className={cn(
+                          "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-all",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground/70 hover:bg-muted"
+                        )}>
+                          <item.icon className="h-5 w-5" />
+                          {item.label}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </nav>
+                <div className="border-t p-4 space-y-4">
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <div className="flex justify-between mb-2 text-xs">
+                      <span className="text-muted-foreground">{t('common.usage')}</span>
+                      <span className="font-medium">
+                        {user?.monthlyUsage || 0} / {user?.monthlyLimit || 100}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${usagePercent}%` }}
+                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} className="object-cover" />
+                        <AvatarFallback className="bg-primary/20 text-primary font-medium">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-sm">
+                        <div className="font-medium">{displayName}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{user?.tier || 'Free'} Plan</div>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={handleLogout}>
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        <div className="flex-1 overflow-auto p-6 bg-muted/20 pb-20 md:pb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {children}
-          </motion.div>
+          <div className="flex-1 overflow-auto p-6 bg-muted/20 pb-20 md:pb-6">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {children}
+            </motion.div>
+          </div>
         </div>
 
         {/* Mobile Bottom Navigation */}
