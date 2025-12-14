@@ -1,7 +1,8 @@
 # 001: Resume/CV Extraction Template
 
-**Status:** Planned
+**Status:** Implemented ✅
 **Created:** 2024-12-14
+**Implemented:** 2024-12-14
 **Priority:** High
 **Purpose:** Demo for recruitment firm client - showcase AI extraction vs traditional OCR
 
@@ -194,9 +195,26 @@ Changes needed:
 
 ## Success Criteria
 
-- [ ] Resume template appears in template selection grid
-- [ ] Upload PDF/image resume extracts all 40+ fields
-- [ ] All 7 array sections display as collapsible tables
-- [ ] Confidence scores shown for each field
-- [ ] Export to JSON/Excel includes all extracted data
-- [ ] Works with both English and Thai resumes
+- [x] Resume template appears in template selection grid
+- [x] Upload PDF/image resume extracts all 40+ fields
+- [x] All 7 array sections display as collapsible tables
+- [x] Confidence scores shown for each field
+- [x] Export to JSON/Excel includes all extracted data
+- [x] Works with both English and Thai resumes
+
+---
+
+## Implementation Notes
+
+**Implemented by:** Development Team
+**Reviewed by:** Claude Code
+**Branch:** `feature/cv-extraction`
+
+### Files Modified
+1. `server/extractionSchemas.ts` - Added `resumeSchema` with 40+ fields
+2. `server/routes.ts` - Added `"resume"` to validTypes array
+3. `server/llamaExtract.ts` - Added multi-array handling for resume
+4. `client/src/lib/templates.ts` - Registered template with teal styling
+5. `client/src/lib/api.ts` - Added to DocumentType union
+6. `client/src/components/StructuredResultsViewer.tsx` - Enhanced for 7 collapsible sections
+7. `client/src/lib/i18n.ts` - Added EN/TH translations
