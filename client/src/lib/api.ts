@@ -36,7 +36,7 @@ export async function getCurrentUser(): Promise<{ user: User }> {
 }
 
 // Template Extraction API (LlamaExtract-based for Bank, Invoice, PO, Contract)
-export type DocumentType = "bank" | "invoice" | "po" | "contract";
+export type DocumentType = "bank" | "invoice" | "po" | "contract" | "resume";
 
 export interface ExtractedField {
   key: string;

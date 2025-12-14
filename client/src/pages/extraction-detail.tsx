@@ -140,6 +140,7 @@ export default function ExtractionDetail() {
             <StructuredResultsViewer
               headerFields={extractedData?.headerFields || []}
               lineItems={extractedData?.lineItems || []}
+              extractedData={extractedData}
               documentType={extraction.documentType as DocumentType}
               className="h-full"
             />

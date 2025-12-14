@@ -1,4 +1,4 @@
-import { Receipt, FileSpreadsheet, ScrollText, Landmark, FileText, LucideIcon } from "lucide-react";
+import { Receipt, FileSpreadsheet, ScrollText, Landmark, FileText, UserCircle, LucideIcon } from "lucide-react";
 import { useLanguage } from "./i18n";
 
 export interface Template {
@@ -12,6 +12,14 @@ export interface Template {
 
 export function getTemplates(t: (key: string) => string): Template[] {
   return [
+    { 
+      id: 'resume', 
+      name: t('dash.template_resume'), 
+      desc: 'Extract work experience, education, and skills', 
+      icon: UserCircle, 
+      color: 'bg-teal-100 text-teal-600', 
+      border: 'hover:border-teal-200' 
+    },
     { 
       id: 'bank', 
       name: t('dash.template_bank'), 
@@ -58,6 +66,9 @@ export function getTemplates(t: (key: string) => string): Template[] {
 export function getTemplateById(id: string, t: (key: string) => string): Template | undefined {
   return getTemplates(t).find(template => template.id === id);
 }
+
+
+
 
 
 

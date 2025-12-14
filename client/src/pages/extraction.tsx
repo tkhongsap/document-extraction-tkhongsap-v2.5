@@ -51,7 +51,7 @@ export default function Extraction() {
     if (!file || !type) return;
     
     // Validate document type
-    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract"];
+    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract", "resume"];
     if (!validTypes.includes(type as DocumentType)) {
       toast.error("Invalid document type");
       return;
@@ -360,6 +360,7 @@ export default function Extraction() {
               <StructuredResultsViewer
                 headerFields={templateResults.headerFields}
                 lineItems={templateResults.lineItems}
+                extractedData={templateResults.extractedData}
                 documentType={type as DocumentType}
                 onFieldChange={handleFieldChange}
                 className="h-full"

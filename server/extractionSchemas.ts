@@ -5,7 +5,7 @@
  * All schemas use PER_DOC extraction target with MULTIMODAL mode.
  */
 
-export type DocumentType = "bank" | "invoice" | "po" | "contract";
+export type DocumentType = "bank" | "invoice" | "po" | "contract" | "resume";
 
 /**
  * Bank Statement Schema
@@ -393,6 +393,293 @@ export const contractSchema = {
 };
 
 /**
+ * Resume/CV Schema
+ * Extracts personal information, work experience, education, skills, and more
+ */
+export const resumeSchema = {
+  type: "object",
+  properties: {
+    full_name: {
+      type: "string",
+      description: "Candidate's full name",
+    },
+    email: {
+      type: "string",
+      description: "Primary email address",
+    },
+    phone: {
+      type: "string",
+      description: "Phone number with country code",
+    },
+    address: {
+      type: "object",
+      description: "Location information",
+      properties: {
+        city: {
+          type: "string",
+          description: "City name",
+        },
+        state: {
+          type: "string",
+          description: "State or province",
+        },
+        country: {
+          type: "string",
+          description: "Country name",
+        },
+        postal_code: {
+          type: "string",
+          description: "Postal or ZIP code",
+        },
+      },
+    },
+    date_of_birth: {
+      type: "string",
+      description: "Birth date if present in YYYY-MM-DD format",
+    },
+    nationality: {
+      type: "string",
+      description: "Nationality or citizenship",
+    },
+    linkedin_url: {
+      type: "string",
+      description: "LinkedIn profile URL",
+    },
+    github_url: {
+      type: "string",
+      description: "GitHub profile URL",
+    },
+    portfolio_url: {
+      type: "string",
+      description: "Portfolio or personal website URL",
+    },
+    professional_summary: {
+      type: "string",
+      description: "Summary or objective statement",
+    },
+    total_years_experience: {
+      type: "string",
+      description: "Total years of professional experience",
+    },
+    desired_position: {
+      type: "string",
+      description: "Target job title or role",
+    },
+    desired_salary: {
+      type: "string",
+      description: "Expected salary if mentioned",
+    },
+    availability: {
+      type: "string",
+      description: "Notice period or start date availability",
+    },
+    work_experience: {
+      type: "array",
+      description: "List of work experience entries",
+      items: {
+        type: "object",
+        properties: {
+          company_name: {
+            type: "string",
+            description: "Employer name",
+          },
+          job_title: {
+            type: "string",
+            description: "Position or role title",
+          },
+          location: {
+            type: "string",
+            description: "City, country",
+          },
+          start_date: {
+            type: "string",
+            description: "Employment start date",
+          },
+          end_date: {
+            type: "string",
+            description: "Employment end date or 'Present'",
+          },
+          employment_type: {
+            type: "string",
+            description: "Full-time, Part-time, Contract, Intern",
+          },
+          responsibilities: {
+            type: "string",
+            description: "Key duties and responsibilities",
+          },
+          achievements: {
+            type: "string",
+            description: "Notable accomplishments and metrics",
+          },
+        },
+      },
+    },
+    education: {
+      type: "array",
+      description: "List of education entries",
+      items: {
+        type: "object",
+        properties: {
+          institution_name: {
+            type: "string",
+            description: "School or university name",
+          },
+          degree: {
+            type: "string",
+            description: "Degree type (Bachelor's, Master's, PhD, etc.)",
+          },
+          field_of_study: {
+            type: "string",
+            description: "Major or concentration",
+          },
+          location: {
+            type: "string",
+            description: "City, country",
+          },
+          start_date: {
+            type: "string",
+            description: "Start date",
+          },
+          graduation_date: {
+            type: "string",
+            description: "Graduation or end date",
+          },
+          gpa: {
+            type: "string",
+            description: "Grade point average if listed",
+          },
+          honors: {
+            type: "string",
+            description: "Honors, awards, distinctions",
+          },
+        },
+      },
+    },
+    skills: {
+      type: "array",
+      description: "List of skills",
+      items: {
+        type: "object",
+        properties: {
+          skill_name: {
+            type: "string",
+            description: "Name of the skill",
+          },
+          category: {
+            type: "string",
+            description: "Technical, Soft Skill, Tool, Framework",
+          },
+          proficiency_level: {
+            type: "string",
+            description: "Expert, Advanced, Intermediate, Beginner",
+          },
+        },
+      },
+    },
+    certifications: {
+      type: "array",
+      description: "List of certifications",
+      items: {
+        type: "object",
+        properties: {
+          certification_name: {
+            type: "string",
+            description: "Name of certification",
+          },
+          issuing_organization: {
+            type: "string",
+            description: "Certifying body",
+          },
+          issue_date: {
+            type: "string",
+            description: "Date obtained",
+          },
+          expiration_date: {
+            type: "string",
+            description: "Expiry date if applicable",
+          },
+          credential_id: {
+            type: "string",
+            description: "Certificate or credential ID",
+          },
+        },
+      },
+    },
+    languages: {
+      type: "array",
+      description: "List of languages",
+      items: {
+        type: "object",
+        properties: {
+          language: {
+            type: "string",
+            description: "Language name",
+          },
+          proficiency: {
+            type: "string",
+            description: "Native, Fluent, Intermediate, Basic",
+          },
+        },
+      },
+    },
+    projects: {
+      type: "array",
+      description: "List of projects",
+      items: {
+        type: "object",
+        properties: {
+          project_name: {
+            type: "string",
+            description: "Name of project",
+          },
+          description: {
+            type: "string",
+            description: "Brief description",
+          },
+          role: {
+            type: "string",
+            description: "Role in the project",
+          },
+          technologies: {
+            type: "string",
+            description: "Technologies or tools used",
+          },
+          url: {
+            type: "string",
+            description: "Project URL if available",
+          },
+        },
+      },
+    },
+    references: {
+      type: "array",
+      description: "List of references",
+      items: {
+        type: "object",
+        properties: {
+          reference_name: {
+            type: "string",
+            description: "Name of reference",
+          },
+          relationship: {
+            type: "string",
+            description: "Professional relationship",
+          },
+          company: {
+            type: "string",
+            description: "Reference's company",
+          },
+          contact: {
+            type: "string",
+            description: "Contact information",
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
  * Get the JSON schema for a given document type
  */
 export function getSchemaForType(documentType: DocumentType): Record<string, unknown> {
@@ -401,6 +688,7 @@ export function getSchemaForType(documentType: DocumentType): Record<string, unk
     invoice: invoiceSchema,
     po: purchaseOrderSchema,
     contract: contractSchema,
+    resume: resumeSchema,
   };
 
   const schema = schemas[documentType];
@@ -420,6 +708,7 @@ export function getDocumentTypeName(documentType: DocumentType): string {
     invoice: "Invoice",
     po: "Purchase Order",
     contract: "Contract",
+    resume: "Resume / CV",
   };
   return names[documentType] || documentType;
 }
