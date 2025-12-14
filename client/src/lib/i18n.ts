@@ -203,6 +203,7 @@ export const translations: Translations = {
     'dash.template_invoice': 'Invoice',
     'dash.template_po': 'Purchase Order',
     'dash.template_contract': 'Contract',
+    'dash.template_resume': 'Resume / CV',
     'dash.general_desc': "Any document, any format - we'll figure it out",
 
     // Extraction
@@ -464,6 +465,7 @@ export const translations: Translations = {
     'dash.template_invoice': 'ใบแจ้งหนี้',
     'dash.template_po': 'ใบสั่งซื้อ',
     'dash.template_contract': 'สัญญา',
+    'dash.template_resume': 'เรซูเม่ / ประวัติย่อ',
     'dash.general_desc': 'เอกสารอะไรก็ได้ รูปแบบไหนก็ได้ เราจัดการให้',
 
     // Extraction
