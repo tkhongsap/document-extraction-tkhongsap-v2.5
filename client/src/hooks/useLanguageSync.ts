@@ -14,14 +14,15 @@ export function useLanguageSync() {
   const queryClient = useQueryClient();
 
   // Initialize language from user data on mount/auth
+  // Note: Intentionally excluding 'language' from deps to prevent reset loop
+  // when user manually changes language via UI
   useEffect(() => {
     if (user?.language) {
       const userLang = user.language as 'en' | 'th';
-      if (userLang !== language) {
-        initializeLanguage(userLang);
-      }
+      initializeLanguage(userLang);
     }
-  }, [user?.language, initializeLanguage, language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.language, initializeLanguage]);
 
   // Mutation to update language in database
   const updateLanguageMutation = useMutation({
@@ -49,7 +50,10 @@ export function useLanguageSync() {
   // Wrapper function that updates both local state and database
   const syncLanguage = (newLanguage: 'en' | 'th') => {
     setLanguage(newLanguage);
-    updateLanguageMutation.mutate(newLanguage);
+    // Only persist to database if user is authenticated
+    if (user) {
+      updateLanguageMutation.mutate(newLanguage);
+    }
   };
 
   return {

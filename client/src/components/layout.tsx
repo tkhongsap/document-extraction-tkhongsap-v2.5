@@ -52,6 +52,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
+  const { isAuthenticated } = useAuth();
+  const { syncLanguage } = useLanguageSync();
+
+  const handleLanguageChange = (lang: 'en' | 'th') => {
+    if (isAuthenticated) {
+      syncLanguage(lang);
+    } else {
+      setLanguage(lang);
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -61,10 +71,10 @@ function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setLanguage('en')}>
+        <DropdownMenuItem onClick={() => handleLanguageChange('en')}>
           English {language === 'en' && '✓'}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setLanguage('th')}>
+        <DropdownMenuItem onClick={() => handleLanguageChange('th')}>
           ไทย (Thai) {language === 'th' && '✓'}
         </DropdownMenuItem>
       </DropdownMenuContent>
