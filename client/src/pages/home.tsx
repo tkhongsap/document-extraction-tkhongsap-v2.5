@@ -1,8 +1,9 @@
 import { useLanguage } from '@/lib/i18n';
-import { HeroEnterprise } from '@/components/marketing/hero-enterprise';
+import { HeroRecruitment } from '@/components/marketing/hero-recruitment';
 import { StatCounter } from '@/components/marketing/stat-counter';
 import { FeatureGrid } from '@/components/marketing/feature-grid';
 import { CTASection } from '@/components/marketing/cta-section';
+import { PricingSection } from '@/components/marketing/pricing-section';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -15,8 +16,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col">
-      {/* Section 1: Hero - Dark dramatic opening with floating cards */}
-      <HeroEnterprise />
+      {/* Section 1: Hero - Recruitment-focused with Resume/CV extraction */}
+      <HeroRecruitment />
 
       {/* Section 2: Social Proof - Stats */}
       <section className="py-16 lg:py-20 bg-cream">
@@ -36,7 +37,10 @@ export default function Home() {
       {/* Section 3: Features - Condensed 3 capabilities preview */}
       <FeatureGrid condensed />
 
-      {/* Section 4: Final CTA - Call to action */}
+      {/* Section 4: Pricing */}
+      <PricingSection />
+
+      {/* Section 5: Final CTA - Call to action */}
       <CTASection />
     </div>
   );
