@@ -13,6 +13,14 @@ export interface Template {
 export function getTemplates(t: (key: string) => string): Template[] {
   return [
     { 
+      id: 'resume', 
+      name: t('dash.template_resume'), 
+      desc: 'Extract work experience, education, and skills', 
+      icon: UserCircle, 
+      color: 'bg-teal-100 text-teal-600', 
+      border: 'hover:border-teal-200' 
+    },
+    { 
       id: 'bank', 
       name: t('dash.template_bank'), 
       desc: 'Extract transactions, balances, and account details', 
@@ -43,14 +51,6 @@ export function getTemplates(t: (key: string) => string): Template[] {
       icon: ScrollText, 
       color: 'bg-orange-100 text-orange-600', 
       border: 'hover:border-orange-200' 
-    },
-    { 
-      id: 'resume', 
-      name: t('dash.template_resume'), 
-      desc: 'Extract work experience, education, and skills', 
-      icon: UserCircle, 
-      color: 'bg-teal-100 text-teal-600', 
-      border: 'hover:border-teal-200' 
     },
     { 
       id: 'general', 
