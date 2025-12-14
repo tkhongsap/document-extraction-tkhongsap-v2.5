@@ -92,61 +92,59 @@ export function PricingSection({ className }: PricingSectionProps) {
             </div>
           </motion.div>
 
-          {/* Business Plan */}
+          {/* Business Plan - Grayed out with masked pricing */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <div className="h-full p-8 bg-white rounded-3xl border-2 border-[hsl(var(--gold))] shadow-xl shadow-[hsl(var(--gold))]/10 relative overflow-hidden">
-              {/* Popular Badge */}
+            <div className="h-full p-8 bg-gray-50 rounded-3xl border-2 border-gray-200 shadow-sm relative overflow-hidden">
+              {/* Coming Soon Badge */}
               <div className="absolute top-6 right-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[hsl(var(--gold))] text-[hsl(192_85%_12%)] text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
                   <Sparkles className="h-3 w-3" />
                   {t('pricing.popular_badge')}
                 </span>
               </div>
 
-              {/* Gold top accent */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[hsl(var(--gold))] via-[hsl(var(--gold-dark))] to-[hsl(var(--gold))]" />
+              {/* Gray top accent */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300" />
 
               <div className="mb-8">
-                <h3 className="text-2xl font-semibold text-foreground mb-2">
+                <h3 className="text-2xl font-semibold text-gray-400 mb-2">
                   {t('pricing.business_name')}
                 </h3>
-                <p className="text-muted-foreground text-sm mb-6">
+                <p className="text-gray-400 text-sm mb-6">
                   {t('pricing.business_desc')}
                 </p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-display text-foreground">฿990</span>
-                  <span className="text-muted-foreground">/{t('pricing.per_month')}</span>
+                  <span className="text-5xl font-display text-gray-400">฿XX,XXX</span>
+                  <span className="text-gray-400">/{t('pricing.per_month')}</span>
                 </div>
               </div>
 
               <ul className="space-y-4 mb-8">
                 {businessFeatures.map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <Check className="h-5 w-5 text-[hsl(var(--gold))] shrink-0 mt-0.5" />
-                    <span className="text-foreground">{feature}</span>
+                    <Check className="h-5 w-5 text-gray-300 shrink-0 mt-0.5" />
+                    <span className="text-gray-400">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <Button
                 size="lg"
-                onClick={handleLogin}
-                className="w-full h-12 bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] font-semibold shadow-lg shadow-[hsl(var(--gold))]/20"
+                disabled
+                className="w-full h-12 bg-gray-200 hover:bg-gray-200 text-gray-500 font-semibold cursor-not-allowed"
               >
                 {t('pricing.business_cta')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
-              {t('pricing.guarantee') && (
-                <p className="text-center text-xs text-muted-foreground mt-4">
-                  {t('pricing.guarantee')}
-                </p>
-              )}
+              <p className="text-center text-xs text-gray-400 mt-4">
+                Contact sales for pricing
+              </p>
             </div>
           </motion.div>
         </div>
