@@ -17,6 +17,7 @@ interface StructuredResultsViewerProps {
   headerFields: ExtractedField[];
   lineItems?: Array<Record<string, unknown>>;
   extractedData?: Record<string, unknown>;
+  confidenceScores?: Record<string, number>;
   documentType: DocumentType;
   onFieldChange?: (index: number, newValue: string) => void;
   className?: string;
@@ -185,20 +186,72 @@ function formatValue(value: unknown): string {
 }
 
 /**
- * Collapsible array section component
+ * Get confidence indicator class based on score
+ */
+function getConfidenceIndicatorClass(confidence: number): string {
+  if (confidence >= 0.9) {
+    return "bg-green-500 dark:bg-green-400";
+  } else if (confidence >= 0.7) {
+    return "bg-yellow-500 dark:bg-yellow-400";
+  } else {
+    return "bg-red-500 dark:bg-red-400";
+  }
+}
+
+/**
+ * Confidence indicator component - small dot with tooltip
+ */
+function ConfidenceIndicator({ confidence }: { confidence: number }) {
+  return (
+    <span
+      className={cn(
+        "inline-block w-2 h-2 rounded-full ml-1.5 cursor-help",
+        getConfidenceIndicatorClass(confidence)
+      )}
+      title={`Confidence: ${Math.round(confidence * 100)}%`}
+    />
+  );
+}
+
+/**
+ * Collapsible array section component with per-cell confidence
  */
 function ArraySection({
   config,
   data,
+  confidenceScores,
+  sectionConfidence,
   isExpanded,
   onToggle,
 }: {
   config: ArraySectionConfig;
   data: Array<Record<string, unknown>>;
+  confidenceScores?: Record<string, number>;
+  sectionConfidence?: number;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
   if (!data || data.length === 0) return null;
+
+  // Get confidence for a specific cell
+  const getCellConfidence = (rowIndex: number, fieldKey: string): number | undefined => {
+    if (!confidenceScores) return sectionConfidence;
+    // Try different key formats that LlamaExtract might use
+    const keys = [
+      `${config.key}.${rowIndex}.${fieldKey}`,
+      `${config.key}[${rowIndex}].${fieldKey}`,
+      `${config.key}.${fieldKey}`,
+      // Also try without array notation
+      `${config.key}_${rowIndex}_${fieldKey}`,
+    ];
+    for (const key of keys) {
+      if (confidenceScores[key] !== undefined) {
+        return confidenceScores[key];
+      }
+    }
+    // Fall back to section-level confidence if per-cell not available
+    return sectionConfidence;
+  };
 
   return (
     <div className="mt-4 border-t pt-4" data-testid={`section-${config.key}`}>
@@ -234,14 +287,22 @@ function ArraySection({
             <TableBody>
               {data.map((item, rowIndex) => (
                 <TableRow key={rowIndex} data-testid={`row-${config.key}-${rowIndex}`}>
-                  {config.columns.map((col) => (
-                    <TableCell
-                      key={col.key}
-                      className={cn("text-sm py-2", col.width)}
-                    >
-                      {formatValue(item[col.key])}
-                    </TableCell>
-                  ))}
+                  {config.columns.map((col) => {
+                    const confidence = getCellConfidence(rowIndex, col.key);
+                    return (
+                      <TableCell
+                        key={col.key}
+                        className={cn("text-sm py-2", col.width)}
+                      >
+                        <span className="inline-flex items-center">
+                          {formatValue(item[col.key])}
+                          {confidence !== undefined && (
+                            <ConfidenceIndicator confidence={confidence} />
+                          )}
+                        </span>
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableBody>
@@ -256,6 +317,7 @@ export function StructuredResultsViewer({
   headerFields,
   lineItems,
   extractedData,
+  confidenceScores,
   documentType,
   onFieldChange,
   className,
@@ -265,6 +327,11 @@ export function StructuredResultsViewer({
   const isResume = documentType === "resume";
   const lineItemsConfig = !isResume ? getLineItemsConfig(documentType) : null;
   const resumeArrayConfigs = isResume ? getResumeArrayConfigs() : [];
+  
+  // Calculate average confidence from header fields for fallback
+  const averageConfidence = headerFields.length > 0
+    ? headerFields.reduce((sum, field) => sum + field.confidence, 0) / headerFields.length
+    : 0.9;
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({
@@ -341,6 +408,8 @@ export function StructuredResultsViewer({
         <ArraySection
           config={lineItemsConfig}
           data={lineItems}
+          confidenceScores={confidenceScores}
+          sectionConfidence={averageConfidence}
           isExpanded={isSectionExpanded(lineItemsConfig.key)}
           onToggle={() => toggleSection(lineItemsConfig.key)}
         />
@@ -354,6 +423,8 @@ export function StructuredResultsViewer({
             key={config.key}
             config={config}
             data={arrayData}
+            confidenceScores={confidenceScores}
+            sectionConfidence={averageConfidence}
             isExpanded={isSectionExpanded(config.key)}
             onToggle={() => toggleSection(config.key)}
           />

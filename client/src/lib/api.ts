@@ -49,6 +49,7 @@ export interface TemplateExtractionResponse {
   headerFields: ExtractedField[];
   lineItems?: Array<Record<string, unknown>>;
   extractedData: Record<string, unknown>;
+  confidenceScores?: Record<string, number>; // Normalized confidence scores for all fields
   pagesProcessed: number;
   fileName: string;
   fileSize: number;
