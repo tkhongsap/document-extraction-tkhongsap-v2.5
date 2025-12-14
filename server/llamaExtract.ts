@@ -431,9 +431,9 @@ export class LlamaExtractService {
     const lineItemsKey = this.getLineItemsKey(documentType);
     const lineItems = lineItemsKey ? (data[lineItemsKey] as Array<Record<string, unknown>> | undefined) : undefined;
 
-    // Build header fields (exclude line items array)
+    // Build header fields (exclude line items array and resume arrays)
     const headerFields: ExtractedField[] = [];
-    this.flattenObject(data, "", headerFields, confidenceScores, lineItemsKey);
+    this.flattenObject(data, "", headerFields, confidenceScores, lineItemsKey, documentType);
 
     console.log(`[LlamaExtract] Formatted ${headerFields.length} header fields`);
     console.log(`[LlamaExtract] Header fields:`, JSON.stringify(headerFields, null, 2));
@@ -459,8 +459,24 @@ export class LlamaExtractService {
       invoice: "line_items",
       po: "line_items",
       contract: "parties", // Contract has parties and signatures as arrays
+      resume: "work_experience", // Resume has multiple arrays, work_experience is primary
     };
     return lineItemsKeys[documentType];
+  }
+
+  /**
+   * Get all array keys to skip for resume documents
+   */
+  private getResumeArrayKeys(): string[] {
+    return [
+      "work_experience",
+      "education", 
+      "skills",
+      "certifications",
+      "languages",
+      "projects",
+      "references",
+    ];
   }
 
   /**
@@ -471,13 +487,18 @@ export class LlamaExtractService {
     prefix: string,
     result: ExtractedField[],
     confidenceScores: Record<string, number>,
-    skipKey: string | null
+    skipKey: string | null,
+    documentType?: DocumentType
   ): void {
+    const resumeArrayKeys = documentType === "resume" ? this.getResumeArrayKeys() : [];
+    
     for (const [key, value] of Object.entries(obj)) {
       // Skip line items array
       if (key === skipKey) continue;
       // Skip signatures array for contracts
       if (key === "signatures") continue;
+      // Skip all resume arrays 
+      if (resumeArrayKeys.includes(key)) continue;
 
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
@@ -497,7 +518,8 @@ export class LlamaExtractService {
           fullKey,
           result,
           confidenceScores,
-          skipKey
+          skipKey,
+          documentType
         );
       } else {
         // Add primitive value as header field

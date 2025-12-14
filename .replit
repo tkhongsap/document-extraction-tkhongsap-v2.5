@@ -40,30 +40,8 @@ externalPort = 6800
 exposeLocalhost = true
 
 [[ports]]
-localPort = 33104
-externalPort = 3001
-exposeLocalhost = true
-
-[[ports]]
-localPort = 35451
+localPort = 24412
 externalPort = 3000
-
-[[ports]]
-localPort = 43149
-externalPort = 8080
-exposeLocalhost = true
-
-[[ports]]
-localPort = 44861
-externalPort = 8000
-
-[[ports]]
-localPort = 45569
-externalPort = 4200
-
-[[ports]]
-localPort = 60336
-externalPort = 3002
 exposeLocalhost = true
 
 [env]

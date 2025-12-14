@@ -383,7 +383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const documentType = req.body.documentType as DocumentType;
 
         // Validate document type
-        const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract"];
+        const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract", "resume"];
         if (!documentType || !validTypes.includes(documentType)) {
           return res.status(400).json({
             message: `Invalid document type. Must be one of: ${validTypes.join(", ")}`,

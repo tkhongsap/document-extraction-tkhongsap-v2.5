@@ -38,7 +38,7 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: isProduction, // Only require HTTPS in production
-      sameSite: isProduction ? 'strict' : 'lax',
+      sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin OAuth in production
       maxAge: sessionTtl,
     },
   });
