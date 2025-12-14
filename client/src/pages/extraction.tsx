@@ -361,6 +361,7 @@ export default function Extraction() {
                 headerFields={templateResults.headerFields}
                 lineItems={templateResults.lineItems}
                 extractedData={templateResults.extractedData}
+                confidenceScores={templateResults.confidenceScores}
                 documentType={type as DocumentType}
                 onFieldChange={handleFieldChange}
                 className="h-full"

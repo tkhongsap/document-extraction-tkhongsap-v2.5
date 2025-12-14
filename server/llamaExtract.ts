@@ -55,6 +55,7 @@ export interface TemplateExtractionResult {
   headerFields: ExtractedField[];
   lineItems?: Array<Record<string, unknown>>;
   extractedData: Record<string, unknown>;
+  confidenceScores?: Record<string, number>; // Normalized confidence scores for all fields
 }
 
 export class LlamaExtractError extends Error {
@@ -423,9 +424,11 @@ export class LlamaExtractService {
   ): TemplateExtractionResult {
     console.log(`[LlamaExtract] Formatting result for document type: ${documentType}`);
     console.log(`[LlamaExtract] Raw result data:`, JSON.stringify(result.data, null, 2));
+    console.log(`[LlamaExtract] Extraction metadata:`, JSON.stringify(result.extraction_metadata, null, 2));
     
     const data = result.data || {};
     const confidenceScores = result.extraction_metadata?.confidence_scores || {};
+    console.log(`[LlamaExtract] Raw confidence scores:`, JSON.stringify(confidenceScores, null, 2));
 
     // Separate header fields from line items based on document type
     const lineItemsKey = this.getLineItemsKey(documentType);
@@ -441,12 +444,20 @@ export class LlamaExtractService {
       console.log(`[LlamaExtract] Line items count: ${lineItems.length}`);
     }
 
+    // Normalize all confidence scores for frontend use
+    const normalizedConfidenceScores: Record<string, number> = {};
+    for (const [key, score] of Object.entries(confidenceScores)) {
+      normalizedConfidenceScores[key] = this.normalizeConfidence(score);
+    }
+    console.log(`[LlamaExtract] Confidence scores count: ${Object.keys(normalizedConfidenceScores).length}`);
+
     return {
       success: true,
       pagesProcessed: 1, // LlamaExtract processes entire document
       headerFields,
       lineItems,
       extractedData: data,
+      confidenceScores: normalizedConfidenceScores,
     };
   }
 

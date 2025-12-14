@@ -436,13 +436,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           headerFields: extractionResult.headerFields,
           lineItems: extractionResult.lineItems,
           extractedData: extractionResult.extractedData,
+          confidenceScores: extractionResult.confidenceScores,
           pagesProcessed: extractionResult.pagesProcessed,
           fileName: originalname,
           fileSize: size,
           mimeType: mimetype,
           documentId, // Include documentId so frontend can link it
         };
-        console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields`);
+        console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields, ${Object.keys(extractionResult.confidenceScores || {}).length} confidence scores`);
         res.json(responsePayload);
       } catch (error: any) {
         console.error("[Template Extraction] Error:", error);

@@ -141,6 +141,7 @@ export default function ExtractionDetail() {
               headerFields={extractedData?.headerFields || []}
               lineItems={extractedData?.lineItems || []}
               extractedData={extractedData}
+              confidenceScores={extractedData?.confidenceScores}
               documentType={extraction.documentType as DocumentType}
               className="h-full"
             />
