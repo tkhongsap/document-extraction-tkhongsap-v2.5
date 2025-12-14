@@ -360,6 +360,7 @@ export default function Extraction() {
               <StructuredResultsViewer
                 headerFields={templateResults.headerFields}
                 lineItems={templateResults.lineItems}
+                extractedData={templateResults.extractedData}
                 documentType={type as DocumentType}
                 onFieldChange={handleFieldChange}
                 className="h-full"
