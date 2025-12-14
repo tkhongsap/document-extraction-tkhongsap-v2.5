@@ -430,6 +430,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           documentType
         );
 
+        // Update user's monthly usage after successful extraction
+        await storage.updateUserUsage(userId, extractionResult.pagesProcessed);
+
         // Return the extraction result
         const responsePayload = {
           success: extractionResult.success,
@@ -517,6 +520,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pagesRequired: parsedDocument.pageCount,
           });
         }
+
+        // Update user's monthly usage after successful parsing
+        await storage.updateUserUsage(userId, parsedDocument.pageCount);
 
         // Return the parsed document
         res.json({
