@@ -77,6 +77,7 @@ export interface LlamaParseConfig {
   adaptiveLongTable: boolean;
   outlinedTableExtraction: boolean;
   outputTablesAsHtml: boolean;
+  parsingInstruction?: string; // Custom instruction to guide AI parsing
 }
 
 /**
@@ -110,6 +111,19 @@ function normalizeConfidence(raw: number): number {
 }
 
 /**
+ * Default parsing instruction to guide AI for well-formatted output
+ */
+const DEFAULT_PARSING_INSTRUCTION = `Format the document with proper structure and spacing:
+- Use appropriate heading levels (# for main title, ## for sections, ### for subsections)
+- Separate paragraphs with blank lines for readability
+- Format tables with clear headers and aligned columns
+- Use bullet points or numbered lists where appropriate
+- Preserve the document's logical structure and hierarchy
+- Add clear spacing between different sections
+- For personal information like contact details, format as a clean list
+- For tabular data, use markdown tables with proper headers`;
+
+/**
  * Get default Agentic preset configuration
  */
 function getDefaultAgenticConfig(): LlamaParseConfig {
@@ -120,6 +134,7 @@ function getDefaultAgenticConfig(): LlamaParseConfig {
     adaptiveLongTable: true,
     outlinedTableExtraction: true,
     outputTablesAsHtml: true,
+    parsingInstruction: DEFAULT_PARSING_INSTRUCTION,
   };
 }
 
@@ -225,6 +240,12 @@ export class LlamaParseService {
     
     // Enable layout extraction to get confidence scores
     formData.append("extract_layout", "true");
+    
+    // Add custom parsing instruction if provided
+    if (this.config.parsingInstruction) {
+      formData.append("parsing_instruction", this.config.parsingInstruction);
+      console.log(`[LlamaParse] Using custom parsing instruction`);
+    }
 
     const response = await fetch(`${LLAMA_PARSE_API_BASE}/upload`, {
       method: "POST",
