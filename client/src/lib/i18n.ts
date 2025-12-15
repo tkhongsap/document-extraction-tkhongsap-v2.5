@@ -263,6 +263,7 @@ export const translations: Translations = {
     'common.back': 'Back',
     'common.upgrade': 'Upgrade Plan',
     'common.usage': 'Monthly Usage',
+    'common.pages': 'page(s)',
 
     // Footer
     'footer.description': 'Secure document extraction for Thai businesses. Extract structured data in seconds.',
@@ -528,6 +529,7 @@ export const translations: Translations = {
     'common.back': 'ย้อนกลับ',
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
+    'common.pages': 'หน้า',
 
     // Footer
     'footer.description': 'การดึงข้อมูลเอกสารที่ปลอดภัยสำหรับธุรกิจไทย ดึงข้อมูลที่มีโครงสร้างได้ในไม่กี่วินาที',

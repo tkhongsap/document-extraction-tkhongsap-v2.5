@@ -304,6 +304,8 @@ export default function History() {
                           </span>
                           <span>•</span>
                           <span>{formatFileSize(doc.fileSize)}</span>
+                          <span>•</span>
+                          <span>{doc.latestExtraction.pagesProcessed} {t('common.pages')}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge variant="secondary">
