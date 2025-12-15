@@ -172,6 +172,9 @@ export const translations: Translations = {
     'pricing.per_month': 'month',
     'pricing.popular_badge': 'Most Popular',
     'pricing.guarantee': '',
+    'pricing.early_bird': 'Early Bird',
+    'pricing.coming_soon': 'Coming Soon',
+    'pricing.contact_early_bird': 'Contact us for Early Bird discount',
 
     // CTA Section
     'cta.title': 'Ready to Transform Your Document Workflow?',
@@ -434,6 +437,9 @@ export const translations: Translations = {
     'pricing.per_month': 'เดือน',
     'pricing.popular_badge': 'ยอดนิยม',
     'pricing.guarantee': '',
+    'pricing.early_bird': 'Early Bird',
+    'pricing.coming_soon': 'เร็วๆ นี้',
+    'pricing.contact_early_bird': 'ติดต่อเราเพื่อรับส่วนลด Early Bird',
 
     // CTA Section
     'cta.title': 'พร้อมเปลี่ยนแปลง Workflow เอกสารของคุณ?',

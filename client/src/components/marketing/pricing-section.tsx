@@ -118,9 +118,9 @@ export function PricingSection({ className }: PricingSectionProps) {
                 <p className="text-gray-400 text-sm mb-6">
                   {t('pricing.business_desc')}
                 </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-display text-gray-400">฿XX,XXX</span>
-                  <span className="text-gray-400">/{t('pricing.per_month')}</span>
+                <div className="flex flex-col">
+                  <span className="text-3xl font-display text-gray-400">{t('pricing.early_bird')}</span>
+                  <span className="text-sm text-gray-400 mt-1">{t('pricing.coming_soon')}</span>
                 </div>
               </div>
 
@@ -142,8 +142,8 @@ export function PricingSection({ className }: PricingSectionProps) {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
-              <p className="text-center text-xs text-gray-400 mt-4">
-                Contact sales for pricing
+              <p className="text-center text-sm text-gray-500 mt-4 font-medium">
+                {t('pricing.contact_early_bird')}
               </p>
             </div>
           </motion.div>
