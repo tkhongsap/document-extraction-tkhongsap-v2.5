@@ -10,13 +10,13 @@ export default function Home() {
 
   const stats = [
     { value: '99.2', suffix: '%', label: t('stats.accuracy'), description: t('stats.accuracyDesc'), highlight: true },
-    { value: '50M', suffix: '+', label: t('stats.pages'), description: t('stats.pagesDesc') },
+    { value: '1M', suffix: '+', label: t('stats.documents_trained'), description: t('stats.documentsTrainedDesc') },
     { value: '24', suffix: '/7', label: t('stats.support'), description: t('stats.supportDesc') },
   ];
 
   return (
     <div className="flex flex-col">
-      {/* Section 1: Hero - Recruitment-focused with Resume/CV extraction */}
+      {/* Section 1: Hero - Document extraction with resume example */}
       <HeroRecruitment />
 
       {/* Section 2: Social Proof - Stats */}
