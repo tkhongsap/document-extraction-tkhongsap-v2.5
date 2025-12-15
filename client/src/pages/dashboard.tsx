@@ -76,7 +76,7 @@ export default function Dashboard() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-semibold">{t('nav.templates')}</h2>
+            <h2 className="text-lg font-semibold">{t('dash.featured_templates')}</h2>
             <p className="text-sm text-muted-foreground mt-1">{t('dash.templates_subtitle') || 'AI-powered extraction for your documents'}</p>
           </div>
           <Link href="/templates" className="text-sm text-primary hover:underline flex items-center">
