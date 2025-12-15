@@ -19,10 +19,10 @@ export const translations: Translations = {
     'nav.about': 'About',
     'nav.signin': 'Sign In',
     'nav.dashboard': 'Dashboard',
-    'nav.general': 'General Extraction',
-    'nav.templates': 'Browse Templates',
-    'nav.history': 'Extraction History',
-    'nav.settings': 'Preferences',
+    'nav.general': 'Extract',
+    'nav.templates': 'Templates',
+    'nav.history': 'History',
+    'nav.settings': 'Settings',
     'nav.logout': 'Sign Out',
 
     // Hero Section
@@ -287,9 +287,9 @@ export const translations: Translations = {
     'nav.about': 'เกี่ยวกับเรา',
     'nav.signin': 'เข้าสู่ระบบ',
     'nav.dashboard': 'แดชบอร์ด',
-    'nav.general': 'ดึงข้อมูลทั่วไป',
-    'nav.templates': 'เรียกดูเทมเพลต',
-    'nav.history': 'ประวัติการดึงข้อมูล',
+    'nav.general': 'ดึงข้อมูล',
+    'nav.templates': 'เทมเพลต',
+    'nav.history': 'ประวัติ',
     'nav.settings': 'ตั้งค่า',
     'nav.logout': 'ออกจากระบบ',
 
