@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/i18n";
 import { useLanguageSync } from "@/hooks/useLanguageSync";
@@ -11,12 +11,11 @@ import {
   History,
   Settings,
   LogOut,
-  Globe,
   Menu,
   X,
   Check,
-  ArrowRight,
-  Plus
+  Plus,
+  ChevronDown
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -50,10 +49,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return <PublicLayout>{children}</PublicLayout>;
 }
 
+const LANGUAGES = [
+  { code: 'en' as const, flag: '🇺🇸', name: 'English', nativeName: 'English' },
+  { code: 'th' as const, flag: '🇹🇭', name: 'Thai', nativeName: 'ภาษาไทย' },
+];
+
 function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
   const { isAuthenticated } = useAuth();
   const { syncLanguage } = useLanguageSync();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
 
   const handleLanguageChange = (lang: 'en' | 'th') => {
     if (isAuthenticated) {
@@ -61,23 +68,95 @@ function LanguageSwitcher() {
     } else {
       setLanguage(lang);
     }
+    setIsOpen(false);
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <Globe className="h-5 w-5" />
-        </Button>
+        <button
+          className={cn(
+            "group inline-flex items-center gap-2 h-9 px-3 rounded-full",
+            "border border-border/60 bg-background/80 backdrop-blur-sm",
+            "text-sm font-medium text-foreground/80",
+            "transition-all duration-300 ease-out",
+            "hover:border-[hsl(var(--gold))]/50 hover:bg-background",
+            "hover:shadow-[0_0_20px_-5px_hsl(var(--gold)/0.25)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/30 focus-visible:ring-offset-2",
+            "active:scale-[0.97]"
+          )}
+          aria-label="Select language"
+        >
+          <span className="text-base leading-none">{currentLang.flag}</span>
+          <span className="font-semibold tracking-wide">{currentLang.code.toUpperCase()}</span>
+          <motion.span
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="text-muted-foreground group-hover:text-[hsl(var(--gold))] transition-colors"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </motion.span>
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleLanguageChange('en')}>
-          English {language === 'en' && '✓'}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleLanguageChange('th')}>
-          ไทย (Thai) {language === 'th' && '✓'}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+      <AnimatePresence>
+        {isOpen && (
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            asChild
+            forceMount
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className={cn(
+                "z-50 min-w-[180px] overflow-hidden rounded-xl p-1.5",
+                "border border-border/50 bg-background/95 backdrop-blur-xl",
+                "shadow-xl shadow-black/5"
+              )}
+            >
+              {LANGUAGES.map((lang, index) => {
+                const isActive = language === lang.code;
+                return (
+                  <motion.button
+                    key={lang.code}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.2 }}
+                    onClick={() => handleLanguageChange(lang.code)}
+                    className={cn(
+                      "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5",
+                      "text-sm transition-all duration-200",
+                      "hover:bg-[hsl(var(--gold))]/10",
+                      isActive
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <span className="text-lg">{lang.flag}</span>
+                    <span className="flex-1 text-left">{lang.nativeName}</span>
+                    <AnimatePresence mode="wait">
+                      {isActive && (
+                        <motion.span
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--gold))]/15"
+                        >
+                          <Check className="h-3 w-3 text-[hsl(var(--gold))]" />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+          </DropdownMenuContent>
+        )}
+      </AnimatePresence>
     </DropdownMenu>
   );
 }
