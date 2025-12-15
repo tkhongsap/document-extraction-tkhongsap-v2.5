@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Clock,
   BarChart3,
+  Files,
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { staggerContainer, staggerItem, cardHover } from '@/lib/animations';
@@ -234,10 +235,14 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <div className="font-medium text-sm">{doc.fileName}</div>
-                        <div className="text-xs text-muted-foreground capitalize">{doc.documentType} • {doc.pagesProcessed} {t('common.pages')}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{doc.documentType}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-6 text-sm">
+                      <div className="flex items-center text-muted-foreground">
+                        <Files className="mr-1 h-3 w-3" />
+                        {doc.pagesProcessed}
+                      </div>
                       <div className="flex items-center text-muted-foreground">
                         <Clock className="mr-1.5 h-3 w-3" />
                         {formatRelativeTime(new Date(doc.createdAt))}

@@ -10,7 +10,8 @@ import {
   RefreshCw, 
   Search,
   Plus,
-  X
+  X,
+  Files
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getDocumentsWithExtractions } from "@/lib/api";
@@ -304,10 +305,12 @@ export default function History() {
                           </span>
                           <span>•</span>
                           <span>{formatFileSize(doc.fileSize)}</span>
-                          <span>•</span>
-                          <span>{doc.latestExtraction.pagesProcessed} {t('common.pages')}</span>
                         </div>
                         <div className="flex items-center gap-3">
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Files className="h-3 w-3" />
+                            {doc.latestExtraction.pagesProcessed}
+                          </Badge>
                           <Badge variant="secondary">
                             {doc.totalExtractions} {t('docs.extractions_count') || 'extraction(s)'}
                           </Badge>
