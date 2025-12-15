@@ -19,10 +19,10 @@ export const translations: Translations = {
     'nav.about': 'About',
     'nav.signin': 'Sign In',
     'nav.dashboard': 'Dashboard',
-    'nav.general': 'New Extraction',
-    'nav.templates': 'Browse Templates',
-    'nav.history': 'Extraction History',
-    'nav.settings': 'Preferences',
+    'nav.general': 'Extract',
+    'nav.templates': 'Templates',
+    'nav.history': 'History',
+    'nav.settings': 'Settings',
     'nav.logout': 'Sign Out',
 
     // Hero Section
@@ -45,6 +45,8 @@ export const translations: Translations = {
     'stats.accuracyDesc': 'Industry-leading OCR precision',
     'stats.pages': 'Pages Processed',
     'stats.pagesDesc': 'Documents processed and growing',
+    'stats.documents_trained': 'Documents',
+    'stats.documentsTrainedDesc': 'AI trained on millions of documents',
     'stats.enterprises': 'Enterprise Clients',
     'stats.support': 'Support Available',
     'stats.supportDesc': 'Expert assistance whenever you need',
@@ -172,6 +174,9 @@ export const translations: Translations = {
     'pricing.per_month': 'month',
     'pricing.popular_badge': 'Most Popular',
     'pricing.guarantee': '',
+    'pricing.early_bird': 'Early Bird',
+    'pricing.coming_soon': 'Coming Soon',
+    'pricing.contact_early_bird': 'Contact us for Early Bird discount',
 
     // CTA Section
     'cta.title': 'Ready to Transform Your Document Workflow?',
@@ -198,13 +203,15 @@ export const translations: Translations = {
     // Dashboard
     'dash.welcome': 'Welcome back!',
     'dash.quick_start': 'New Extraction',
-    'dash.recent': 'Pick up where you left off',
+    'dash.recent': 'Recent History',
     'dash.template_bank': 'Bank Statement',
     'dash.template_invoice': 'Invoice',
     'dash.template_po': 'Purchase Order',
     'dash.template_contract': 'Contract',
     'dash.template_resume': 'Resume / CV',
     'dash.general_desc': "Any document, any format - we'll figure it out",
+    'dash.featured_templates': 'Featured Templates',
+    'dash.templates_subtitle': 'AI-powered extraction for your documents',
 
     // Extraction
     'extract.upload_title': 'Drop your document here',
@@ -260,6 +267,7 @@ export const translations: Translations = {
     'common.back': 'Back',
     'common.upgrade': 'Upgrade Plan',
     'common.usage': 'Monthly Usage',
+    'common.pages': 'page(s)',
 
     // Footer
     'footer.description': 'Secure document extraction for Thai businesses. Extract structured data in seconds.',
@@ -281,9 +289,9 @@ export const translations: Translations = {
     'nav.about': 'เกี่ยวกับเรา',
     'nav.signin': 'เข้าสู่ระบบ',
     'nav.dashboard': 'แดชบอร์ด',
-    'nav.general': 'ดึงข้อมูลใหม่',
-    'nav.templates': 'เรียกดูเทมเพลต',
-    'nav.history': 'ประวัติการดึงข้อมูล',
+    'nav.general': 'ดึงข้อมูล',
+    'nav.templates': 'เทมเพลต',
+    'nav.history': 'ประวัติ',
     'nav.settings': 'ตั้งค่า',
     'nav.logout': 'ออกจากระบบ',
 
@@ -294,8 +302,8 @@ export const translations: Translations = {
     'hero.cta_primary': 'เข้าสู่ระบบ',
     'hero.cta_secondary': 'ดูตัวอย่าง',
     'hero.trust_encryption': 'เข้ารหัสระดับธนาคาร',
-    'hero.trust_pdpa': 'สอดคล้อง PDPA',
-    'hero.trust_soc2': 'ได้รับ SOC 2',
+    'hero.trust_pdpa': 'รองรับ PDPA',
+    'hero.trust_soc2': 'ได้รับรอง SOC 2',
 
     // Logo Strip
     'logos.title': 'ได้รับความไว้วางใจจากองค์กรชั้นนำในไทย',
@@ -307,9 +315,11 @@ export const translations: Translations = {
     'stats.accuracyDesc': 'ความแม่นยำ OCR ชั้นนำในอุตสาหกรรม',
     'stats.pages': 'หน้าที่ประมวลผลแล้ว',
     'stats.pagesDesc': 'เอกสารที่ประมวลผลและเพิ่มขึ้นเรื่อยๆ',
+    'stats.documents_trained': 'เอกสาร',
+    'stats.documentsTrainedDesc': 'AI ฝึกฝนจากเอกสารนับล้านฉบับ',
     'stats.enterprises': 'ลูกค้าองค์กร',
     'stats.support': 'พร้อมให้บริการ',
-    'stats.supportDesc': 'ผู้เชี่ยวชาญพร้อมช่วยเหลือทุกเมื่อ',
+    'stats.supportDesc': 'ทีมผู้เชี่ยวชาญพร้อมให้บริการตลอดเวลา',
 
     // Features Section
     'features.eyebrow': 'ความสามารถ',
@@ -329,7 +339,7 @@ export const translations: Translations = {
     'features.api_desc': 'RESTful API พร้อมเอกสารประกอบครบถ้วน เชื่อมต่อการดึงข้อมูลเอกสารเข้ากับ workflow ของคุณ',
 
     // Demo Section
-    'demo.section_title': 'ดูความมหัศจรรย์ของ AI',
+    'demo.section_title': 'ดูพลังของ AI ในการทำงาน',
     'demo.section_subtitle': 'คลิกประเภทเอกสารด้านล่างเพื่อดูการดึงข้อมูลอัตโนมัติทันที',
     'demo.tab_invoice': 'ใบแจ้งหนี้',
     'demo.tab_bank': 'รายการเดินบัญชี',
@@ -349,7 +359,7 @@ export const translations: Translations = {
     'comparison.before_title': 'ประมวลผลด้วยมือ',
     'comparison.after_title': 'ด้วยแพลตฟอร์มของเรา',
     'comparison.before_1': 'ใช้เวลาหลายชั่วโมงกรอกข้อมูลต่อเอกสาร',
-    'comparison.before_2': 'ข้อผิดพลาดสูงจากความเหนื่อยล้า',
+    'comparison.before_2': 'อัตราผิดพลาดสูงจากความเหนื่อยล้าของพนักงาน',
     'comparison.before_3': 'รูปแบบไม่สอดคล้องกันระหว่างทีม',
     'comparison.before_4': 'การประมวลผลล่าช้าและเกิดคอขวด',
     'comparison.after_1': 'ดึงข้อมูลทันทีในไม่กี่วินาที',
@@ -383,11 +393,11 @@ export const translations: Translations = {
     'usecases.insurance.description': 'ประมวลผลแบบฟอร์มเคลมและเอกสารกรมธรรม์ทันที ดึงข้อมูลสำคัญเพื่อเร่งการอนุมัติและลดเวลาประมวลผล',
     'usecases.insurance.docs': 'แบบฟอร์มเคลม, เอกสารกรมธรรม์, เวชระเบียน',
     'usecases.healthcare.industry': 'สุขภาพ',
-    'usecases.healthcare.headline': 'ปรับปรุงเอกสารทางคลินิก',
+    'usecases.healthcare.headline': 'เพิ่มประสิทธิภาพการจัดการเอกสารทางคลินิก',
     'usecases.healthcare.description': 'แปลงเวชระเบียน ผลตรวจ และใบสั่งยาเป็นดิจิทัล เข้าถึงข้อมูลทางการแพทย์ที่สำคัญได้เร็วขึ้น',
     'usecases.healthcare.docs': 'เวชระเบียน, ผลตรวจ, ใบสั่งยา',
     'usecases.legal.industry': 'กฎหมาย',
-    'usecases.legal.headline': 'เปลี่ยนแปลงการวิเคราะห์สัญญา',
+    'usecases.legal.headline': 'ยกระดับการวิเคราะห์สัญญา',
     'usecases.legal.description': 'ดึงข้อมูลคู่สัญญา วันที่ และข้อผูกพันจากสัญญาโดยอัตโนมัติ เร่งการตรวจสอบและการปฏิบัติตามกฎระเบียบ',
     'usecases.legal.docs': 'สัญญา, ข้อตกลง, เอกสารทางกฎหมาย',
 
@@ -407,7 +417,7 @@ export const translations: Translations = {
     'security.badge_ssl': 'SSL Secured',
     'security.badge_soc2': 'SOC 2 Type II',
     'security.badge_iso': 'ISO 27001',
-    'security.badge_pdpa': 'PDPA Compliant',
+    'security.badge_pdpa': 'รองรับ PDPA',
     'security.cta_title': 'พร้อมที่จะประมวลผลเอกสารอย่างปลอดภัย?',
     'security.cta_subtitle': 'เริ่มดึงข้อมูลด้วยการปกป้องระดับองค์กร',
     'security.cta_primary': 'เริ่มต้นใช้งาน',
@@ -429,11 +439,14 @@ export const translations: Translations = {
     'pricing.business_feature_2': 'ประมวลผลลำดับความสำคัญ',
     'pricing.business_feature_3': 'เข้าถึง API',
     'pricing.business_feature_4': 'เทมเพลตกำหนดเอง',
-    'pricing.business_feature_5': 'สนับสนุนเฉพาะทาง',
+    'pricing.business_feature_5': 'ทีมสนับสนุนเฉพาะ',
     'pricing.business_cta': 'เข้าสู่ระบบ',
     'pricing.per_month': 'เดือน',
     'pricing.popular_badge': 'ยอดนิยม',
     'pricing.guarantee': '',
+    'pricing.early_bird': 'Early Bird',
+    'pricing.coming_soon': 'เร็วๆ นี้',
+    'pricing.contact_early_bird': 'ติดต่อเราเพื่อรับส่วนลด Early Bird',
 
     // CTA Section
     'cta.title': 'พร้อมเปลี่ยนแปลง Workflow เอกสารของคุณ?',
@@ -460,13 +473,15 @@ export const translations: Translations = {
     // Dashboard
     'dash.welcome': 'ยินดีต้อนรับกลับมา!',
     'dash.quick_start': 'ดึงข้อมูลใหม่',
-    'dash.recent': 'ทำงานต่อจากที่ค้างไว้',
+    'dash.recent': 'ประวัติล่าสุด',
     'dash.template_bank': 'รายการเดินบัญชี',
     'dash.template_invoice': 'ใบแจ้งหนี้',
     'dash.template_po': 'ใบสั่งซื้อ',
     'dash.template_contract': 'สัญญา',
     'dash.template_resume': 'เรซูเม่ / ประวัติย่อ',
-    'dash.general_desc': 'เอกสารอะไรก็ได้ รูปแบบไหนก็ได้ เราจัดการให้',
+    'dash.general_desc': 'เอกสารทุกประเภท ทุกรูปแบบ - เราจัดการให้',
+    'dash.featured_templates': 'เทมเพลตแนะนำ',
+    'dash.templates_subtitle': 'ดึงข้อมูลด้วย AI สำหรับเอกสารของคุณ',
 
     // Extraction
     'extract.upload_title': 'วางเอกสารของคุณที่นี่',
@@ -476,7 +491,7 @@ export const translations: Translations = {
     'extract.processing': 'กำลังดึงข้อมูล...',
     'extract.processing_sub': 'ปกติใช้เวลาไม่กี่วินาที',
     'extract.results': 'นี่คือข้อมูลที่เราพบ',
-    'extract.confidence': 'ความเชื่อมั่น',
+    'extract.confidence': 'ระดับความมั่นใจ',
     'extract.export': 'ส่งออก',
     'extract.field': 'ฟิลด์',
     'extract.value': 'ค่า',
@@ -522,16 +537,17 @@ export const translations: Translations = {
     'common.back': 'ย้อนกลับ',
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
+    'common.pages': 'หน้า',
 
     // Footer
     'footer.description': 'การดึงข้อมูลเอกสารที่ปลอดภัยสำหรับธุรกิจไทย ดึงข้อมูลที่มีโครงสร้างได้ในไม่กี่วินาที',
     'footer.product': 'ผลิตภัณฑ์',
     'footer.security': 'ความปลอดภัย',
     'footer.security_encryption': 'เข้ารหัสระดับธนาคาร',
-    'footer.security_pdpa': 'สอดคล้อง PDPA',
+    'footer.security_pdpa': 'รองรับ PDPA',
     'footer.security_autodelete': 'ลบอัตโนมัติภายใน 24 ชั่วโมง',
     'footer.security_soc2': 'SOC 2 Type II',
-    'footer.copyright': '© 2025 DocExtract สงวนลิขสิทธิ์',
+    'footer.copyright': '© 2025 DocExtract สงวนลิขสิทธิ์ทุกประการ',
   }
 };
 

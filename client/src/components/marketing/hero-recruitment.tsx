@@ -47,7 +47,7 @@ export function HeroRecruitment({ className }: HeroRecruitmentProps) {
   };
 
   const benefits = [
-    { icon: CheckCircle2, text: language === 'th' ? 'ดึงข้อมูลจากเรซูเม่ใน 3 วินาที' : 'Extract resume data in 3 seconds' },
+    { icon: CheckCircle2, text: language === 'th' ? 'ดึงข้อมูลได้ในไม่กี่วินาที' : 'Extract data in seconds' },
     { icon: CheckCircle2, text: language === 'th' ? 'รองรับไฟล์ PDF, Word, รูปภาพ' : 'Supports PDF, Word, images' },
     { icon: CheckCircle2, text: language === 'th' ? 'แม่นยำ 99.2% สำหรับภาษาไทย-อังกฤษ' : '99.2% accuracy for Thai-English' },
   ];
@@ -77,9 +77,9 @@ export function HeroRecruitment({ className }: HeroRecruitmentProps) {
             {/* Feature Badge */}
             <motion.div variants={itemVariants}>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-300">
-                <UserCircle className="h-4 w-4" />
+                <Sparkles className="h-4 w-4" />
                 <span className="text-sm font-semibold tracking-wide">
-                  {language === 'th' ? 'ใหม่! ดึงข้อมูลเรซูเม่อัตโนมัติ' : 'NEW! Automated Resume Extraction'}
+                  {language === 'th' ? 'ความแม่นยำในการดึงข้อมูล 99.2%' : '99.2% Extraction Accuracy'}
                 </span>
               </div>
             </motion.div>
@@ -90,7 +90,7 @@ export function HeroRecruitment({ className }: HeroRecruitmentProps) {
               className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display text-white leading-[1.1]"
             >
               <span className="block">
-                {language === 'th' ? 'เปลี่ยนเรซูเม่เป็น' : 'Transform Resumes'}
+                {language === 'th' ? 'เปลี่ยนเอกสารเป็น' : 'Transform Documents'}
               </span>
               <span className="block bg-gradient-to-r from-teal-300 via-[hsl(var(--gold))] to-teal-200 bg-clip-text text-transparent">
                 {language === 'th' ? 'ข้อมูลที่ใช้งานได้ทันที' : 'Into Actionable Data'}
@@ -103,8 +103,8 @@ export function HeroRecruitment({ className }: HeroRecruitmentProps) {
               className="text-lg lg:text-xl text-white/70 max-w-xl leading-relaxed"
             >
               {language === 'th'
-                ? 'AI ช่วยดึงข้อมูลจากเรซูเม่และ CV อัตโนมัติ ประวัติการทำงาน การศึกษา ทักษะ และข้อมูลติดต่อ พร้อมส่งออกเป็น Excel ได้ทันที'
-                : 'AI-powered extraction from resumes and CVs. Work history, education, skills, and contact info—export to Excel instantly.'}
+                ? 'AI ระดับองค์กรดึงข้อมูลจากเอกสารภาษาไทยและอังกฤษด้วยความแม่นยำสูงสุด ประมวลผลใบแจ้งหนี้ สัญญา เรซูเม่ และรายการเดินบัญชีในไม่กี่วินาที'
+                : 'Enterprise-grade AI extracts data from Thai & English documents with unmatched precision. Process invoices, contracts, resumes, and bank statements in seconds.'}
             </motion.p>
 
             {/* Benefits List */}
