@@ -32,22 +32,25 @@ export default function Dashboard() {
 
   const recentDocs = recentData?.extractions || [];
 
-  // Get top 4 templates for quick access (excluding 'general')
+  // Get featured templates in specific order: Resume, Contract, Invoice, PO
   const allTemplates = getTemplates(t);
-  const quickTemplates = allTemplates.filter(t => t.id !== 'general').slice(0, 4);
-  const templates = quickTemplates.map(template => {
-    // Map colors to dashboard style
-    const colorMap: Record<string, string> = {
-      'bg-blue-100 text-blue-600': 'bg-primary/10 text-primary',
-      'bg-green-100 text-green-600': 'bg-emerald-500/10 text-emerald-600',
-      'bg-purple-100 text-purple-600': 'bg-violet-500/10 text-violet-600',
-      'bg-orange-100 text-orange-600': 'bg-amber-500/10 text-amber-600',
-    };
-    return {
-      ...template,
-      color: colorMap[template.color] || template.color
-    };
-  });
+  const featuredIds = ['resume', 'contract', 'invoice', 'po'];
+  const featuredTemplates = featuredIds
+    .map(id => allTemplates.find(t => t.id === id))
+    .filter((t): t is NonNullable<typeof t> => t !== undefined)
+    .map(template => {
+      // Map colors to dashboard style with gold accent on hover
+      const colorMap: Record<string, string> = {
+        'bg-teal-100 text-teal-600': 'bg-teal-500/10 text-teal-600',
+        'bg-orange-100 text-orange-600': 'bg-amber-500/10 text-amber-600',
+        'bg-green-100 text-green-600': 'bg-emerald-500/10 text-emerald-600',
+        'bg-purple-100 text-purple-600': 'bg-violet-500/10 text-violet-600',
+      };
+      return {
+        ...template,
+        color: colorMap[template.color] || template.color
+      };
+    });
 
   const usagePercent = user ? (user.monthlyUsage / user.monthlyLimit) * 100 : 0;
   
@@ -69,123 +72,43 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Upload Zone Card */}
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{t('nav.general')}</CardTitle>
-                <CardDescription>{t('dash.general_desc')}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Link href="/extraction/general">
-              <motion.div {...cardHover}>
-                <Card className="hover:border-primary/30 transition-all duration-200 cursor-pointer group">
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                    <div
-                      className={cn(
-                        'h-14 w-14 rounded-2xl flex items-center justify-center',
-                        'transition-transform duration-200 group-hover:scale-110',
-                        'bg-primary/10 text-primary'
-                      )}
-                    >
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <span className="font-medium text-sm">{t('nav.general')}</span>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Usage Card */}
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{t('common.usage')}</CardTitle>
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <motion.div
-                  className="text-4xl font-semibold tracking-tight tabular-nums"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  {user?.monthlyUsage}
-                </motion.div>
-                <p className="text-sm text-muted-foreground">of {user?.monthlyLimit} pages</p>
-              </div>
-
-              <div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${usagePercent}%` }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                  <span>0</span>
-                  <span>{user?.monthlyLimit} limit</span>
-                </div>
-              </div>
-
-              {usagePercent > 80 && (
-                <Button variant="outline" size="sm" className="w-full">
-                  {t('common.upgrade')}
-                  <ArrowRight className="ml-2 h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Templates Section */}
+      {/* Featured Templates Section - Hero Cards */}
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold">{t('nav.templates')}</h2>
+          <div>
+            <h2 className="text-lg font-semibold">{t('nav.templates')}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{t('dash.templates_subtitle') || 'AI-powered extraction for your documents'}</p>
+          </div>
           <Link href="/templates" className="text-sm text-primary hover:underline flex items-center">
             View all <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </div>
         <motion.div
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
-          {templates.map((template) => (
+          {featuredTemplates.map((template) => (
             <motion.div key={template.id} variants={staggerItem}>
               <Link href={`/extraction/${template.id}`}>
                 <motion.div {...cardHover}>
-                  <Card className="hover:border-primary/30 transition-all duration-200 cursor-pointer group">
-                    <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+                  <Card className="hover:border-[hsl(var(--gold))]/40 hover:shadow-[0_0_20px_-5px_hsl(var(--gold)/0.15)] transition-all duration-300 cursor-pointer group">
+                    <CardContent className="p-6 flex items-center gap-5">
                       <div
                         className={cn(
-                          'h-14 w-14 rounded-2xl flex items-center justify-center',
-                          'transition-transform duration-200 group-hover:scale-110',
+                          'h-16 w-16 rounded-2xl flex items-center justify-center flex-shrink-0',
+                          'transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg',
                           template.color
                         )}
                       >
-                        <template.icon className="h-6 w-6" />
+                        <template.icon className="h-8 w-8" />
                       </div>
-                      <span className="font-medium text-sm">{template.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base mb-1 group-hover:text-[hsl(var(--gold))] transition-colors">{template.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{template.desc}</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-[hsl(var(--gold))] group-hover:translate-x-1 transition-all flex-shrink-0" />
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -193,6 +116,56 @@ export default function Dashboard() {
             </motion.div>
           ))}
         </motion.div>
+      </div>
+
+      {/* Secondary Grid: New Extraction + Usage */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* New Extraction Card - Compact */}
+        <Card className="md:col-span-2">
+          <CardContent className="p-6">
+            <Link href="/extraction/general">
+              <div className="flex items-center gap-4 group cursor-pointer">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base group-hover:text-primary transition-colors">{t('nav.general')}</h3>
+                  <p className="text-sm text-muted-foreground">{t('dash.general_desc')}</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Usage Card - Compact */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">{t('common.usage')}</span>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-semibold tracking-tight tabular-nums">{user?.monthlyUsage}</span>
+                <span className="text-sm text-muted-foreground">/ {user?.monthlyLimit}</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${usagePercent}%` }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                />
+              </div>
+              {usagePercent > 80 && (
+                <Button variant="outline" size="sm" className="w-full mt-2">
+                  {t('common.upgrade')}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent History */}
