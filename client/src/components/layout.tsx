@@ -587,13 +587,13 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
           {/* Desktop Header */}
           <header className="hidden md:flex h-16 items-center justify-between border-b bg-background px-6">
-            <h1 className="text-lg font-semibold tracking-tight">
-              {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'DocExtract'}
-            </h1>
             <div className="flex items-center gap-3">
-              <LanguageSwitcher />
-              <SidebarTrigger />
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground hover:bg-muted" />
+              <h1 className="text-lg font-semibold tracking-tight">
+                {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'DocExtract'}
+              </h1>
             </div>
+            <LanguageSwitcher />
           </header>
 
           {/* Mobile Menu Overlay */}
