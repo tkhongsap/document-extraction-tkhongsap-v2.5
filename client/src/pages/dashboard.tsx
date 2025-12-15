@@ -59,17 +59,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-muted-foreground text-sm mb-1">Good morning, {displayName}</p>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('dash.welcome')}</h1>
-        </div>
-        <Button asChild size="lg">
-          <Link href="/extraction/general">
-            <FileText className="mr-2 h-4 w-4" />
-            {t('dash.quick_start')}
-          </Link>
-        </Button>
+      <div>
+        <p className="text-muted-foreground text-sm mb-1">Good morning, {displayName}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">{t('dash.welcome')}</h1>
       </div>
 
       {/* Featured Templates Section - Hero Cards */}
