@@ -201,7 +201,7 @@ export const translations: Translations = {
     // Dashboard
     'dash.welcome': 'Welcome back!',
     'dash.quick_start': 'New Extraction',
-    'dash.recent': 'Pick up where you left off',
+    'dash.recent': 'Recent History',
     'dash.template_bank': 'Bank Statement',
     'dash.template_invoice': 'Invoice',
     'dash.template_po': 'Purchase Order',
@@ -466,7 +466,7 @@ export const translations: Translations = {
     // Dashboard
     'dash.welcome': 'ยินดีต้อนรับกลับมา!',
     'dash.quick_start': 'ดึงข้อมูลใหม่',
-    'dash.recent': 'ทำงานต่อจากที่ค้างไว้',
+    'dash.recent': 'ประวัติล่าสุด',
     'dash.template_bank': 'รายการเดินบัญชี',
     'dash.template_invoice': 'ใบแจ้งหนี้',
     'dash.template_po': 'ใบสั่งซื้อ',
