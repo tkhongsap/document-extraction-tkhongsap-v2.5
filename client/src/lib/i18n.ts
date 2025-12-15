@@ -208,6 +208,7 @@ export const translations: Translations = {
     'dash.template_contract': 'Contract',
     'dash.template_resume': 'Resume / CV',
     'dash.general_desc': "Any document, any format - we'll figure it out",
+    'dash.templates_subtitle': 'AI-powered extraction for your documents',
 
     // Extraction
     'extract.upload_title': 'Drop your document here',
@@ -474,6 +475,7 @@ export const translations: Translations = {
     'dash.template_contract': 'สัญญา',
     'dash.template_resume': 'เรซูเม่ / ประวัติย่อ',
     'dash.general_desc': 'เอกสารอะไรก็ได้ รูปแบบไหนก็ได้ เราจัดการให้',
+    'dash.templates_subtitle': 'ดึงข้อมูลด้วย AI สำหรับเอกสารของคุณ',
 
     // Extraction
     'extract.upload_title': 'วางเอกสารของคุณที่นี่',
