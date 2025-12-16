@@ -8,6 +8,8 @@ import { Layout } from "@/components/layout";
 
 import Home from "@/pages/home";
 import Login from "@/pages/login";
+import Register from "@/pages/Register";
+import EmailVerification from "@/pages/EmailVerification";
 import Pricing from "@/pages/pricing";
 import UseCases from "@/pages/use-cases";
 import Security from "@/pages/security";
@@ -57,6 +59,8 @@ function Router() {
         <Route path="/security" component={Security} />
         <Route path="/capabilities" component={Capabilities} />
         <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/verify-email" component={EmailVerification} />
 
         {/* Protected Routes */}
         <Route path="/dashboard">

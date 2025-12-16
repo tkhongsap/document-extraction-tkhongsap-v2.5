@@ -1,7 +1,7 @@
 """
 User Model
 """
-from sqlalchemy import Column, String, Integer, Text, DateTime
+from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -15,9 +15,11 @@ class User(Base):
     
     id = Column(String, primary_key=True, default=generate_uuid)
     email = Column(String, unique=True, nullable=True)
+    password_hash = Column(String, nullable=True)  # Added for password storage
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     profile_image_url = Column(String, nullable=True)
+    email_verified = Column(Boolean, nullable=False, default=False)  # Email verification status
     tier = Column(Text, nullable=False, default="free")
     monthly_usage = Column(Integer, nullable=False, default=0)
     monthly_limit = Column(Integer, nullable=False, default=100)

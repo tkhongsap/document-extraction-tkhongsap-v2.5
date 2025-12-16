@@ -212,7 +212,7 @@ def main():
     
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="::",  # Bind to IPv6 (also accepts IPv4)
         port=port,
         reload=settings.node_env == "development",
         log_level="info" if settings.node_env == "development" else "warning",
