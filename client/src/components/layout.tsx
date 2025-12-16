@@ -167,28 +167,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [location] = useLocation();
 
-  const handleLogin = async () => {
-    // Use mock login in development
-    if (import.meta.env.DEV) {
-      try {
-        const res = await fetch('/api/auth/mock-login', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (res.ok) {
-          window.location.href = '/dashboard';
-        } else {
-          console.error('Mock login failed');
-          window.location.href = "/api/login";
-        }
-      } catch (error) {
-        console.error('Mock login error:', error);
-        window.location.href = "/api/login";
-      }
-    } else {
-      window.location.href = "/api/login";
-    }
+  const handleLogin = () => {
+    window.location.href = "/login";
   };
 
   const handleHashLink = (hash: string, e: React.MouseEvent) => {
@@ -442,8 +422,17 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   // Initialize language from user data
   useLanguageSync();
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+    // Redirect to login page
+    window.location.href = "/login";
   };
 
   const displayName = user?.firstName && user?.lastName 
