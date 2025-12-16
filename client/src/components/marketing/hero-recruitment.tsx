@@ -43,7 +43,7 @@ export function HeroRecruitment({ className }: HeroRecruitmentProps) {
   const { t, language } = useLanguage();
 
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/login";
   };
 
   const benefits = [
