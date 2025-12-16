@@ -1,16 +1,17 @@
 import type { User, Extraction, DocumentWithExtractions } from "@shared/schema";
 
 // Auth API
-export async function login(): Promise<{ user: User }> {
-  const res = await fetch("/api/auth/mock-login", {
+export async function login(username: string, password: string): Promise<{ success: boolean; user: User }> {
+  const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
+    body: JSON.stringify({ username, password }),
   });
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.message || "Login failed");
+    throw new Error(error.detail || error.message || "Login failed");
   }
 
   return res.json();
@@ -23,8 +24,8 @@ export async function logout(): Promise<void> {
   });
 }
 
-export async function getCurrentUser(): Promise<{ user: User }> {
-  const res = await fetch("/api/auth/me", {
+export async function getCurrentUser(): Promise<User> {
+  const res = await fetch("/api/auth/user", {
     credentials: "include",
   });
 
