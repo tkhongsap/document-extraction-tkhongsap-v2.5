@@ -1,6 +1,61 @@
+# Dependencies
 node_modules
+__pycache__
+*.pyc
+.venv
+venv
+env
+
+# Build outputs
 dist
+build
+*.tar.gz
+
+# IDE / Editor
+.vscode/settings.json
+.idea
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+.pytest_cache
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+
+# Project specific
 server/public
 vite.config.ts.*
-*.tar.gz
+backend/dev.db
+backend/storage/
+attached_assets/*.pdf
+attached_assets/*.png
+attached_assets/*.jpg
