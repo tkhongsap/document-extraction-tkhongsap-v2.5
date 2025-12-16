@@ -1,15 +1,193 @@
-# docs-extraction-tkhongsap
+# Document AI Extractor v2.5
 
 A bilingual (EN/TH) document extraction platform enabling users to extract structured data from documents using pre-built templates or a general extraction option, with a freemium pricing model.
 
 ## Features
 
-- **Document Extraction**: Extract structured data from documents using AI
+- **Document Extraction**: Extract structured data from documents using AI (LlamaParse & LlamaExtract)
 - **Pre-built Templates**: Bank Statements, Invoices, Purchase Orders, Contracts
 - **General Extraction**: For any document type without a predefined template
 - **Bilingual Support**: Full English and Thai language support
 - **Freemium Model**: Free tier (100 pages/month) and Pro tier (1,000 pages/month)
 - **Export Options**: JSON, CSV, Excel formats
+
+## Tech Stack
+
+### Frontend
+- **Framework**: React 19 + TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS + Radix UI
+- **Routing**: Wouter
+- **State Management**: TanStack Query
+- **Animations**: Framer Motion
+
+### Backend
+- **Framework**: Python FastAPI
+- **Database**: SQLite (development) / PostgreSQL (production)
+- **ORM**: SQLAlchemy + aiosqlite
+- **Authentication**: Session-based auth with Starlette SessionMiddleware
+- **AI Services**: LlamaParse, LlamaExtract API
+
+## Getting Started
+
+### Prerequisites
+
+- **Python 3.10+** with pip or conda
+- **Node.js 20+** with npm
+- **LlamaCloud API Key** (for document extraction)
+
+### Installation
+
+#### 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd document-ai-extractor-v2.5
+```
+
+#### 2. Backend Setup
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create virtual environment (choose one)
+python -m venv venv
+# OR with conda
+conda create -n eureka python=3.10
+conda activate eureka
+
+# Activate virtual environment (Windows)
+.\venv\Scripts\activate
+# OR (Linux/Mac)
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+#### 3. Frontend Setup
+
+```bash
+# From project root
+npm install
+```
+
+### Environment Variables
+
+Create `backend/.env` file:
+
+```env
+# Database
+DATABASE_URL=sqlite+aiosqlite:///./dev.db
+
+# Session Secret (generate a random string)
+SESSION_SECRET=your-super-secret-key-change-this
+
+# LlamaCloud API
+LLAMA_CLOUD_API_KEY=your-llama-cloud-api-key
+
+# Server
+PORT=8000
+HOST=0.0.0.0
+
+# Optional: Object Storage (GCS)
+GCS_BUCKET_NAME=your-bucket-name
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+```
+
+### Running the Application
+
+#### Development Mode
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+conda activate eureka  # or activate your venv
+python main.py
+# Server runs at http://localhost:8000
+```
+
+**Terminal 2 - Frontend:**
+```bash
+npm run dev
+# Frontend runs at http://localhost:5173
+```
+
+#### Access the Application
+
+Open your browser and navigate to: **http://localhost:5173**
+
+### Demo Accounts
+
+For development and testing, use these mock accounts:
+
+| Username | Password | User ID |
+|----------|----------|---------|
+| admin | admin123 | 1 |
+| demo | demo123 | 2 |
+| test | test123 | 36691541 |
+
+### Build for Production
+
+```bash
+# Build frontend
+npm run build
+
+# The backend serves the built frontend from client/dist
+```
+
+## Project Structure
+
+```
+├── client/                 # React frontend application
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── pages/          # Page components
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── lib/            # Utilities and API client
+│   └── public/             # Static assets
+│
+├── backend/                # Python FastAPI backend
+│   ├── app/
+│   │   ├── core/           # Core modules (config, database, logging)
+│   │   ├── models/         # SQLAlchemy models
+│   │   ├── schemas/        # Pydantic schemas
+│   │   ├── services/       # Business logic services
+│   │   ├── routes/         # API route handlers
+│   │   └── utils/          # Utility functions
+│   ├── main.py             # Application entry point
+│   └── requirements.txt    # Python dependencies
+│
+├── shared/                 # Shared types and schemas
+├── docs/                   # Documentation
+├── llama-docs/             # LlamaParse/LlamaExtract documentation
+└── ai-specs/               # AI extraction specifications
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - Login with username/password
+- `POST /api/auth/logout` - Logout current session
+- `GET /api/auth/user` - Get current user info
+- `GET /api/auth/me` - Get current user (alias)
+- `GET /api/auth/session` - Get session info
+
+### Extractions
+- `GET /api/extractions` - List all extractions
+- `POST /api/extractions` - Create new extraction
+- `GET /api/extractions/:id` - Get extraction by ID
+- `DELETE /api/extractions/:id` - Delete extraction
+
+### Objects (File Storage)
+- `POST /api/objects/upload` - Upload file
+- `GET /api/objects/:key` - Get file by key
+- `DELETE /api/objects/:key` - Delete file
 
 ## Extraction Templates
 
@@ -135,63 +313,44 @@ Each party row contains:
 
 ### Schema Implementation
 
-All extraction schemas are defined in [`server/extractionSchemas.ts`](server/extractionSchemas.ts) and displayed using [`client/src/components/StructuredResultsViewer.tsx`](client/src/components/StructuredResultsViewer.tsx). The backend separates header fields from line items during processing, and the frontend displays them in separate sections.
+All extraction schemas are defined in the backend services and displayed using [StructuredResultsViewer.tsx](client/src/components/StructuredResultsViewer.tsx). The backend separates header fields from line items during processing, and the frontend displays them in separate sections.
 
-## Tech Stack
+## Troubleshooting
 
-- **Frontend**: React 19, Vite, Tailwind CSS, Radix UI
-- **Backend**: Express.js, Node.js
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Passport.js with social login support (LINE, Google, Facebook, Apple)
-- **State Management**: Zustand, TanStack Query
-- **Animations**: Framer Motion
+### Common Issues
 
-## Getting Started
+**1. Login not working**
+- Ensure backend is running on port 8000
+- Check that SESSION_SECRET is set in .env
+- Verify Vite proxy is configured correctly
 
-### Prerequisites
+**2. Database errors**
+- Delete `backend/dev.db` and restart backend to recreate tables
+- Check DATABASE_URL in .env is correct
 
-- Node.js 20+
-- PostgreSQL database
-- Environment variables configured (see `.env.example`)
+**3. Frontend 404 errors**
+- Ensure you're accessing via http://localhost:5173 (not 8000)
+- Check that the frontend dev server is running
 
-### Installation
+**4. Extraction fails**
+- Verify LLAMA_CLOUD_API_KEY is set correctly
+- Check API quota on LlamaCloud dashboard
 
-```bash
-npm install
-```
+### Logs
 
-### Development
+Backend logs are stored in `backend/logs/` directory.
 
-```bash
-# Start client dev server
-npm run dev:client
+## Development Notes
 
-# Start server
-npm run dev
-```
+### Adding New Routes
 
-### Build
+1. Create route file in `backend/app/routes/`
+2. Add schemas in `backend/app/schemas/`
+3. Register router in `backend/main.py`
 
-```bash
-npm run build
-```
+### Database Migrations
 
-### Database
-
-```bash
-# Push schema changes
-npm run db:push
-```
-
-## Project Structure
-
-```
-├── client/          # React frontend application
-├── server/          # Express backend API
-├── shared/          # Shared types and schemas
-├── script/          # Build and utility scripts
-└── attached_assets/ # Design documents and assets
-```
+Currently using auto-create on startup. For production, implement Alembic migrations.
 
 ## License
 
