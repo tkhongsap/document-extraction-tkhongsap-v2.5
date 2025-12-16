@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/layout";
 
 import Home from "@/pages/home";
+import Login from "@/pages/login";
 import Pricing from "@/pages/pricing";
 import UseCases from "@/pages/use-cases";
 import Security from "@/pages/security";
@@ -31,8 +32,7 @@ function PrivateRoute({ component: Component, ...rest }: any) {
   }
   
   if (!isAuthenticated) {
-    window.location.href = "/api/login";
-    return null;
+    return <Redirect to="/login" />;
   }
   
   return <Component {...rest} />;
@@ -56,6 +56,7 @@ function Router() {
         <Route path="/use-cases" component={UseCases} />
         <Route path="/security" component={Security} />
         <Route path="/capabilities" component={Capabilities} />
+        <Route path="/login" component={Login} />
 
         {/* Protected Routes */}
         <Route path="/dashboard">
