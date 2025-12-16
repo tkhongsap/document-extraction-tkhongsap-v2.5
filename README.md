@@ -92,7 +92,7 @@ SESSION_SECRET=your-super-secret-key-change-this
 LLAMA_CLOUD_API_KEY=your-llama-cloud-api-key
 
 # Server
-PORT=5001
+PORT=8000
 HOST=0.0.0.0
 
 # Optional: Object Storage (GCS)
@@ -109,7 +109,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
 cd backend
 conda activate eureka  # or activate your venv
 python main.py
-# Server runs at http://localhost:5001
+# Server runs at http://localhost:8000
 ```
 
 **Terminal 2 - Frontend:**
@@ -320,7 +320,7 @@ All extraction schemas are defined in the backend services and displayed using [
 ### Common Issues
 
 **1. Login not working**
-- Ensure backend is running on port 5001
+- Ensure backend is running on port 8000
 - Check that SESSION_SECRET is set in .env
 - Verify Vite proxy is configured correctly
 
@@ -329,7 +329,7 @@ All extraction schemas are defined in the backend services and displayed using [
 - Check DATABASE_URL in .env is correct
 
 **3. Frontend 404 errors**
-- Ensure you're accessing via http://localhost:5173 (not 5001)
+- Ensure you're accessing via http://localhost:5173 (not 8000)
 - Check that the frontend dev server is running
 
 **4. Extraction fails**
