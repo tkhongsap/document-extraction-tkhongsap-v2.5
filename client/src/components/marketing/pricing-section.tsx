@@ -12,7 +12,7 @@ export function PricingSection({ className }: PricingSectionProps) {
   const { t } = useLanguage();
   
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/login";
   };
 
   const starterFeatures = [
