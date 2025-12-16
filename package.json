@@ -12,9 +12,10 @@
     "start": "cd backend && python main.py",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "backend:install": "cd backend && pip install -r requirements.txt",
-    "dev:ts": "NODE_ENV=development tsx server/index.ts",
-    "start:ts": "NODE_ENV=production node dist/index.cjs"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:drop": "drizzle-kit drop"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.17.3",
