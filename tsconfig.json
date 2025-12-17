@@ -15,7 +15,6 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "types": ["node", "vite/client"],
-    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]

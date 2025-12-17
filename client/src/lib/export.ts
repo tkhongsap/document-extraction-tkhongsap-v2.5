@@ -177,51 +177,57 @@ export function exportToCSV(extraction: Extraction): void {
  * Export extraction data to Excel format (.xlsx)
  */
 export async function exportToExcel(extraction: Extraction): Promise<void> {
-  const XLSX = await import("xlsx");
+  const ExcelJS = await import("exceljs");
   const extractedData = extraction.extractedData as any;
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
 
   if (extraction.documentType === "general") {
     // For general extractions, create a simple sheet with metadata and content
-    const data = [
+    const worksheet = workbook.addWorksheet("Extraction");
+    worksheet.addRows([
       ["Field", "Value"],
       ["Document Type", extraction.documentType],
       ["File Name", extraction.fileName],
       ["Extracted", new Date(extraction.createdAt).toISOString()],
       ["", ""],
       ["Content", extractedData?.text || extractedData?.markdown || ""],
-    ];
-    const worksheet = XLSX.utils.aoa_to_sheet(data);
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Extraction");
+    ]);
   } else {
     // For template extractions, create separate sheets for header fields and line items
     if (extractedData?.headerFields && extractedData.headerFields.length > 0) {
-      const headerData = [
+      const headerSheet = workbook.addWorksheet("Header Fields");
+      headerSheet.addRows([
         ["Field", "Value"],
         ...extractedData.headerFields.map((field: any) => [
           field.key || field.name || "Unknown",
           field.value || "",
         ]),
-      ];
-      const headerSheet = XLSX.utils.aoa_to_sheet(headerData);
-      XLSX.utils.book_append_sheet(workbook, headerSheet, "Header Fields");
+      ]);
     }
 
     if (extractedData?.lineItems && Array.isArray(extractedData.lineItems) && extractedData.lineItems.length > 0) {
       const firstItem = extractedData.lineItems[0];
       const keys = Object.keys(firstItem);
-      const lineItemData = [
+      const lineItemSheet = workbook.addWorksheet("Line Items");
+      lineItemSheet.addRows([
         keys,
         ...extractedData.lineItems.map((item: any) =>
           keys.map((key) => item[key] || "")
         ),
-      ];
-      const lineItemSheet = XLSX.utils.aoa_to_sheet(lineItemData);
-      XLSX.utils.book_append_sheet(workbook, lineItemSheet, "Line Items");
+      ]);
     }
   }
 
-  // Write workbook to file
-  XLSX.writeFile(workbook, `${extraction.fileName.replace(/\.[^/.]+$/, "")}.xlsx`);
+  // Write workbook to file and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${extraction.fileName.replace(/\.[^/.]+$/, "")}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 

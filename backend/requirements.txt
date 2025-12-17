@@ -2,14 +2,11 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.18
-email-validator==2.1.0.post1
-aiosmtplib==3.0.2
 
 # Database
 sqlalchemy==2.0.36
-aiosqlite==0.20.0
-# psycopg2-binary==2.9.10  # Comment out for development
-# asyncpg==0.30.0          # Comment out for development
+psycopg[binary]==3.2.4
+asyncpg==0.30.0
 
 # Auth
 python-jose[cryptography]==3.3.0
@@ -32,5 +29,5 @@ itsdangerous==2.2.0
 # Async support
 aiofiles==24.1.0
 
-# CORS - Let FastAPI handle this automatically
-# starlette==0.45.2  # Removed to prevent version conflict
+# CORS
+# starlette==0.45.2
