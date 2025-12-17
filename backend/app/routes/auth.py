@@ -3,14 +3,18 @@ Authentication Routes
 """
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Optional
 
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_current_user_id
 from app.services.storage import StorageService
 from app.models.user import User
-from app.schemas.user import UserResponse, UserCreate
+from app.models.email_verification import EmailVerification, create_verification_token, verify_email_token, send_verification_email_async
+from app.schemas.user import UserResponse, UserCreate, UserRegister
 from app.schemas.auth import LoginRequest
+from app.schemas.email_verification import EmailVerificationRequest, VerifyTokenRequest, ResendVerificationRequest
+from app.utils.password import hash_password, verify_password, validate_password_strength, validate_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -85,21 +89,62 @@ async def login(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Login with username and password (mockup)"""
-    username = login_data.username.lower()
+    """Login with username/email and password - supports both mock users and registered users"""
+    username_or_email = login_data.username.lower()
     password = login_data.password
     
-    # Check if user exists in mock users
-    if username not in MOCK_USERS:
+    # First, try to find a registered user by email
+    if "@" in username_or_email:  # Email format
+        result = await db.execute(
+            select(User).where(User.email == username_or_email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if user and user.password_hash:
+            # Verify password
+            from app.utils.password import verify_password
+            if not verify_password(password, user.password_hash):
+                raise HTTPException(status_code=401, detail="Invalid email or password")
+            
+            # Check if email is verified
+            if not user.email_verified:
+                raise HTTPException(
+                    status_code=401, 
+                    detail={
+                        "type": "email_not_verified",
+                        "message": "Please verify your email address before logging in",
+                        "email": user.email
+                    }
+                )
+            
+            # Set session for registered user
+            request.session["user"] = {
+                "sub": user.id,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "profile_image_url": user.profile_image_url,
+            }
+            
+            print(f"[Login] Successfully logged in registered user: {user.email}")
+            
+            return {
+                "success": True,
+                "message": "Login successful",
+                "user": UserResponse.model_validate(user),
+            }
+    
+    # If not found as registered user or not email format, try mock users
+    if username_or_email not in MOCK_USERS:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
-    mock_user = MOCK_USERS[username]
+    mock_user = MOCK_USERS[username_or_email]
     
-    # Verify password
+    # Verify password for mock user
     if mock_user["password"] != password:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
-    # Get or create user in database
+    # Get or create mock user in database
     storage = StorageService(db)
     user = await storage.get_user(mock_user["id"])
     
@@ -113,7 +158,7 @@ async def login(
             profile_image_url=mock_user["profile_image_url"],
         ))
     
-    # Set session
+    # Set session for mock user
     request.session["user"] = {
         "sub": user.id,
         "email": user.email,
@@ -122,7 +167,7 @@ async def login(
         "profile_image_url": user.profile_image_url,
     }
     
-    print(f"[Login] Successfully logged in as: {user.email}")
+    print(f"[Login] Successfully logged in mock user: {user.email}")
     
     return {
         "success": True,
@@ -306,3 +351,199 @@ async def replit_oauth_callback(
     except Exception as e:
         print(f"[Replit OAuth] Exception: {e}")
         return RedirectResponse(url="/login?error=oauth_exception")
+
+
+@router.post("/register")
+async def register(
+    user_data: UserRegister,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Register a new user account"""
+    
+    # Validate password strength
+    password_validation = validate_password_strength(user_data.password)
+    if not password_validation["is_valid"]:
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "type": "password_validation",
+                "message": "Password does not meet requirements",
+                "errors": password_validation["errors"]
+            }
+        )
+    
+    # Check if user already exists
+    storage = StorageService(db)
+    existing_user = await db.execute(
+        select(User).where(User.email == user_data.email.lower())
+    )
+    if existing_user.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "type": "email_exists",
+                "message": "An account with this email already exists"
+            }
+        )
+    
+    # Hash password
+    hashed_password = hash_password(user_data.password)
+    
+    # Create user (unverified)
+    user = User(
+        email=user_data.email.lower(),
+        password_hash=hashed_password,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        email_verified=False
+    )
+    
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    
+    # Send email verification
+    verification = await create_verification_token(db, user.email, user.id)
+    await send_verification_email_async(user.email, verification.token)
+    
+    print(f"[Register] New user registered: {user.email}")
+    
+    return {
+        "success": True,
+        "message": "Registration successful! Please check your email to verify your account.",
+        "user_id": user.id,
+        "email": user.email
+    }
+
+
+@router.post("/verify-email")
+async def verify_email(
+    verify_data: VerifyTokenRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Verify email address with token"""
+    
+    verification = await verify_email_token(db, verify_data.token)
+    
+    if not verification:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "type": "invalid_token",
+                "message": "Invalid or expired verification token"
+            }
+        )
+    
+    # Update user email verification status
+    if verification.user_id:
+        result = await db.execute(
+            select(User).where(User.id == verification.user_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if user:
+            user.email_verified = True
+            await db.commit()
+            
+            print(f"[Verify Email] Email verified for user: {user.email}")
+            
+            return {
+                "success": True,
+                "message": "Email successfully verified! You can now log in.",
+                "email": user.email
+            }
+    
+    return {
+        "success": True,
+        "message": "Email verification completed",
+        "email": verification.email
+    }
+
+
+@router.post("/resend-verification")
+async def resend_verification(
+    resend_data: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Resend email verification"""
+    
+    # Find user
+    result = await db.execute(
+        select(User).where(User.email == resend_data.email.lower())
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # Don't reveal if email exists or not for security
+        return {
+            "success": True,
+            "message": "If an account with this email exists, a verification email has been sent."
+        }
+    
+    if user.email_verified:
+        return {
+            "success": True,
+            "message": "This email is already verified."
+        }
+    
+    # Create new verification token
+    verification = await create_verification_token(db, user.email, user.id)
+    await send_verification_email_async(user.email, verification.token)
+    
+    print(f"[Resend Verification] Verification email resent to: {user.email}")
+    
+    return {
+        "success": True,
+        "message": "Verification email sent! Please check your inbox."
+    }
+
+
+@router.post("/login-with-password")
+async def login_with_password(
+    login_data: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Login with email and password (for registered users)"""
+    
+    # Find user by email
+    result = await db.execute(
+        select(User).where(User.email == login_data.username.lower())
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user or not user.password_hash:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Verify password
+    if not verify_password(login_data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Check if email is verified
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=401, 
+            detail={
+                "type": "email_not_verified",
+                "message": "Please verify your email address before logging in",
+                "email": user.email
+            }
+        )
+    
+    # Set session
+    request.session["user"] = {
+        "sub": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "profile_image_url": user.profile_image_url,
+    }
+    
+    print(f"[Login with Password] Successfully logged in as: {user.email}")
+    
+    return {
+        "success": True,
+        "message": "Login successful",
+        "user": UserResponse.model_validate(user),
+    }

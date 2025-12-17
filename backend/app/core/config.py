@@ -1,6 +1,8 @@
 """
 FastAPI Backend Configuration
 """
+import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -27,11 +29,22 @@ class Settings(BaseSettings):
     
     # Environment
     node_env: str = "development"
-    port: int = 5000
+    port: int = 8000
+    
+    # SMTP Email Settings
+    smtp_server: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    from_email: str = ""
+    from_name: str = "Document AI Extractor"
     
     class Config:
-        env_file = ".env"
+        # Look for .env in the project root directory (parent of backend)
+        env_file = os.path.join(Path(__file__).parent.parent.parent.parent, ".env")
         case_sensitive = False
+        extra = "ignore"  # Allow extra fields in .env file
 
 
 @lru_cache()

@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, Loader2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { login } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -89,16 +89,16 @@ export default function LoginPage() {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Username or Email</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username"
+                placeholder="Enter username or email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={isLoading}
-                autoComplete="username"
+                autoComplete="username email"
               />
             </div>
             
@@ -186,9 +186,26 @@ export default function LoginPage() {
           </div>
 
           <div className="text-xs text-muted-foreground space-y-1 bg-muted/50 p-3 rounded-lg">
+            <p className="text-center font-medium mb-2">Demo accounts (username or email):</p>
             <p><strong>admin</strong> / admin123</p>
             <p><strong>demo</strong> / demo123</p>
             <p><strong>test</strong> / test123</p>
+            <p className="text-center text-xs mt-2 italic">
+              Or use your registered email address
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Don't have an account?{" "}
+              <Link href="/register">
+                <Button variant="ghost" className="p-0 h-auto font-semibold">
+                  Sign up
+                </Button>
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>
