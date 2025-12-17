@@ -1,7 +1,7 @@
 """
 User Schemas
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -15,6 +15,21 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     id: str
+
+
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+    
+    @field_validator('first_name', 'last_name')
+    def validate_name(cls, v):
+        if not v or len(v.strip()) < 1:
+            raise ValueError('Name cannot be empty')
+        if len(v.strip()) > 50:
+            raise ValueError('Name cannot be longer than 50 characters')
+        return v.strip()
 
 
 class UserResponse(UserBase):

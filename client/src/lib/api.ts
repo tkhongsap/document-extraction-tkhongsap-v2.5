@@ -17,6 +17,77 @@ export async function login(username: string, password: string): Promise<{ succe
   return res.json();
 }
 
+export async function loginWithPassword(email: string, password: string): Promise<{ success: boolean; user: User }> {
+  const res = await fetch("/api/auth/login-with-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ username: email, password }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail?.message || error.detail || error.message || "Login failed");
+  }
+
+  return res.json();
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+}
+
+export async function register(userData: RegisterData): Promise<{ success: boolean; message: string; user_id: string; email: string }> {
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(userData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail?.message || error.detail || error.message || "Registration failed");
+  }
+
+  return res.json();
+}
+
+export async function verifyEmail(token: string): Promise<{ success: boolean; message: string; email: string }> {
+  const res = await fetch("/api/auth/verify-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ token }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail?.message || error.detail || error.message || "Email verification failed");
+  }
+
+  return res.json();
+}
+
+export async function resendVerification(email: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch("/api/auth/resend-verification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail?.message || error.detail || error.message || "Failed to resend verification");
+  }
+
+  return res.json();
+}
+
 export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", {
     method: "POST",
