@@ -3,10 +3,10 @@ Storage service for database operations
 Equivalent to server/storage.ts
 """
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, update
+from sqlalchemy import select, desc, update, delete
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.models.user import User
 from app.models.document import Document
@@ -15,6 +15,10 @@ from app.models.usage_history import UsageHistory
 from app.schemas.user import UserCreate
 from app.schemas.document import DocumentCreate, DocumentWithExtractions
 from app.schemas.extraction import ExtractionCreate, ExtractionResponse
+
+
+# Extraction retention period (3 days)
+EXTRACTION_RETENTION_DAYS = 3
 
 
 def should_reset_usage(last_reset_at: Optional[datetime]) -> bool:
@@ -267,3 +271,23 @@ class StorageService:
             count += 1
         
         return documents
+    
+    async def cleanup_old_extractions(self) -> int:
+        """Delete extractions older than retention period (3 days)"""
+        cutoff_date = datetime.utcnow() - timedelta(days=EXTRACTION_RETENTION_DAYS)
+        
+        # Count before delete for logging
+        count_result = await self.db.execute(
+            select(Extraction).where(Extraction.created_at < cutoff_date)
+        )
+        old_extractions = list(count_result.scalars().all())
+        count = len(old_extractions)
+        
+        if count > 0:
+            # Delete old extractions
+            await self.db.execute(
+                delete(Extraction).where(Extraction.created_at < cutoff_date)
+            )
+            await self.db.commit()
+        
+        return count

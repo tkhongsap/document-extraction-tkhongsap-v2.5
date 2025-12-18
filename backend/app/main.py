@@ -4,6 +4,7 @@ Document AI Extractor Backend
 """
 import os
 import sys
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -18,6 +19,8 @@ import uvicorn
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.core.config import get_settings
+from app.core.database import async_session_maker
+from app.services.storage import StorageService
 from app.routes import (
     auth_router,
     documents_router,
@@ -29,6 +32,23 @@ from app.routes import (
 )
 
 
+# Background task for cleanup
+async def cleanup_old_extractions_task():
+    """Background task to cleanup old extractions every 6 hours"""
+    while True:
+        try:
+            await asyncio.sleep(6 * 60 * 60)  # Run every 6 hours
+            async with async_session_maker() as db:
+                storage = StorageService(db)
+                deleted_count = await storage.cleanup_old_extractions()
+                if deleted_count > 0:
+                    print(f"[Cleanup] Deleted {deleted_count} old extractions (older than 3 days)")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[Cleanup] Error: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
@@ -37,9 +57,18 @@ async def lifespan(app: FastAPI):
     print(f"[FastAPI] Starting server in {settings.node_env} mode")
     print(f"[FastAPI] API key configured: {settings.llama_cloud_api_key[:10]}..." if settings.llama_cloud_api_key else "[FastAPI] WARNING: No API key configured")
     
+    # Start background cleanup task
+    cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
+    print("[FastAPI] Started extraction cleanup background task (runs every 6 hours)")
+    
     yield
     
     # Shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
     print("[FastAPI] Shutting down...")
 
 
