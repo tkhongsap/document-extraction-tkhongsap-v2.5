@@ -41,12 +41,15 @@ class DocumentResponse(DocumentBase):
 
 
 class DocumentWithExtractions(BaseModel):
-    file_name: str
-    file_size: int
-    document_type: str
+    file_name: str = Field(alias="fileName")
+    file_size: int = Field(alias="fileSize")
+    document_type: str = Field(alias="documentType")
     extractions: List["ExtractionResponse"]
-    latest_extraction: "ExtractionResponse"
-    total_extractions: int
+    latest_extraction: "ExtractionResponse" = Field(alias="latestExtraction")
+    total_extractions: int = Field(alias="totalExtractions")
+    
+    class Config:
+        populate_by_name = True
 
 
 # Update forward references

@@ -58,6 +58,10 @@ export const users = pgTable("users", {
   // Plan type stored here for quick access (synced with subscription)
   planType: text("plan_type").notNull().default('free'),
   language: varchar("language", { length: 2 }).notNull().default('en'),
+  // Usage tracking
+  monthlyUsage: integer("monthly_usage").notNull().default(0),
+  monthlyLimit: integer("monthly_limit").notNull().default(100),
+  tier: varchar("tier").notNull().default('free'),
   // Stripe integration
   stripeCustomerId: varchar("stripe_customer_id"),
   createdAt: timestamp("created_at").defaultNow(),
