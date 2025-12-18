@@ -7,16 +7,19 @@ from datetime import datetime
 
 
 class ExtractionBase(BaseModel):
-    file_name: str
-    file_size: int
-    document_type: str
-    pages_processed: int
-    extracted_data: Dict[str, Any]
+    file_name: str = Field(alias="fileName")
+    file_size: int = Field(alias="fileSize")
+    document_type: str = Field(alias="documentType")
+    pages_processed: int = Field(alias="pagesProcessed")
+    extracted_data: Dict[str, Any] = Field(alias="extractedData")
+    
+    class Config:
+        populate_by_name = True
 
 
 class ExtractionCreate(ExtractionBase):
-    user_id: str
-    document_id: Optional[str] = None
+    user_id: Optional[str] = Field(default=None, alias="userId")
+    document_id: Optional[str] = Field(default=None, alias="documentId")
     status: str = "completed"
 
 

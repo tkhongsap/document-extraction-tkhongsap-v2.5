@@ -296,7 +296,7 @@ class LlamaParseService:
                 if confidences:
                     raw_confidence = sum(confidences) / len(confidences)
                     page_confidence = normalize_confidence(raw_confidence)
-                    print(f"[LlamaParse] Page {index + 1} - Raw confidence: {raw_confidence * 100:.1f}% → Normalized: {page_confidence * 100:.1f}%")
+                    print(f"[LlamaParse] Page {index + 1} - Raw confidence: {raw_confidence * 100:.1f}% -> Normalized: {page_confidence * 100:.1f}%")
             
             pages.append(ParsedPage(
                 page_number=page.get("page", index + 1),
