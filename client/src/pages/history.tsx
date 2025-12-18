@@ -340,25 +340,25 @@ export default function History() {
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" disabled>
+                          <Button variant="outline" size="sm">
                             <Download className="mr-2 h-4 w-4" />
                             {t('docs.download') || 'Download'}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled onClick={() => exportToJSON(doc.latestExtraction)}>
+                          <DropdownMenuItem onClick={() => exportToJSON(doc.latestExtraction)}>
                             {t('export.json') || 'JSON'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToCSV(doc.latestExtraction)}>
+                          <DropdownMenuItem onClick={() => exportToCSV(doc.latestExtraction)}>
                             {t('export.csv') || 'CSV'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToExcel(doc.latestExtraction)}>
+                          <DropdownMenuItem onClick={() => exportToExcel(doc.latestExtraction)}>
                             {t('export.excel') || 'Excel'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToMarkdown(doc.latestExtraction)}>
+                          <DropdownMenuItem onClick={() => exportToMarkdown(doc.latestExtraction)}>
                             {t('export.markdown') || 'Markdown'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToText(doc.latestExtraction)}>
+                          <DropdownMenuItem onClick={() => exportToText(doc.latestExtraction)}>
                             {t('export.text') || 'Text'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
