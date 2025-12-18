@@ -5,11 +5,31 @@ Used for "New Extraction" (general) feature.
 """
 import httpx
 import asyncio
+import re
+import sys
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
 
 from app.core.config import get_settings
+
+
+def safe_print(message: str) -> None:
+    """Safe print that handles Unicode characters on Windows"""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        # Fallback for Windows console encoding issues
+        print(message.encode('utf-8', errors='replace').decode('utf-8', errors='replace'))
+
+
+def sanitize_filename(name: str) -> str:
+    """Remove non-ASCII characters from filename for API compatibility"""
+    # Keep only ASCII characters, replace others with underscore
+    # But preserve the extension
+    base, ext = (name.rsplit('.', 1) + [''])[:2]
+    safe_base = re.sub(r'[^\x00-\x7F]+', '_', base)
+    return f"{safe_base}.{ext}" if ext else safe_base
 
 LLAMA_PARSE_API_BASE = "https://api.cloud.llamaindex.ai/api/v1/parsing"
 
@@ -135,8 +155,8 @@ class LlamaParseService:
         if not self.config.model:
             raise LlamaParseError("Model is required for agentic parsing mode")
         
-        print(f"[LlamaParse] API key configured: {self.api_key[:10]}...")
-        print(f"[LlamaParse] Using parse mode: {self.config.parse_mode}")
+        safe_print(f"[LlamaParse] API key configured: {self.api_key[:10]}...")
+        safe_print(f"[LlamaParse] Using parse mode: {self.config.parse_mode}")
     
     async def parse_document(
         self, 
@@ -153,17 +173,18 @@ class LlamaParseService:
         Returns:
             ParsedDocument with markdown and metadata
         """
-        # Step 1: Upload file and start job
-        job_id = await self._upload_file(file_buffer, file_name)
-        print(f"[LlamaParse] Job started: {job_id}")
+        # Step 1: Upload file and start job (use sanitized filename for API)
+        safe_filename = sanitize_filename(file_name)
+        job_id = await self._upload_file(file_buffer, safe_filename)
+        safe_print(f"[LlamaParse] Job started: {job_id}")
         
         # Step 2: Poll for completion
         await self._wait_for_completion(job_id)
-        print(f"[LlamaParse] Job completed: {job_id}")
+        safe_print(f"[LlamaParse] Job completed: {job_id}")
         
         # Step 3: Get results
         result = await self._get_result(job_id)
-        print(f"[LlamaParse] Retrieved results for job: {job_id}")
+        safe_print(f"[LlamaParse] Retrieved results for job: {job_id}")
         
         return self._format_result(result)
     
@@ -188,7 +209,7 @@ class LlamaParseService:
         
         if self.config.parsing_instruction:
             data["parsing_instruction"] = self.config.parsing_instruction
-            print("[LlamaParse] Using custom parsing instruction")
+            safe_print("[LlamaParse] Using custom parsing instruction")
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -203,7 +224,7 @@ class LlamaParseService:
         
         if response.status_code != 200:
             error_text = response.text
-            print(f"[LlamaParse] Upload failed: {response.status_code} - {error_text}")
+            safe_print(f"[LlamaParse] Upload failed: {response.status_code} - {error_text}")
             raise LlamaParseError(
                 f"Failed to upload file to LlamaParse: {error_text}",
                 response.status_code
@@ -275,15 +296,15 @@ class LlamaParseService:
         """Format LlamaParse result into standard format"""
         raw_pages = result.get("pages", [])
         
-        print(f"[LlamaParse] formatResult - Total pages: {len(raw_pages)}")
-        print(f"[LlamaParse] formatResult - Job metadata: {result.get('job_metadata')}")
+        safe_print(f"[LlamaParse] formatResult - Total pages: {len(raw_pages)}")
+        safe_print(f"[LlamaParse] formatResult - Job metadata: {result.get('job_metadata')}")
         
         pages: List[ParsedPage] = []
         
         for index, page in enumerate(raw_pages):
             layout = page.get("layout", [])
             has_layout = bool(layout)
-            print(f"[LlamaParse] Page {index + 1} - Has layout: {has_layout}, Layout elements: {len(layout)}")
+            safe_print(f"[LlamaParse] Page {index + 1} - Has layout: {has_layout}, Layout elements: {len(layout)}")
             
             # Calculate page-level confidence
             page_confidence: Optional[float] = None
@@ -296,7 +317,7 @@ class LlamaParseService:
                 if confidences:
                     raw_confidence = sum(confidences) / len(confidences)
                     page_confidence = normalize_confidence(raw_confidence)
-                    print(f"[LlamaParse] Page {index + 1} - Raw confidence: {raw_confidence * 100:.1f}% -> Normalized: {page_confidence * 100:.1f}%")
+                    safe_print(f"[LlamaParse] Page {index + 1} - Raw confidence: {raw_confidence * 100:.1f}% -> Normalized: {page_confidence * 100:.1f}%")
             
             pages.append(ParsedPage(
                 page_number=page.get("page", index + 1),
@@ -318,9 +339,9 @@ class LlamaParseService:
                 "max": max(page_confidences),
                 "average": overall_confidence,
             }
-            print(f"[LlamaParse] Overall normalized confidence: {overall_confidence * 100:.1f}%")
+            safe_print(f"[LlamaParse] Overall normalized confidence: {overall_confidence * 100:.1f}%")
         else:
-            print("[LlamaParse] No confidence data available")
+            safe_print("[LlamaParse] No confidence data available")
         
         return ParsedDocument(
             markdown=result.get("markdown", "") or "\n\n---\n\n".join(p.markdown for p in pages),
