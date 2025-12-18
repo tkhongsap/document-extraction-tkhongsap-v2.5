@@ -5,6 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import httpx
+import io
+
+from pypdf import PdfReader
 
 from app.core.database import get_db
 from app.core.auth import ensure_usage_reset
@@ -34,6 +37,15 @@ ALLOWED_MIMES = [
 ]
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+
+def get_pdf_page_count(buffer: bytes) -> int:
+    """Get page count from PDF buffer. Returns 1 for non-PDF files."""
+    try:
+        reader = PdfReader(io.BytesIO(buffer))
+        return len(reader.pages)
+    except Exception:
+        return 1  # Default to 1 page for non-PDF or errors
 
 
 async def upload_document_and_create_record(
@@ -204,6 +216,22 @@ async def general_extraction(
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 50MB)")
     
+    # Get page count before calling LlamaParse API
+    page_count = get_pdf_page_count(buffer) if file.content_type == "application/pdf" else 1
+    
+    # Check monthly limit with actual page count
+    new_usage = user.monthly_usage + page_count
+    if new_usage > user.monthly_limit:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "Monthly page limit exceeded",
+                "usage": user.monthly_usage,
+                "limit": user.monthly_limit,
+                "pagesRequired": page_count,
+            }
+        )
+    
     try:
         # Upload document
         document_id = await upload_document_and_create_record(
@@ -217,19 +245,6 @@ async def general_extraction(
             buffer,
             file.filename or "document"
         )
-        
-        # Check monthly limit
-        new_usage = user.monthly_usage + result.page_count
-        if new_usage > user.monthly_limit:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "message": "Monthly page limit exceeded",
-                    "usage": user.monthly_usage,
-                    "limit": user.monthly_limit,
-                    "pagesRequired": result.page_count,
-                }
-            )
         
         # Update usage
         storage = StorageService(db)
