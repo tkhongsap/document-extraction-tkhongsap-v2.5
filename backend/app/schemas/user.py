@@ -47,3 +47,13 @@ class UserResponse(UserBase):
 
 class UserUpdate(BaseModel):
     language: Optional[str] = None
+
+
+class TierUpdate(BaseModel):
+    tier: str
+    
+    @field_validator('tier')
+    def validate_tier(cls, v):
+        if v not in ('free', 'pro', 'enterprise'):
+            raise ValueError('Tier must be one of: free, pro, enterprise')
+        return v

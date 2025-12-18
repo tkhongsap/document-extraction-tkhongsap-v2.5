@@ -280,3 +280,26 @@ export async function getDocumentsWithExtractions(limit: number = 20): Promise<{
 
   return res.json();
 }
+
+// User Tier Management
+export async function changeTier(tier: 'free' | 'pro' | 'enterprise'): Promise<{ 
+  success: boolean; 
+  tier: string; 
+  monthly_limit: number; 
+  monthly_usage: number;
+  message: string;
+}> {
+  const res = await fetch("/api/user/change-tier", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ tier }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to change tier");
+  }
+
+  return res.json();
+}
