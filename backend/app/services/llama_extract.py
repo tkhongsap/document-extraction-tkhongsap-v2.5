@@ -5,6 +5,8 @@ Used for template-based extractions (Bank Statement, Invoice, PO, Contract, Resu
 """
 import httpx
 import asyncio
+import re
+import os
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
@@ -15,6 +17,37 @@ from app.utils.extraction_schemas import (
     get_line_items_key,
     RESUME_ARRAY_KEYS,
 )
+
+
+def safe_print(message: str) -> None:
+    """Print message safely with UTF-8 encoding, handling encoding errors gracefully"""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        # Fallback: encode with errors='replace' for Windows console
+        print(message.encode('utf-8', errors='replace').decode('utf-8', errors='replace'))
+
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize filename to ASCII-safe characters for API compatibility.
+    Replaces non-ASCII characters with underscores but keeps the extension.
+    """
+    # Get extension
+    name, ext = os.path.splitext(filename)
+    
+    # Replace non-ASCII characters with underscore
+    safe_name = re.sub(r'[^\x00-\x7F]+', '_', name)
+    
+    # Clean up multiple underscores
+    safe_name = re.sub(r'_+', '_', safe_name).strip('_')
+    
+    # If name becomes empty, use default
+    if not safe_name:
+        safe_name = "document"
+    
+    return safe_name + ext
+
 
 LLAMA_EXTRACT_API_BASE = "https://api.cloud.llamaindex.ai/api/v1"
 
@@ -99,7 +132,7 @@ class LlamaExtractService:
         self.poll_interval_ms = 3000  # Poll every 3 seconds
         self.agent_cache: Dict[str, str] = {}  # documentType -> agentId
         
-        print(f"[LlamaExtract] API key configured: {self.api_key[:10]}...")
+        safe_print(f"[LlamaExtract] API key configured: {self.api_key[:10]}...")
     
     async def extract_document(
         self,
@@ -118,27 +151,27 @@ class LlamaExtractService:
         Returns:
             TemplateExtractionResult with extracted fields
         """
-        print(f"[LlamaExtract] Starting extraction for {file_name} with type: {document_type}")
+        safe_print(f"[LlamaExtract] Starting extraction for {sanitize_filename(file_name)} with type: {document_type}")
         
         # Step 1: Get or create extraction agent
         agent_id = await self._get_or_create_agent(document_type)
-        print(f"[LlamaExtract] Using agent: {agent_id}")
+        safe_print(f"[LlamaExtract] Using agent: {agent_id}")
         
         # Step 2: Upload file
         file_id = await self._upload_file(file_buffer, file_name)
-        print(f"[LlamaExtract] File uploaded: {file_id}")
+        safe_print(f"[LlamaExtract] File uploaded: {file_id}")
         
         # Step 3: Create extraction job
         job_id = await self._create_job(agent_id, file_id)
-        print(f"[LlamaExtract] Job created: {job_id}")
+        safe_print(f"[LlamaExtract] Job created: {job_id}")
         
         # Step 4: Wait for completion
         await self._wait_for_completion(job_id)
-        print(f"[LlamaExtract] Job completed: {job_id}")
+        safe_print(f"[LlamaExtract] Job completed: {job_id}")
         
         # Step 5: Get results
         result = await self._get_result(job_id)
-        print(f"[LlamaExtract] Retrieved results for job: {job_id}")
+        safe_print(f"[LlamaExtract] Retrieved results for job: {job_id}")
         
         # Step 6: Format results
         return self._format_result(result, document_type)
@@ -148,7 +181,7 @@ class LlamaExtractService:
         # Check cache
         if document_type in self.agent_cache:
             agent_id = self.agent_cache[document_type]
-            print(f"[LlamaExtract] Using cached agent for {document_type}: {agent_id}")
+            safe_print(f"[LlamaExtract] Using cached agent for {document_type}: {agent_id}")
             return agent_id
         
         agent_name = f"docai-{document_type}-v1"
@@ -157,17 +190,17 @@ class LlamaExtractService:
         try:
             existing = await self._get_agent_by_name(agent_name)
             if existing:
-                print(f"[LlamaExtract] Found existing agent: {existing['id']}")
+                safe_print(f"[LlamaExtract] Found existing agent: {existing['id']}")
                 self.agent_cache[document_type] = existing["id"]
                 return existing["id"]
         except LlamaExtractError:
-            print(f"[LlamaExtract] Agent {agent_name} not found, creating new one")
+            safe_print(f"[LlamaExtract] Agent {agent_name} not found, creating new one")
         
         # Create new agent
         schema = get_schema_for_type(document_type)
         agent = await self._create_agent(agent_name, schema)
         self.agent_cache[document_type] = agent["id"]
-        print(f"[LlamaExtract] Created new agent: {agent['id']}")
+        safe_print(f"[LlamaExtract] Created new agent: {agent['id']}")
         return agent["id"]
     
     async def _get_agent_by_name(self, name: str) -> Optional[Dict[str, Any]]:
@@ -219,7 +252,7 @@ class LlamaExtractService:
         
         if response.status_code != 200:
             error_text = response.text
-            print(f"[LlamaExtract] Failed to create agent: {response.status_code} - {error_text}")
+            safe_print(f"[LlamaExtract] Failed to create agent: {response.status_code} - {error_text}")
             
             # Try to parse error details
             error_message = "Failed to create extraction agent"
@@ -241,10 +274,12 @@ class LlamaExtractService:
     
     async def _upload_file(self, file_buffer: bytes, file_name: str) -> str:
         """Upload a file to LlamaCloud"""
+        # Sanitize filename to avoid encoding issues with non-ASCII characters
+        safe_file_name = sanitize_filename(file_name)
         mime_type = get_mime_type(file_name)
         
         files = {
-            "upload_file": (file_name, file_buffer, mime_type)
+            "upload_file": (safe_file_name, file_buffer, mime_type)
         }
         
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -259,7 +294,7 @@ class LlamaExtractService:
         
         if response.status_code != 200:
             error_text = response.text
-            print(f"[LlamaExtract] File upload failed: {response.status_code} - {error_text}")
+            safe_print(f"[LlamaExtract] File upload failed: {response.status_code} - {error_text}")
             raise LlamaExtractError(
                 f"Failed to upload file: {error_text}",
                 response.status_code
@@ -297,23 +332,23 @@ class LlamaExtractService:
     
     async def _wait_for_completion(self, job_id: str) -> None:
         """Poll for job completion"""
-        print(f"[LlamaExtract] Starting to poll for job {job_id} completion...")
+        safe_print(f"[LlamaExtract] Starting to poll for job {job_id} completion...")
         
         for i in range(self.max_retries):
             status = await self._get_job_status(job_id)
-            print(f"[LlamaExtract] Poll {i + 1}/{self.max_retries} - Job {job_id} status: {status}")
+            safe_print(f"[LlamaExtract] Poll {i + 1}/{self.max_retries} - Job {job_id} status: {status}")
             
             if status == "SUCCESS":
-                print(f"[LlamaExtract] Job {job_id} completed successfully")
+                safe_print(f"[LlamaExtract] Job {job_id} completed successfully")
                 return
             
             if status in ("ERROR", "CANCELLED"):
-                print(f"[LlamaExtract] Job {job_id} failed with status: {status}")
+                safe_print(f"[LlamaExtract] Job {job_id} failed with status: {status}")
                 raise LlamaExtractError(f"Job {job_id} failed with status: {status}")
             
             await asyncio.sleep(self.poll_interval_ms / 1000)
         
-        print(f"[LlamaExtract] Job {job_id} timed out after {self.max_retries} polls")
+        safe_print(f"[LlamaExtract] Job {job_id} timed out after {self.max_retries} polls")
         raise LlamaExtractError(
             f"Job {job_id} timed out after {self.max_retries * self.poll_interval_ms / 1000} seconds"
         )
@@ -365,14 +400,14 @@ class LlamaExtractService:
         document_type: DocumentType,
     ) -> TemplateExtractionResult:
         """Format extraction result for frontend"""
-        print(f"[LlamaExtract] Formatting result for document type: {document_type}")
+        safe_print(f"[LlamaExtract] Formatting result for document type: {document_type}")
         
         data = result.get("data", {})
         confidence_scores = result.get("extraction_metadata", {}).get("confidence_scores", {})
         
         # Use repr() for safe logging of Unicode characters on Windows
-        print(f"[LlamaExtract] Raw result data keys: {list(data.keys())}")
-        print(f"[LlamaExtract] Raw confidence scores: {confidence_scores}")
+        safe_print(f"[LlamaExtract] Raw result data keys: {list(data.keys())}")
+        safe_print(f"[LlamaExtract] Raw confidence scores: {confidence_scores}")
         
         # Separate header fields from line items
         line_items_key = get_line_items_key(document_type)
@@ -382,7 +417,7 @@ class LlamaExtractService:
         header_fields: List[ExtractedField] = []
         self._flatten_object(data, "", header_fields, confidence_scores, line_items_key, document_type)
         
-        print(f"[LlamaExtract] Formatted {len(header_fields)} header fields")
+        safe_print(f"[LlamaExtract] Formatted {len(header_fields)} header fields")
         
         # Normalize confidence scores
         normalized_scores: Dict[str, float] = {}
