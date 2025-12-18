@@ -39,7 +39,7 @@ async def get_extractions(
     """Get user's extractions"""
     storage = StorageService(db)
     extractions = await storage.get_extractions_by_user_id(user.id, limit)
-    return {"extractions": [ExtractionResponse.model_validate(e) for e in extractions]}
+    return {"extractions": [ExtractionResponse.model_validate(e).model_dump(by_alias=True) for e in extractions]}
 
 
 @router.get("/{extraction_id}", response_model=dict)
