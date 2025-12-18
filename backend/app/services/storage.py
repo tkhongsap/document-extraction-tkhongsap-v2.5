@@ -3,10 +3,10 @@ Storage service for database operations
 Equivalent to server/storage.ts
 """
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, update
+from sqlalchemy import select, desc, update, delete
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.models.user import User
 from app.models.document import Document
@@ -15,6 +15,10 @@ from app.models.usage_history import UsageHistory
 from app.schemas.user import UserCreate
 from app.schemas.document import DocumentCreate, DocumentWithExtractions
 from app.schemas.extraction import ExtractionCreate, ExtractionResponse
+
+
+# Extraction retention period (3 days)
+EXTRACTION_RETENTION_DAYS = 3
 
 
 def should_reset_usage(last_reset_at: Optional[datetime]) -> bool:
@@ -114,6 +118,32 @@ class StorageService:
         )
         self.db.add(history)
         await self.db.commit()
+    
+    async def update_user_tier(self, user_id: str, new_tier: str) -> User:
+        """Update user's tier and reset usage"""
+        user = await self.get_user(user_id)
+        if not user:
+            raise ValueError("User not found")
+        
+        # Define tier limits
+        tier_limits = {
+            "free": 100,
+            "pro": 1000,
+            "enterprise": 10000
+        }
+        
+        if new_tier not in tier_limits:
+            raise ValueError(f"Invalid tier: {new_tier}. Must be one of: free, pro, enterprise")
+        
+        # Update tier and limit
+        user.tier = new_tier
+        user.monthly_limit = tier_limits[new_tier]
+        user.monthly_usage = 0  # Reset usage when changing tier
+        user.last_reset_at = datetime.utcnow()
+        
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
     
     async def check_and_reset_if_needed(self, user_id: str) -> User:
         """Check if monthly usage needs reset and perform if needed"""
@@ -267,3 +297,23 @@ class StorageService:
             count += 1
         
         return documents
+    
+    async def cleanup_old_extractions(self) -> int:
+        """Delete extractions older than retention period (3 days)"""
+        cutoff_date = datetime.utcnow() - timedelta(days=EXTRACTION_RETENTION_DAYS)
+        
+        # Count before delete for logging
+        count_result = await self.db.execute(
+            select(Extraction).where(Extraction.created_at < cutoff_date)
+        )
+        old_extractions = list(count_result.scalars().all())
+        count = len(old_extractions)
+        
+        if count > 0:
+            # Delete old extractions
+            await self.db.execute(
+                delete(Extraction).where(Extraction.created_at < cutoff_date)
+            )
+            await self.db.commit()
+        
+        return count

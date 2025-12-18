@@ -1,6 +1,7 @@
 import { useLanguage } from "@/lib/i18n";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -11,7 +12,6 @@ import { getTemplateById } from "@/lib/templates";
 import { 
   processTemplateExtraction, 
   processGeneralExtraction, 
-  saveExtraction,
   type GeneralExtractionResponse,
   type TemplateExtractionResponse,
   type DocumentType,
@@ -24,6 +24,7 @@ import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 export default function Extraction() {
   const { t } = useLanguage();
   const { type } = useParams();
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -71,21 +72,12 @@ export default function Extraction() {
       setTemplateResults(response);
       console.log('[Extraction] templateResults state updated');
 
-      await saveExtraction({
-        fileName: file.name,
-        fileSize: file.size,
-        documentType: type,
-        pagesProcessed: response.pagesProcessed,
-        extractedData: {
-          ...response.extractedData,
-          headerFields: response.headerFields,
-          lineItems: response.lineItems,
-        },
-        status: 'completed',
-        documentId: response.documentId,
-      });
+      // Backend already saves extraction, no need to call saveExtraction here
 
       toast.success('Document extracted successfully!');
+      
+      // Refresh user data to update Monthly Usage display
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Extraction] Error during extraction:', error);
       toast.error(error.message || 'Extraction failed');
@@ -107,21 +99,12 @@ export default function Extraction() {
       const response = await processGeneralExtraction(file);
       setGeneralResults(response);
 
-      await saveExtraction({
-        fileName: file.name,
-        fileSize: file.size,
-        documentType: 'general',
-        pagesProcessed: response.pageCount,
-        extractedData: { 
-          markdown: response.markdown, 
-          text: response.text,
-          pages: response.pages 
-        },
-        status: 'completed',
-        documentId: response.documentId,
-      });
+      // Backend already saves extraction, no need to call saveExtraction here
 
       toast.success(`Document parsed successfully! ${response.pageCount} page(s) processed.`);
+      
+      // Refresh user data to update Monthly Usage display
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       toast.error(error.message || 'Extraction failed');
       setGeneralResults(null);
