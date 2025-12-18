@@ -25,13 +25,14 @@ class ExtractionCreate(ExtractionBase):
 
 class ExtractionResponse(ExtractionBase):
     id: str
-    user_id: str
-    document_id: Optional[str] = None
+    user_id: str = Field(alias="userId")
+    document_id: Optional[str] = Field(default=None, alias="documentId")
     status: str
-    created_at: datetime
+    created_at: datetime = Field(alias="createdAt")
     
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class ExtractedField(BaseModel):

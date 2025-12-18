@@ -22,6 +22,7 @@ from app.routes import (
     auth_router,
     documents_router,
     extractions_router,
+    docs_with_extractions_router,
     objects_router,
     extract_router,
     user_router,
@@ -100,6 +101,7 @@ async def log_requests(request: Request, call_next):
 app.include_router(auth_router)
 app.include_router(documents_router)
 app.include_router(extractions_router)
+app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
