@@ -1,16 +1,16 @@
 """
 User Schemas
 """
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
 
 class UserBase(BaseModel):
     email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    profile_image_url: Optional[str] = None
+    first_name: Optional[str] = Field(default=None, alias="firstName", serialization_alias="firstName")
+    last_name: Optional[str] = Field(default=None, alias="lastName", serialization_alias="lastName")
+    profile_image_url: Optional[str] = Field(default=None, alias="profileImageUrl", serialization_alias="profileImageUrl")
 
 
 class UserCreate(UserBase):
@@ -35,14 +35,15 @@ class UserRegister(BaseModel):
 class UserResponse(UserBase):
     id: str
     tier: str
-    monthly_usage: int
-    monthly_limit: int
+    monthly_usage: int = Field(alias="monthlyUsage", serialization_alias="monthlyUsage")
+    monthly_limit: int = Field(alias="monthlyLimit", serialization_alias="monthlyLimit")
     language: str
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: Optional[datetime] = Field(default=None, alias="createdAt", serialization_alias="createdAt")
+    updated_at: Optional[datetime] = Field(default=None, alias="updatedAt", serialization_alias="updatedAt")
     
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class UserUpdate(BaseModel):
