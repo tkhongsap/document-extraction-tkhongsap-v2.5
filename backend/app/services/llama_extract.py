@@ -370,7 +370,8 @@ class LlamaExtractService:
         data = result.get("data", {})
         confidence_scores = result.get("extraction_metadata", {}).get("confidence_scores", {})
         
-        print(f"[LlamaExtract] Raw result data: {data}")
+        # Use repr() for safe logging of Unicode characters on Windows
+        print(f"[LlamaExtract] Raw result data keys: {list(data.keys())}")
         print(f"[LlamaExtract] Raw confidence scores: {confidence_scores}")
         
         # Separate header fields from line items
