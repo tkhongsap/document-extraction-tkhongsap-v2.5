@@ -14,7 +14,7 @@ import {
   Files
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getDocumentsWithExtractions } from "@/lib/api";
+import { getExtractions } from "@/lib/api";
 import { Link } from "wouter";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
@@ -117,41 +117,41 @@ export default function History() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['documents-with-extractions'],
-    queryFn: () => getDocumentsWithExtractions(20),
+    queryKey: ['extractions'],
+    queryFn: () => getExtractions(50),
   });
 
-  const documents = data?.documents || [];
+  const extractions = data?.extractions || [];
   
   // Debounce search query to improve performance
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
 
-  // Filter documents by multiple fields: filename, documentType, status, and extractedData
-  const filteredDocuments = useMemo(() => {
+  // Filter extractions by multiple fields: filename, documentType, status, and extractedData
+  const filteredExtractions = useMemo(() => {
     if (!debouncedSearchQuery.trim()) {
-      return documents;
+      return extractions;
     }
     
     const query = debouncedSearchQuery.toLowerCase().trim();
     
-    return documents.filter((doc: typeof documents[number]) => {
+    return extractions.filter((extraction: typeof extractions[number]) => {
       // Search in fileName
-      if (doc.fileName.toLowerCase().includes(query)) return true;
+      if (extraction.fileName.toLowerCase().includes(query)) return true;
       
       // Search in documentType
-      if (doc.documentType.toLowerCase().includes(query)) return true;
+      if (extraction.documentType.toLowerCase().includes(query)) return true;
       
       // Search in status
-      if (doc.latestExtraction.status.toLowerCase().includes(query)) return true;
+      if (extraction.status.toLowerCase().includes(query)) return true;
       
       // Search in extractedData (recursive search through JSON structure)
-      if (doc.latestExtraction.extractedData && searchInExtractedData(doc.latestExtraction.extractedData, query)) {
+      if (extraction.extractedData && searchInExtractedData(extraction.extractedData, query)) {
         return true;
       }
       
       return false;
     });
-  }, [documents, debouncedSearchQuery]);
+  }, [extractions, debouncedSearchQuery]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -225,9 +225,9 @@ export default function History() {
             {debouncedSearchQuery.trim() && !isLoading && (
               <div className="flex items-center justify-between px-1">
                 <p className="text-xs text-muted-foreground">
-                  {filteredDocuments.length === 0 
+                  {filteredExtractions.length === 0 
                     ? 'No results found'
-                    : `Found ${filteredDocuments.length} ${filteredDocuments.length === 1 ? 'document' : 'documents'}`
+                    : `Found ${filteredExtractions.length} ${filteredExtractions.length === 1 ? 'extraction' : 'extractions'}`
                   }
                 </p>
                 {searchQuery.trim() && searchQuery.trim() !== debouncedSearchQuery.trim() && (
@@ -239,14 +239,14 @@ export default function History() {
         </CardContent>
       </Card>
 
-      {/* Document Cards */}
+      {/* Extraction Cards */}
       {isLoading ? (
         <Card>
           <CardContent className="flex items-center justify-center p-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </CardContent>
         </Card>
-      ) : filteredDocuments.length === 0 ? (
+      ) : filteredExtractions.length === 0 ? (
         <Card>
           <CardContent className="text-center p-12">
             <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
@@ -254,8 +254,8 @@ export default function History() {
             </div>
             <h3 className="font-semibold text-lg mb-2">
               {debouncedSearchQuery 
-                ? (t('docs.no_results') || 'No documents found')
-                : (t('docs.empty_title') || 'No documents yet')
+                ? (t('docs.no_results') || 'No extractions found')
+                : (t('docs.empty_title') || 'No extractions yet')
               }
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
@@ -276,97 +276,95 @@ export default function History() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {filteredDocuments.map((doc: typeof filteredDocuments[number]) => {
-            const TypeIcon = getDocumentTypeIcon(doc.documentType);
-            const latest = doc.latestExtraction;
+          {filteredExtractions.map((extraction: typeof filteredExtractions[number]) => {
+            const TypeIcon = getDocumentTypeIcon(extraction.documentType);
             
             return (
-              <Card key={doc.fileName} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    {/* Left: Document Info */}
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <TypeIcon className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base mb-1 truncate">
-                          {debouncedSearchQuery.trim() 
-                            ? highlightText(doc.fileName, debouncedSearchQuery)
-                            : doc.fileName
-                          }
-                        </h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                          <span className="capitalize">
-                            {debouncedSearchQuery.trim() && doc.documentType.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-                              ? highlightText(doc.documentType, debouncedSearchQuery)
-                              : doc.documentType
+              <Link key={extraction.id} href={`/history/${extraction.id}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* Left: Extraction Info */}
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <TypeIcon className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-base mb-1 truncate">
+                            {debouncedSearchQuery.trim() 
+                              ? highlightText(extraction.fileName, debouncedSearchQuery)
+                              : extraction.fileName
                             }
-                          </span>
-                          <span>•</span>
-                          <span>{formatFileSize(doc.fileSize)}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Files className="h-3 w-3" />
-                            {doc.latestExtraction.pagesProcessed}
-                          </Badge>
-                          <Badge variant="secondary">
-                            {doc.totalExtractions} {t('docs.extractions_count') || 'extraction(s)'}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Latest: {formatRelativeTime(new Date(latest.createdAt))}
-                          </span>
-                          <Badge 
-                            variant={latest.status === 'completed' ? 'success' : latest.status === 'processing' ? 'default' : 'warning'}
-                          >
-                            {latest.status}
-                          </Badge>
+                          </h3>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                            <span className="capitalize">
+                              {debouncedSearchQuery.trim() && extraction.documentType.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+                                ? highlightText(extraction.documentType, debouncedSearchQuery)
+                                : extraction.documentType
+                              }
+                            </span>
+                            <span>•</span>
+                            <span>{formatFileSize(extraction.fileSize)}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Files className="h-3 w-3" />
+                              {extraction.pagesProcessed}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatRelativeTime(new Date(extraction.createdAt))}
+                            </span>
+                            <Badge 
+                              variant={extraction.status === 'completed' ? 'success' : extraction.status === 'processing' ? 'default' : 'warning'}
+                            >
+                              {extraction.status}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        asChild
-                      >
-                        <Link href={`/extraction/${doc.documentType}`}>
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          {t('docs.reextract') || 'Re-extract'}
-                        </Link>
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" disabled>
-                            <Download className="mr-2 h-4 w-4" />
-                            {t('docs.download') || 'Download'}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled onClick={() => exportToJSON(doc.latestExtraction)}>
-                            {t('export.json') || 'JSON'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToCSV(doc.latestExtraction)}>
-                            {t('export.csv') || 'CSV'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToExcel(doc.latestExtraction)}>
-                            {t('export.excel') || 'Excel'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToMarkdown(doc.latestExtraction)}>
-                            {t('export.markdown') || 'Markdown'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled onClick={() => exportToText(doc.latestExtraction)}>
-                            {t('export.text') || 'Text'}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.preventDefault()}>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          asChild
+                        >
+                          <Link href={`/extraction/${extraction.documentType}`}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('docs.reextract') || 'Re-extract'}
+                          </Link>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" disabled>
+                              <Download className="mr-2 h-4 w-4" />
+                              {t('docs.download') || 'Download'}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem disabled onClick={() => exportToJSON(extraction)}>
+                              {t('export.json') || 'JSON'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled onClick={() => exportToCSV(extraction)}>
+                              {t('export.csv') || 'CSV'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled onClick={() => exportToExcel(extraction)}>
+                              {t('export.excel') || 'Excel'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled onClick={() => exportToMarkdown(extraction)}>
+                              {t('export.markdown') || 'Markdown'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled onClick={() => exportToText(extraction)}>
+                              {t('export.text') || 'Text'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>
