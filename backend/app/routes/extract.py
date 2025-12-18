@@ -17,6 +17,7 @@ from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
 from app.models.user import User
 from app.schemas.document import DocumentCreate
+from app.schemas.extraction import ExtractionCreate
 from app.utils.extraction_schemas import DocumentType
 
 router = APIRouter(prefix="/api/extract", tags=["extract"])
@@ -164,6 +165,18 @@ async def template_extraction(
         storage = StorageService(db)
         await storage.update_user_usage(user.id, result.pages_processed)
         
+        # Auto-save extraction to database (will be auto-deleted after 3 days)
+        extraction = await storage.create_extraction(ExtractionCreate(
+            user_id=user.id,
+            document_id=document_id,
+            file_name=file.filename or "document",
+            file_size=file_size,
+            document_type=documentType,
+            pages_processed=result.pages_processed,
+            extracted_data=result.extracted_data,
+            status="completed",
+        ))
+        
         # Return result
         return {
             "success": result.success,
@@ -179,6 +192,7 @@ async def template_extraction(
             "fileSize": file_size,
             "mimeType": file.content_type,
             "documentId": document_id,
+            "extractionId": extraction.id,
         }
     except LlamaExtractError as e:
         print(f"[Template Extraction] Error: {e}")
@@ -250,6 +264,24 @@ async def general_extraction(
         storage = StorageService(db)
         await storage.update_user_usage(user.id, result.page_count)
         
+        # Auto-save extraction to database (will be auto-deleted after 3 days)
+        extraction = await storage.create_extraction(ExtractionCreate(
+            user_id=user.id,
+            document_id=document_id,
+            file_name=file.filename or "document",
+            file_size=file_size,
+            document_type="general",
+            pages_processed=result.page_count,
+            extracted_data={
+                "markdown": result.markdown,
+                "text": result.text,
+                "pageCount": result.page_count,
+                "overallConfidence": result.overall_confidence,
+                "confidenceStats": result.confidence_stats,
+            },
+            status="completed",
+        ))
+        
         # Return result
         return {
             "success": True,
@@ -271,6 +303,7 @@ async def general_extraction(
             "overallConfidence": result.overall_confidence,
             "confidenceStats": result.confidence_stats,
             "documentId": document_id,
+            "extractionId": extraction.id,
         }
     except LlamaParseError as e:
         print(f"[General Extraction] Error: {e}")
