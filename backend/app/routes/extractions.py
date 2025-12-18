@@ -9,8 +9,25 @@ from app.core.auth import get_current_user, ensure_usage_reset
 from app.services.storage import StorageService
 from app.models.user import User
 from app.schemas.extraction import ExtractionResponse, ExtractionCreate
+from app.schemas.document import DocumentWithExtractions
 
 router = APIRouter(prefix="/api/extractions", tags=["extractions"])
+
+
+# Documents with extractions route - must be outside the prefix
+docs_with_extractions_router = APIRouter(tags=["extractions"])
+
+
+@docs_with_extractions_router.get("/api/documents-with-extractions", response_model=dict)
+async def get_documents_with_extractions(
+    limit: int = 20,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get documents grouped with their extractions"""
+    storage = StorageService(db)
+    documents = await storage.get_extractions_grouped_by_document(user.id, limit)
+    return {"documents": [doc.model_dump(by_alias=True) for doc in documents]}
 
 
 @router.get("", response_model=dict)
