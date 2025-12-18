@@ -29,5 +29,8 @@ itsdangerous==2.2.0
 # Async support
 aiofiles==24.1.0
 
+# PDF processing
+pypdf==5.1.0
+
 # CORS
 # starlette==0.45.2
