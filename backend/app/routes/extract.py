@@ -21,6 +21,16 @@ from app.utils.extraction_schemas import DocumentType
 
 router = APIRouter(prefix="/api/extract", tags=["extract"])
 
+
+def safe_print(message: str) -> None:
+    """Print message safely with UTF-8 encoding, handling encoding errors gracefully"""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        # Fallback: encode with errors='replace' for Windows console
+        print(message.encode('utf-8', errors='replace').decode('utf-8', errors='replace'))
+
+
 # Allowed MIME types for upload
 ALLOWED_MIMES = [
     "application/pdf",
@@ -59,10 +69,10 @@ async def upload_document_and_create_record(
     """Helper to upload file and create document record"""
     try:
         object_storage = ObjectStorageService()
-        
+
         # Get upload URL
         upload_url = await object_storage.get_object_entity_upload_url()
-        
+
         # Upload file
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.put(
@@ -73,16 +83,16 @@ async def upload_document_and_create_record(
                     "Content-Length": str(file_size),
                 },
             )
-        
+
         if response.status_code not in (200, 201):
             raise Exception(f"Failed to upload file to GCS: {response.text}")
-        
+
         # Set ACL and get normalized path
         object_path = await object_storage.try_set_object_entity_acl_policy(
             upload_url,
             ObjectAclPolicy(owner=user_id, visibility="private"),
         )
-        
+
         # Create document record
         storage = StorageService(db)
         document = await storage.create_document(DocumentCreate(
@@ -92,10 +102,10 @@ async def upload_document_and_create_record(
             mime_type=mime_type,
             object_path=object_path,
         ))
-        
+
         return document.id
     except Exception as e:
-        print(f"[Upload] Failed to store document: {e}")
+        safe_print(f"[Upload] Failed to store document: {e}")
         return None
 
 
@@ -151,7 +161,7 @@ async def template_extraction(
             buffer, file.filename or "document", file_size, file.content_type or "application/octet-stream",
             user.id, db
         )
-        
+
         # Extract using LlamaExtract
         llama_extract = create_llama_extract_service()
         result = await llama_extract.extract_document(
@@ -181,13 +191,13 @@ async def template_extraction(
             "documentId": document_id,
         }
     except LlamaExtractError as e:
-        print(f"[Template Extraction] Error: {e}")
+        safe_print(f"[Template Extraction] Error: {e}")
         raise HTTPException(
             status_code=e.status_code or 500,
             detail={"message": str(e), "type": "LlamaExtractError"}
         )
     except Exception as e:
-        print(f"[Template Extraction] Error: {e}")
+        safe_print(f"[Template Extraction] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -238,7 +248,7 @@ async def general_extraction(
             buffer, file.filename or "document", file_size, file.content_type or "application/octet-stream",
             user.id, db
         )
-        
+
         # Parse using LlamaParse
         llama_parse = create_llama_parse_service()
         result = await llama_parse.parse_document(
@@ -273,11 +283,11 @@ async def general_extraction(
             "documentId": document_id,
         }
     except LlamaParseError as e:
-        print(f"[General Extraction] Error: {e}")
+        safe_print(f"[General Extraction] Error: {e}")
         raise HTTPException(
             status_code=e.status_code or 500,
             detail={"message": str(e), "type": "LlamaParseError"}
         )
     except Exception as e:
-        print(f"[General Extraction] Error: {e}")
+        safe_print(f"[General Extraction] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
