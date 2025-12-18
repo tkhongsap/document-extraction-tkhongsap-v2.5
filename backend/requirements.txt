@@ -22,12 +22,14 @@ python-dotenv==1.0.1
 # Validation
 pydantic==2.10.4
 pydantic-settings==2.7.0
+email-validator==2.2.0
 
 # Session & Auth
 itsdangerous==2.2.0
 
 # Async support
 aiofiles==24.1.0
+aiosmtplib==3.0.2
 
 # PDF processing
 pypdf==5.1.0
