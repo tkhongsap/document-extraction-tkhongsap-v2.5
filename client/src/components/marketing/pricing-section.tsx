@@ -3,6 +3,8 @@ import { Check, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 
 interface PricingSectionProps {
   className?: string;
@@ -10,9 +12,15 @@ interface PricingSectionProps {
 
 export function PricingSection({ className }: PricingSectionProps) {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   
-  const handleLogin = () => {
-    window.location.href = "/login";
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      setLocation('/settings');
+    } else {
+      setLocation('/login');
+    }
   };
 
   const starterFeatures = [
@@ -84,10 +92,10 @@ export function PricingSection({ className }: PricingSectionProps) {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={handleLogin}
+                onClick={handleGetStarted}
                 className="w-full h-12"
               >
-                {t('pricing.starter_cta')}
+                {isAuthenticated ? 'Go to Settings' : t('pricing.starter_cta')}
               </Button>
             </div>
           </motion.div>
