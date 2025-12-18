@@ -1,30 +1,22 @@
 import { useLanguage } from "@/lib/i18n";
 import { useDateFormatter } from "@/lib/date-utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
-  Download, 
   FileText, 
-  RefreshCw, 
   Search,
   Plus,
   X,
-  Files
+  Files,
+  Clock
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getExtractions } from "@/lib/api";
 import { Link } from "wouter";
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 
 function formatFileSize(bytes: number): string {
@@ -33,6 +25,41 @@ function formatFileSize(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Retention period in days (must match backend EXTRACTION_RETENTION_DAYS)
+const RETENTION_DAYS = 3;
+
+/**
+ * Format remaining time before deletion
+ * @param createdAt - Creation date of extraction
+ * @returns Formatted string showing time remaining
+ */
+function formatTimeRemaining(createdAt: Date): { text: string; isUrgent: boolean } {
+  const now = new Date();
+  const expiresAt = new Date(createdAt.getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const diffMs = expiresAt.getTime() - now.getTime();
+  
+  if (diffMs <= 0) {
+    return { text: 'Expiring soon', isUrgent: true };
+  }
+  
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  // Show minutes only if less than 5 minutes
+  if (diffMinutes < 5) {
+    return { text: `${diffMinutes}m left`, isUrgent: true };
+  }
+  
+  // Show hours if less than 1 day
+  if (diffDays < 1) {
+    return { text: `${diffHours}h left`, isUrgent: diffHours < 6 };
+  }
+  
+  // Show days
+  return { text: `${diffDays}d left`, isUrgent: false };
 }
 
 function getDocumentTypeIcon(type: string) {
@@ -323,44 +350,18 @@ export default function History() {
                         </div>
                       </div>
 
-                      {/* Right: Actions */}
-                      <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.preventDefault()}>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          asChild
-                        >
-                          <Link href={`/extraction/${extraction.documentType}`}>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            {t('docs.reextract') || 'Re-extract'}
-                          </Link>
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" disabled>
-                              <Download className="mr-2 h-4 w-4" />
-                              {t('docs.download') || 'Download'}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem disabled onClick={() => exportToJSON(extraction)}>
-                              {t('export.json') || 'JSON'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem disabled onClick={() => exportToCSV(extraction)}>
-                              {t('export.csv') || 'CSV'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem disabled onClick={() => exportToExcel(extraction)}>
-                              {t('export.excel') || 'Excel'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem disabled onClick={() => exportToMarkdown(extraction)}>
-                              {t('export.markdown') || 'Markdown'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem disabled onClick={() => exportToText(extraction)}>
-                              {t('export.text') || 'Text'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      {/* Right: Expiry Time */}
+                      {(() => {
+                        const { text, isUrgent } = formatTimeRemaining(new Date(extraction.createdAt));
+                        return (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge variant={isUrgent ? 'destructive' : 'outline'} className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {text}
+                            </Badge>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
