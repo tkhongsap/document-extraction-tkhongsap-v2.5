@@ -231,3 +231,213 @@ export async function exportToExcel(extraction: Extraction): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Interface for structured export data (used in StructuredResultsViewer)
+ */
+export interface StructuredExportData {
+  headerFields: Array<{ key: string; value: string; confidence?: number }>;
+  lineItems?: Array<Record<string, unknown>>;
+  extractedData?: Record<string, unknown>;
+  documentType: string;
+  fileName: string;
+}
+
+/**
+ * Resume array keys for multi-section export
+ */
+const RESUME_ARRAY_KEYS = [
+  { key: "work_experience", title: "Work Experience" },
+  { key: "education", title: "Education" },
+  { key: "skills", title: "Skills" },
+  { key: "certifications", title: "Certifications" },
+  { key: "languages", title: "Languages" },
+  { key: "projects", title: "Projects" },
+  { key: "references", title: "References" },
+];
+
+/**
+ * Contract array keys for multi-section export
+ */
+const CONTRACT_ARRAY_KEYS = [
+  { key: "parties", title: "Parties" },
+  { key: "signatures", title: "Signatures" },
+];
+
+/**
+ * Line items keys for different document types
+ */
+const LINE_ITEMS_KEYS: Record<string, { key: string; title: string }[]> = {
+  bank: [{ key: "transactions", title: "Transactions" }],
+  invoice: [{ key: "line_items", title: "Line Items" }],
+  po: [{ key: "line_items", title: "Order Items" }],
+  contract: CONTRACT_ARRAY_KEYS,
+};
+
+/**
+ * Export structured data to JSON format (for StructuredResultsViewer)
+ */
+export function exportStructuredToJSON(data: StructuredExportData): void {
+  const isResume = data.documentType === "resume";
+  
+  let exportData: Record<string, unknown> = {
+    documentType: data.documentType,
+    headerFields: data.headerFields,
+  };
+
+  if (isResume && data.extractedData) {
+    // For resume, include all array sections
+    RESUME_ARRAY_KEYS.forEach(({ key }) => {
+      const arrayData = data.extractedData?.[key];
+      if (Array.isArray(arrayData) && arrayData.length > 0) {
+        exportData[key] = arrayData;
+      }
+    });
+  } else {
+    // For other document types, include arrays from LINE_ITEMS_KEYS
+    const arrayConfigs = LINE_ITEMS_KEYS[data.documentType];
+    if (arrayConfigs && data.extractedData) {
+      arrayConfigs.forEach(({ key }) => {
+        const arrayData = data.extractedData?.[key];
+        if (Array.isArray(arrayData) && arrayData.length > 0) {
+          exportData[key] = arrayData;
+        }
+      });
+    }
+    // Also include lineItems if provided directly
+    if (data.lineItems && data.lineItems.length > 0) {
+      exportData.lineItems = data.lineItems;
+    }
+  }
+
+  // Include raw data for completeness
+  exportData.rawData = data.extractedData || {};
+  
+  const dataStr = JSON.stringify(exportData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${data.fileName.replace(/\.[^/.]+$/, "")}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Create a worksheet from array data
+ */
+function createArrayWorksheet(
+  workbook: import("exceljs").Workbook,
+  title: string,
+  arrayData: Array<Record<string, unknown>>
+): void {
+  if (!arrayData || arrayData.length === 0) return;
+
+  const sheet = workbook.addWorksheet(title);
+  const firstItem = arrayData[0];
+  const keys = Object.keys(firstItem);
+
+  // Add header row and data rows
+  sheet.addRows([
+    keys.map(k => k.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())), // Format headers
+    ...arrayData.map((item) =>
+      keys.map((key) => {
+        const value = item[key];
+        return value !== null && value !== undefined ? String(value) : "";
+      })
+    ),
+  ]);
+
+  // Style header row
+  sheet.getRow(1).font = { bold: true };
+  sheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE0E0E0" },
+  };
+
+  // Auto-fit columns (approximate)
+  keys.forEach((_, index) => {
+    sheet.getColumn(index + 1).width = 20;
+  });
+}
+
+/**
+ * Export structured data to Excel format (for StructuredResultsViewer)
+ */
+export async function exportStructuredToExcel(data: StructuredExportData): Promise<void> {
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const isResume = data.documentType === "resume";
+
+  // Create Header Fields sheet
+  if (data.headerFields && data.headerFields.length > 0) {
+    const headerSheet = workbook.addWorksheet("Header Fields");
+    headerSheet.addRows([
+      ["Field", "Value", "Confidence"],
+      ...data.headerFields.map((field) => [
+        field.key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+        field.value,
+        field.confidence ? `${Math.round(field.confidence * 100)}%` : "-",
+      ]),
+    ]);
+    
+    // Style header row
+    headerSheet.getRow(1).font = { bold: true };
+    headerSheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+    headerSheet.columns = [
+      { width: 30 },
+      { width: 50 },
+      { width: 15 },
+    ];
+  }
+
+  if (isResume && data.extractedData) {
+    // For resume, create separate sheets for each array section
+    RESUME_ARRAY_KEYS.forEach(({ key, title }) => {
+      const arrayData = data.extractedData?.[key] as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(arrayData) && arrayData.length > 0) {
+        createArrayWorksheet(workbook, title, arrayData);
+      }
+    });
+  } else {
+    // For other document types, create sheets for each array in LINE_ITEMS_KEYS
+    const arrayConfigs = LINE_ITEMS_KEYS[data.documentType];
+    if (arrayConfigs && data.extractedData) {
+      arrayConfigs.forEach(({ key, title }) => {
+        const arrayData = data.extractedData?.[key] as Array<Record<string, unknown>> | undefined;
+        if (Array.isArray(arrayData) && arrayData.length > 0) {
+          createArrayWorksheet(workbook, title, arrayData);
+        }
+      });
+    }
+    
+    // Also include lineItems if provided directly and no array was found
+    if (data.lineItems && data.lineItems.length > 0 && workbook.worksheets.length <= 1) {
+      createArrayWorksheet(workbook, "Line Items", data.lineItems);
+    }
+  }
+
+  // If no sheets were created, create a default one
+  if (workbook.worksheets.length === 0) {
+    const defaultSheet = workbook.addWorksheet("Data");
+    defaultSheet.addRow(["No data available"]);
+  }
+
+  // Write workbook to file and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${data.fileName.replace(/\.[^/.]+$/, "")}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
