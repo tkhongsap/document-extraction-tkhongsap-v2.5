@@ -4,13 +4,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   FileText, 
   Search,
   Plus,
   X,
   Files,
-  Clock
+  Clock,
+  RefreshCw,
+  Download
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getExtractions } from "@/lib/api";
@@ -350,18 +358,44 @@ export default function History() {
                         </div>
                       </div>
 
-                      {/* Right: Expiry Time */}
-                      {(() => {
-                        const { text, isUrgent } = formatTimeRemaining(new Date(extraction.createdAt));
-                        return (
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge variant={isUrgent ? 'destructive' : 'outline'} className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {text}
-                            </Badge>
-                          </div>
-                        );
-                      })()}
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          asChild
+                        >
+                          <Link href={`/extraction/${extraction.documentType}`}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('docs.reextract') || 'Re-extract'}
+                          </Link>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Download className="mr-2 h-4 w-4" />
+                              {t('docs.download') || 'Download'}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => exportToJSON(extraction)}>
+                              {t('export.json') || 'JSON'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportToCSV(extraction)}>
+                              {t('export.csv') || 'CSV'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportToExcel(extraction)}>
+                              {t('export.excel') || 'Excel'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportToMarkdown(extraction)}>
+                              {t('export.markdown') || 'Markdown'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportToText(extraction)}>
+                              {t('export.text') || 'Text'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

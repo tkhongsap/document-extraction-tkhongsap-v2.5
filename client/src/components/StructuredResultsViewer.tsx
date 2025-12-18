@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ExtractedField, DocumentType } from "@/lib/api";
+import { exportStructuredToJSON, exportStructuredToExcel } from "@/lib/export";
 
 interface StructuredResultsViewerProps {
   headerFields: ExtractedField[];
@@ -21,6 +22,7 @@ interface StructuredResultsViewerProps {
   documentType: DocumentType;
   onFieldChange?: (index: number, newValue: string) => void;
   className?: string;
+  fileName?: string;
 }
 
 interface ArraySectionConfig {
@@ -321,6 +323,7 @@ export function StructuredResultsViewer({
   documentType,
   onFieldChange,
   className,
+  fileName = "extraction",
 }: StructuredResultsViewerProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   
@@ -433,11 +436,35 @@ export function StructuredResultsViewer({
 
       {/* Export Buttons */}
       <div className="flex-shrink-0 mt-4 pt-4 border-t flex gap-2 justify-end">
-        <Button variant="outline" size="sm" className="h-8 text-xs" data-testid="button-export-json">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 text-xs" 
+          data-testid="button-export-json"
+          onClick={() => exportStructuredToJSON({
+            headerFields,
+            lineItems,
+            extractedData,
+            documentType,
+            fileName,
+          })}
+        >
           <Download className="mr-2 h-3 w-3" />
           Export JSON
         </Button>
-        <Button variant="default" size="sm" className="h-8 text-xs" data-testid="button-export-excel">
+        <Button 
+          variant="default" 
+          size="sm" 
+          className="h-8 text-xs" 
+          data-testid="button-export-excel"
+          onClick={() => exportStructuredToExcel({
+            headerFields,
+            lineItems,
+            extractedData,
+            documentType,
+            fileName,
+          })}
+        >
           <Download className="mr-2 h-3 w-3" />
           Export Excel
         </Button>

@@ -9,6 +9,10 @@ from .config import get_settings
 
 settings = get_settings()
 
+# Always enable SQL echo for full visibility of queries and errors
+# main.py already configures stdout to use UTF-8, so Unicode filenames are safe
+_enable_echo = True
+
 # Convert postgres:// to postgresql+asyncpg:// for async support
 database_url = settings.database_url
 
@@ -17,14 +21,14 @@ if database_url.startswith("sqlite"):
     # SQLite - use aiosqlite
     engine = create_async_engine(
         database_url,
-        echo=settings.node_env == "development",
+        echo=_enable_echo,
         connect_args={"check_same_thread": False},
     )
 elif database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
     engine = create_async_engine(
         database_url,
-        echo=settings.node_env == "development",
+        echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
     )
@@ -32,7 +36,7 @@ elif database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     engine = create_async_engine(
         database_url,
-        echo=settings.node_env == "development",
+        echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
     )
@@ -40,7 +44,7 @@ else:
     # Default - assume PostgreSQL with asyncpg
     engine = create_async_engine(
         database_url,
-        echo=settings.node_env == "development",
+        echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
     )

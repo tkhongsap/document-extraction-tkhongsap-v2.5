@@ -144,6 +144,7 @@ export default function ExtractionDetail() {
               confidenceScores={extractedData?.confidenceScores}
               documentType={extraction.documentType as DocumentType}
               className="h-full"
+              fileName={extraction.fileName}
             />
           )}
         </CardContent>

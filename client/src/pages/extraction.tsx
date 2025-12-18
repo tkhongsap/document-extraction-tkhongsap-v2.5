@@ -348,6 +348,7 @@ export default function Extraction() {
                 documentType={type as DocumentType}
                 onFieldChange={handleFieldChange}
                 className="h-full"
+                fileName={file?.name || "extraction"}
               />
             ) : (
               // Empty state
