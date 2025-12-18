@@ -28,6 +28,10 @@ export function useDateFormatter() {
 
   const formatRelativeTime = (date: Date | string | number) => {
     const d = new Date(date);
+    // Validate date
+    if (isNaN(d.getTime())) {
+      return '-';
+    }
     const locale = language === 'th' ? th : enUS;
     return formatDistanceToNow(d, { addSuffix: true, locale });
   };
