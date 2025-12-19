@@ -417,12 +417,11 @@ async def batch_template_extraction(
             
             # Process with LlamaExtract
             extract_service = create_llama_extract_service()
-            doc_type = DocumentType(documentType)
             
             extraction_result = await extract_service.extract_document(
                 file_buffer=content,
                 file_name=file.filename or "document",
-                document_type=doc_type,
+                document_type=documentType,  # Pass string directly, already validated
             )
             
             # Update usage
