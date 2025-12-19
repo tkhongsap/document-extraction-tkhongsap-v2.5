@@ -429,6 +429,19 @@ async def batch_template_extraction(
             db.add(current_user)
             await db.commit()
             
+            # Save extraction to database for history
+            storage = StorageService(db)
+            extraction = await storage.create_extraction(ExtractionCreate(
+                user_id=current_user.id,
+                document_id=document_id,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                document_type=documentType,
+                pages_processed=page_count,
+                extracted_data=extraction_result.extracted_data,
+                status="completed",
+            ))
+            
             result_item["success"] = True
             result_item["data"] = {
                 "headerFields": [
@@ -442,6 +455,7 @@ async def batch_template_extraction(
                 "fileSize": file_size,
                 "mimeType": content_type,
                 "documentId": document_id,
+                "extractionId": extraction.id,
             }
             
         except LlamaExtractError as e:
@@ -559,6 +573,25 @@ async def batch_general_extraction(
             db.add(current_user)
             await db.commit()
             
+            # Save extraction to database for history
+            storage = StorageService(db)
+            extraction = await storage.create_extraction(ExtractionCreate(
+                user_id=current_user.id,
+                document_id=document_id,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                document_type="general",
+                pages_processed=extraction_result.page_count,
+                extracted_data={
+                    "markdown": extraction_result.markdown,
+                    "text": extraction_result.text,
+                    "pageCount": extraction_result.page_count,
+                    "overallConfidence": extraction_result.overall_confidence,
+                    "confidenceStats": extraction_result.confidence_stats,
+                },
+                status="completed",
+            ))
+            
             result_item["success"] = True
             result_item["data"] = {
                 "markdown": extraction_result.markdown,
@@ -574,10 +607,11 @@ async def batch_general_extraction(
                     for p in extraction_result.pages
                 ],
                 "fileSize": file_size,
-                "mimeType": file.content_type,
+                "mimeType": content_type,
                 "overallConfidence": extraction_result.overall_confidence,
                 "confidenceStats": extraction_result.confidence_stats,
                 "documentId": document_id,
+                "extractionId": extraction.id,
             }
             
         except LlamaParseError as e:
