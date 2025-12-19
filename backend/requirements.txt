@@ -34,5 +34,8 @@ aiosmtplib==3.0.2
 # PDF processing
 pypdf==5.1.0
 
+# pgvector for vector similarity search
+pgvector==0.3.6
+
 # CORS
 # starlette==0.45.2
