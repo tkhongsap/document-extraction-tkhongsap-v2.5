@@ -3,15 +3,15 @@ Database connection and session management
 """
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import event
 from typing import AsyncGenerator
 
 from .config import get_settings
 
 settings = get_settings()
 
-# Always enable SQL echo for full visibility of queries and errors
-# main.py already configures stdout to use UTF-8, so Unicode filenames are safe
-_enable_echo = True
+# Disable SQL echo in production for performance
+_enable_echo = settings.node_env == "development"
 
 # Convert postgres:// to postgresql+asyncpg:// for async support
 database_url = settings.database_url
@@ -31,6 +31,7 @@ elif database_url.startswith("postgres://"):
         echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
+        pool_pre_ping=True,  # Check connection health
     )
 elif database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -39,6 +40,7 @@ elif database_url.startswith("postgresql://"):
         echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
+        pool_pre_ping=True,  # Check connection health
     )
 else:
     # Default - assume PostgreSQL with asyncpg
@@ -47,6 +49,7 @@ else:
         echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
+        pool_pre_ping=True,  # Check connection health
     )
 
 # Create async session factory

@@ -190,21 +190,34 @@ async def template_extraction(
         
         # If document type is resume, also save to resumes table with embedding
         resume_id = None
+        safe_print(f"[Template Extraction] Checking resume save: documentType={documentType}, has_data={bool(result.extracted_data)}")
         if documentType == "resume" and result.extracted_data:
             try:
+                safe_print(f"[Template Extraction] Attempting to save resume...")
                 resume_service = ResumeService(db)
+                # Check if OpenAI API key is configured
+                from app.core.config import get_settings
+                settings = get_settings()
+                has_openai_key = bool(settings.openai_api_key)
+                safe_print(f"[Template Extraction] OpenAI key configured: {has_openai_key}")
+                
                 resume = await resume_service.create_from_extraction(
                     user_id=user.id,
                     extraction_id=extraction.id,
                     extracted_data=result.extracted_data,
                     source_file_name=file.filename or "document",
-                    generate_embedding=True,
+                    generate_embedding=has_openai_key,  # Only generate if API key exists
                 )
                 resume_id = resume.id
-                safe_print(f"[Template Extraction] Resume saved with ID: {resume_id}")
+                embedding_status = "with embedding" if resume.embedding else "without embedding"
+                safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
             except Exception as e:
                 safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
+                import traceback
+                traceback.print_exc()
                 # Continue without resume save - extraction is still saved
+        else:
+            safe_print(f"[Template Extraction] Skipping resume save")
         
         # Return result
         return {
@@ -467,12 +480,17 @@ async def batch_template_extraction(
             if documentType == "resume" and extraction_result.extracted_data:
                 try:
                     resume_service = ResumeService(db)
+                    # Check if OpenAI API key is configured
+                    from app.core.config import get_settings
+                    settings = get_settings()
+                    has_openai_key = bool(settings.openai_api_key)
+                    
                     resume = await resume_service.create_from_extraction(
                         user_id=current_user.id,
                         extraction_id=extraction.id,
                         extracted_data=extraction_result.extracted_data,
                         source_file_name=file.filename or "document",
-                        generate_embedding=True,
+                        generate_embedding=has_openai_key,  # Only generate if API key exists
                     )
                     resume_id = resume.id
                 except Exception as e:
