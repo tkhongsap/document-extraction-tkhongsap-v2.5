@@ -324,3 +324,280 @@ async def general_extraction(
     except Exception as e:
         safe_print(f"[General Extraction] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Batch Extraction Endpoints
+# =============================================================================
+
+@router.post("/batch/process")
+async def batch_template_extraction(
+    files: List[UploadFile] = File(...),
+    documentType: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(ensure_usage_reset),
+):
+    """
+    Batch process multiple documents using LlamaExtract templates.
+    Processes files sequentially to avoid rate limiting.
+    """
+    safe_print(f"[Batch Template Extraction] Processing {len(files)} files with template: {documentType}")
+    
+    # Validate document type
+    valid_types = ["bank", "invoice", "po", "contract", "resume"]
+    if documentType not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid document type. Must be one of: {', '.join(valid_types)}"
+        )
+    
+    results = []
+    
+    for file in files:
+        result_item = {
+            "fileName": file.filename,
+            "success": False,
+            "error": None,
+            "data": None,
+        }
+        
+        try:
+            # Debug: log file info
+            safe_print(f"[Batch Template] File: {file.filename}, content_type: {file.content_type}, size: {file.size}")
+            
+            # Validate file type - handle None content_type by inferring from filename
+            content_type = file.content_type
+            if not content_type or content_type == "application/octet-stream":
+                if file.filename:
+                    fname = file.filename.lower()
+                    if fname.endswith('.pdf'):
+                        content_type = "application/pdf"
+                    elif fname.endswith(('.jpg', '.jpeg')):
+                        content_type = "image/jpeg"
+                    elif fname.endswith('.png'):
+                        content_type = "image/png"
+            
+            if content_type not in ALLOWED_MIMES:
+                result_item["error"] = f"Unsupported file type: {content_type}"
+                results.append(result_item)
+                continue
+            
+            # Read file content
+            content = await file.read()
+            file_size = len(content)
+            
+            # Check file size
+            if file_size > MAX_FILE_SIZE:
+                result_item["error"] = f"File too large: {file_size / (1024*1024):.1f}MB (max 50MB)"
+                results.append(result_item)
+                continue
+            
+            # Reset file position
+            await file.seek(0)
+            
+            # Get page count for PDFs
+            page_count = get_pdf_page_count(content)
+            
+            # Check usage limit
+            pages_remaining = current_user.monthly_limit - current_user.monthly_usage
+            if pages_remaining < page_count:
+                result_item["error"] = f"Insufficient pages remaining ({pages_remaining} < {page_count})"
+                results.append(result_item)
+                continue
+            
+            # Upload document and create record
+            document_id = await upload_document_and_create_record(
+                buffer=content,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                mime_type=content_type,
+                user_id=current_user.id,
+                db=db,
+            )
+            
+            # Process with LlamaExtract
+            extract_service = create_llama_extract_service()
+            doc_type = DocumentType(documentType)
+            
+            extraction_result = await extract_service.extract_document(
+                file_buffer=content,
+                file_name=file.filename or "document",
+                document_type=doc_type,
+            )
+            
+            # Update usage
+            current_user.monthly_usage += page_count
+            db.add(current_user)
+            await db.commit()
+            
+            result_item["success"] = True
+            result_item["data"] = {
+                "headerFields": [
+                    {"key": f.key, "value": str(f.value) if f.value is not None else "", "confidence": f.confidence}
+                    for f in extraction_result.header_fields
+                ],
+                "lineItems": extraction_result.line_items,
+                "extractedData": extraction_result.extracted_data,
+                "confidenceScores": extraction_result.confidence_scores,
+                "pagesProcessed": page_count,
+                "fileSize": file_size,
+                "mimeType": content_type,
+                "documentId": document_id,
+            }
+            
+        except LlamaExtractError as e:
+            result_item["error"] = str(e)
+        except Exception as e:
+            result_item["error"] = str(e)
+        
+        results.append(result_item)
+    
+    # Count successes and failures
+    success_count = sum(1 for r in results if r["success"])
+    failure_count = len(results) - success_count
+    
+    safe_print(f"[Batch Template Extraction] Complete: {success_count} success, {failure_count} failed")
+    
+    return {
+        "success": True,
+        "totalFiles": len(files),
+        "successCount": success_count,
+        "failureCount": failure_count,
+        "results": results,
+    }
+
+
+@router.post("/batch/general")
+async def batch_general_extraction(
+    files: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(ensure_usage_reset),
+):
+    """
+    Batch process multiple documents using LlamaParse for general extraction.
+    Processes files sequentially to avoid rate limiting.
+    """
+    safe_print(f"[Batch General Extraction] Processing {len(files)} files")
+    
+    results = []
+    
+    for file in files:
+        result_item = {
+            "fileName": file.filename,
+            "success": False,
+            "error": None,
+            "data": None,
+        }
+        
+        try:
+            # Debug: log file info
+            safe_print(f"[Batch General] File: {file.filename}, content_type: {file.content_type}, size: {file.size}")
+            
+            # Validate file type - handle None content_type by inferring from filename
+            content_type = file.content_type
+            if not content_type or content_type == "application/octet-stream":
+                if file.filename:
+                    fname = file.filename.lower()
+                    if fname.endswith('.pdf'):
+                        content_type = "application/pdf"
+                    elif fname.endswith(('.jpg', '.jpeg')):
+                        content_type = "image/jpeg"
+                    elif fname.endswith('.png'):
+                        content_type = "image/png"
+                    elif fname.endswith('.docx'):
+                        content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    elif fname.endswith('.xlsx'):
+                        content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            
+            if content_type not in ALLOWED_MIMES:
+                result_item["error"] = f"Unsupported file type: {content_type}"
+                results.append(result_item)
+                continue
+            
+            # Read file content
+            content = await file.read()
+            file_size = len(content)
+            
+            # Check file size
+            if file_size > MAX_FILE_SIZE:
+                result_item["error"] = f"File too large: {file_size / (1024*1024):.1f}MB (max 50MB)"
+                results.append(result_item)
+                continue
+            
+            # Reset file position
+            await file.seek(0)
+            
+            # Get page count for PDFs
+            page_count = get_pdf_page_count(content)
+            
+            # Check usage limit
+            pages_remaining = current_user.monthly_limit - current_user.monthly_usage
+            if pages_remaining < page_count:
+                result_item["error"] = f"Insufficient pages remaining ({pages_remaining} < {page_count})"
+                results.append(result_item)
+                continue
+            
+            # Upload document and create record
+            document_id = await upload_document_and_create_record(
+                buffer=content,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                mime_type=content_type,
+                user_id=current_user.id,
+                db=db,
+            )
+            
+            # Process with LlamaParse
+            parse_service = create_llama_parse_service()
+            
+            extraction_result = await parse_service.parse_document(
+                file_buffer=content,
+                file_name=file.filename or "document",
+            )
+            
+            # Update usage
+            current_user.monthly_usage += page_count
+            db.add(current_user)
+            await db.commit()
+            
+            result_item["success"] = True
+            result_item["data"] = {
+                "markdown": extraction_result.markdown,
+                "text": extraction_result.text,
+                "pageCount": extraction_result.page_count,
+                "pages": [
+                    {
+                        "pageNumber": p.page_number,
+                        "markdown": p.markdown,
+                        "text": p.text,
+                        "confidence": p.confidence,
+                    }
+                    for p in extraction_result.pages
+                ],
+                "fileSize": file_size,
+                "mimeType": file.content_type,
+                "overallConfidence": extraction_result.overall_confidence,
+                "confidenceStats": extraction_result.confidence_stats,
+                "documentId": document_id,
+            }
+            
+        except LlamaParseError as e:
+            result_item["error"] = str(e)
+        except Exception as e:
+            result_item["error"] = str(e)
+        
+        results.append(result_item)
+    
+    # Count successes and failures
+    success_count = sum(1 for r in results if r["success"])
+    failure_count = len(results) - success_count
+    
+    safe_print(f"[Batch General Extraction] Complete: {success_count} success, {failure_count} failed")
+    
+    return {
+        "success": True,
+        "totalFiles": len(files),
+        "successCount": success_count,
+        "failureCount": failure_count,
+        "results": results,
+    }
