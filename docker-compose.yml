@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector extension for RAG
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: docex-postgres
     restart: unless-stopped
     environment:

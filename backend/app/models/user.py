@@ -32,3 +32,4 @@ class User(Base):
     documents = relationship("Document", back_populates="user")
     extractions = relationship("Extraction", back_populates="user")
     usage_history = relationship("UsageHistory", back_populates="user")
+    resumes = relationship("Resume", back_populates="user")

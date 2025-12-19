@@ -4,6 +4,7 @@ Document AI Extractor Backend
 """
 import os
 import sys
+import io
 import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager

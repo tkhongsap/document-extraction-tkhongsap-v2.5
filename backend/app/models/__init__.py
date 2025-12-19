@@ -7,6 +7,7 @@ from .extraction import Extraction
 from .session import Session
 from .usage_history import UsageHistory
 from .email_verification import EmailVerification
+from .resume import Resume
 
 __all__ = [
     "User",
@@ -15,4 +16,5 @@ __all__ = [
     "Session",
     "UsageHistory",
     "EmailVerification",
+    "Resume",
 ]
