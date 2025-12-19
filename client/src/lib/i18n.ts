@@ -233,6 +233,14 @@ export const translations: Translations = {
     'extract.click_parse': 'Click "Parse Document" to extract content',
     'extract.upload_prompt': 'Upload a document to see results',
     'extract.drag_drop_hint': 'Drag and drop a file or click to browse',
+    'extract.extracting': 'Extracting...',
+    'extract.batch_mode': 'Batch Mode',
+    'extract.batch_upload_title': 'Upload Multiple Files',
+    'extract.batch_upload_desc': 'Drop multiple files or click to select',
+    'extract.batch_processing': 'Processing batch...',
+    'extract.batch_process': 'Process All',
+    'extract.ready_to_process': 'Ready to process',
+    'extract.click_process_all': 'Click "Process All" to extract content from all files',
 
     // Empty states
     'empty.no_history': 'No documents yet',
@@ -503,6 +511,14 @@ export const translations: Translations = {
     'extract.click_parse': 'คลิก "แยกวิเคราะห์เอกสาร" เพื่อดึงเนื้อหา',
     'extract.upload_prompt': 'อัปโหลดเอกสารเพื่อดูผลลัพธ์',
     'extract.drag_drop_hint': 'ลากและวางไฟล์หรือคลิกเพื่อเลือก',
+    'extract.extracting': 'กำลังดึงข้อมูล...',
+    'extract.batch_mode': 'โหมด Batch',
+    'extract.batch_upload_title': 'อัปโหลดหลายไฟล์',
+    'extract.batch_upload_desc': 'ลากหลายไฟล์หรือคลิกเพื่อเลือก',
+    'extract.batch_processing': 'กำลังประมวลผล...',
+    'extract.batch_process': 'ประมวลผลทั้งหมด',
+    'extract.ready_to_process': 'พร้อมประมวลผล',
+    'extract.click_process_all': 'คลิก "ประมวลผลทั้งหมด" เพื่อดึงข้อมูลจากทุกไฟล์',
 
     // Empty states
     'empty.no_history': 'ยังไม่มีเอกสาร',
