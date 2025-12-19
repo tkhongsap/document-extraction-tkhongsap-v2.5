@@ -36,6 +36,7 @@ from .embedding_service import (
     EmbeddingService,
     get_embedding_service,
 )
+from .resume_service import ResumeService
 
 __all__ = [
     # Storage
@@ -60,4 +61,6 @@ __all__ = [
     # Embedding
     "EmbeddingService",
     "get_embedding_service",
+    # Resume
+    "ResumeService",
 ]
