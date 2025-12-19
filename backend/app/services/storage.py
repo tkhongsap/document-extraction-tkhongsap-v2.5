@@ -120,7 +120,7 @@ class StorageService:
         await self.db.commit()
     
     async def update_user_tier(self, user_id: str, new_tier: str) -> User:
-        """Update user's tier and reset usage"""
+        """Update user's tier without resetting usage"""
         user = await self.get_user(user_id)
         if not user:
             raise ValueError("User not found")
@@ -135,11 +135,10 @@ class StorageService:
         if new_tier not in tier_limits:
             raise ValueError(f"Invalid tier: {new_tier}. Must be one of: free, pro, enterprise")
         
-        # Update tier and limit
+        # Update tier and limit only - keep existing usage
         user.tier = new_tier
         user.monthly_limit = tier_limits[new_tier]
-        user.monthly_usage = 0  # Reset usage when changing tier
-        user.last_reset_at = datetime.utcnow()
+        # Don't reset monthly_usage - carry over from previous tier
         
         await self.db.commit()
         await self.db.refresh(user)
