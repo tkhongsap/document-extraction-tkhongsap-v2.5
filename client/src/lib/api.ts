@@ -217,6 +217,105 @@ export async function processGeneralExtraction(file: File): Promise<GeneralExtra
   return res.json();
 }
 
+// =============================================================================
+// Batch Extraction APIs
+// =============================================================================
+
+export interface BatchResultItem<T> {
+  fileName: string;
+  success: boolean;
+  error: string | null;
+  data: T | null;
+}
+
+export interface BatchExtractionResponse<T> {
+  success: boolean;
+  totalFiles: number;
+  successCount: number;
+  failureCount: number;
+  results: BatchResultItem<T>[];
+}
+
+export type BatchTemplateResultData = {
+  headerFields: ExtractedField[];
+  lineItems?: Array<Record<string, unknown>>;
+  extractedData: Record<string, unknown>;
+  confidenceScores?: Record<string, number>;
+  pagesProcessed: number;
+  fileSize: number;
+  mimeType: string;
+  documentId?: string;
+};
+
+export type BatchGeneralResultData = {
+  markdown: string;
+  text: string;
+  pageCount: number;
+  pages: GeneralExtractionPage[];
+  fileSize: number;
+  mimeType: string;
+  overallConfidence?: number;
+  confidenceStats?: { min: number; max: number; average: number };
+  documentId?: string;
+};
+
+/**
+ * Batch process multiple documents using LlamaExtract templates.
+ * @param files - Array of files to process
+ * @param documentType - The type of document (bank, invoice, po, contract, resume)
+ * @returns Batch results with individual file statuses
+ */
+export async function processBatchTemplateExtraction(
+  files: File[],
+  documentType: DocumentType
+): Promise<BatchExtractionResponse<BatchTemplateResultData>> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  formData.append("documentType", documentType);
+
+  const res = await fetch("/api/extract/batch/process", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Batch template extraction failed");
+  }
+
+  return res.json();
+}
+
+/**
+ * Batch process multiple documents using LlamaParse for general extraction.
+ * @param files - Array of files to process
+ * @returns Batch results with individual file statuses
+ */
+export async function processBatchGeneralExtraction(
+  files: File[]
+): Promise<BatchExtractionResponse<BatchGeneralResultData>> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const res = await fetch("/api/extract/batch/general", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Batch general extraction failed");
+  }
+
+  return res.json();
+}
+
 export interface SaveExtractionRequest {
   fileName: string;
   fileSize: number;
