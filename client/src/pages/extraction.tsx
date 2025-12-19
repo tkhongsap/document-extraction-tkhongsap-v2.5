@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Batch processing limit - change this value to adjust max files allowed
-const BATCH_FILE_LIMIT = 50;
+const BATCH_FILE_LIMIT = 5000;
 
 export default function Extraction() {
   const { t } = useLanguage();
