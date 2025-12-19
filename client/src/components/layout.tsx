@@ -50,8 +50,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 const LANGUAGES = [
-  { code: 'en' as const, flag: '🇺🇸', name: 'English', nativeName: 'English' },
-  { code: 'th' as const, flag: '🇹🇭', name: 'Thai', nativeName: 'ภาษาไทย' },
+  { code: 'en' as const, flag: '🇺🇸', name: 'English' },
+  { code: 'th' as const, flag: '🇹🇭', name: 'ภาษาไทย' },
 ];
 
 function LanguageSwitcher() {
@@ -87,8 +87,7 @@ function LanguageSwitcher() {
           )}
           aria-label="Select language"
         >
-          <span className="text-base leading-none">{currentLang.flag}</span>
-          <span className="font-semibold tracking-wide">{currentLang.code.toUpperCase()}</span>
+          <span className="text-sm font-medium tracking-wide">{currentLang.code.toUpperCase()}</span>
           <motion.span
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -135,8 +134,10 @@ function LanguageSwitcher() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <span className="text-lg">{lang.flag}</span>
-                    <span className="flex-1 text-left">{lang.nativeName}</span>
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-sm font-medium w-6">{lang.code.toUpperCase()}</span>
+                      <span className="text-sm">{lang.name}</span>
+                    </div>
                     <AnimatePresence mode="wait">
                       {isActive && (
                         <motion.span

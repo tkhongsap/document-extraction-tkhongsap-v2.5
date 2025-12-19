@@ -29,6 +29,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Batch processing limit - change this value to adjust max files allowed
+const BATCH_FILE_LIMIT = 5000;
+
 export default function Extraction() {
   const { t } = useLanguage();
   const { type } = useParams();
@@ -258,7 +261,7 @@ export default function Extraction() {
           'image/png': ['.png'],
           'image/jpeg': ['.jpg', '.jpeg']
         },
-    maxFiles: isBatchMode ? 10 : 1,
+    maxFiles: isBatchMode ? BATCH_FILE_LIMIT : 1,
     multiple: isBatchMode
   });
 
@@ -380,11 +383,16 @@ export default function Extraction() {
                     {batchFiles.map((batchFile, index) => (
                       <div 
                         key={index}
+                        onClick={() => hasResults && setSelectedBatchIndex(index)}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-lg border",
+                          "flex items-center justify-between p-3 rounded-lg border transition-all",
+                          hasResults && "cursor-pointer hover:border-primary/50",
+                          hasResults && selectedBatchIndex === index && "ring-2 ring-primary border-primary",
                           hasResults && batchTemplateResults?.results[index]?.success 
                             ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-                            : hasResults && !batchTemplateResults?.results[index]?.success
+                            : hasResults && batchGeneralResults?.results[index]?.success
+                            ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                            : hasResults && (batchTemplateResults?.results[index] || batchGeneralResults?.results[index])
                             ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
                             : "bg-card border-border"
                         )}
@@ -413,7 +421,7 @@ export default function Extraction() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleRemoveBatchFile(index)}
+                              onClick={(e) => { e.stopPropagation(); handleRemoveBatchFile(index); }}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -425,14 +433,14 @@ export default function Extraction() {
                 </ScrollArea>
                 
                 {/* Add more files dropzone */}
-                {!hasResults && batchFiles.length < 10 && (
+                {!hasResults && batchFiles.length < BATCH_FILE_LIMIT && (
                   <div 
                     {...getRootProps()} 
                     className="mx-2 mb-2 p-4 border-2 border-dashed rounded-lg transition-all cursor-pointer text-center border-muted-foreground/25 hover:border-primary/50"
                   >
                     <input {...getInputProps()} />
                     <p className="text-sm text-muted-foreground">
-                      + Add more files ({10 - batchFiles.length} remaining)
+                      + Add more files ({BATCH_FILE_LIMIT - batchFiles.length} remaining)
                     </p>
                   </div>
                 )}
@@ -553,24 +561,6 @@ export default function Extraction() {
                 )
               )}
             </div>
-            
-            {/* Batch results file selector */}
-            {isBatchMode && hasResults && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Viewing:</span>
-                <select
-                  value={selectedBatchIndex}
-                  onChange={(e) => setSelectedBatchIndex(Number(e.target.value))}
-                  className="text-sm border rounded px-2 py-1 bg-background"
-                >
-                  {(batchTemplateResults?.results || batchGeneralResults?.results || []).map((result, idx) => (
-                    <option key={idx} value={idx}>
-                      {result.fileName} {result.success ? '✓' : '✗'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isBatchMode ? (
@@ -583,6 +573,9 @@ export default function Extraction() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Processing {batchFiles.length} files sequentially
+                  </p>
+                  <p className="text-sm text-primary mt-2 font-medium">
+                    ~{Math.ceil(batchFiles.length * (isGeneralExtraction ? 15 : 20))} seconds estimated
                   </p>
                 </div>
               </div>
