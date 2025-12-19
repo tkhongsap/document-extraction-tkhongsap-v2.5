@@ -434,6 +434,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update user's monthly usage after successful extraction
         await storage.updateUserUsage(userId, extractionResult.pagesProcessed);
 
+        // If document type is resume, also save to resumes table with embedding
+        let resumeId: string | undefined;
+        if (documentType === "resume" && extractionResult.extractedData) {
+          try {
+            const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+            const resume = await resumeService.createFromExtraction(
+              userId,
+              documentId || randomUUID(), // Use extraction ID as fallback
+              extractionResult.extractedData as ResumeData,
+              originalname,
+              true // Generate embedding
+            );
+            resumeId = resume.id;
+            console.log(`[Template Extraction] Resume saved with ID: ${resumeId}`);
+          } catch (error: any) {
+            console.error("[Template Extraction] Warning: Failed to save resume:", error);
+            // Continue without resume save - extraction still returned
+          }
+        }
+
         // Return the extraction result
         const responsePayload = {
           success: extractionResult.success,
@@ -446,6 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileSize: size,
           mimeType: mimetype,
           documentId, // Include documentId so frontend can link it
+          resumeId, // Include resumeId if resume was saved
         };
         console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields, ${Object.keys(extractionResult.confidenceScores || {}).length} confidence scores`);
         res.json(responsePayload);
