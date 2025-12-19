@@ -1,7 +1,28 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, index, boolean, decimal, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb, index, boolean, decimal, uniqueIndex, date, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// ============================================================================
+// CUSTOM TYPES
+// ============================================================================
+
+// Custom type for pgvector - stores vector embeddings
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType(config) {
+    return `vector(${config?.dimensions ?? 1536})`;
+  },
+  toDriver(value: number[]): string {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: string): number[] {
+    if (typeof value === 'string') {
+      // Handle PostgreSQL vector format: [0.1,0.2,0.3]
+      return JSON.parse(value);
+    }
+    return value as unknown as number[];
+  },
+});
 
 // ============================================================================
 // ENUMS
@@ -127,6 +148,61 @@ export interface DocumentWithExtractions {
   latestExtraction: Extraction;
   totalExtractions: number;
 }
+
+// ============================================================================
+// RESUMES TABLE (Structured resume data + vector embeddings for RAG)
+// ============================================================================
+
+export const resumes = pgTable("resumes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  extractionId: varchar("extraction_id").references(() => extractions.id),
+  
+  // Resume fields (aligned with extraction schema)
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  location: varchar("location"),
+  currentRole: varchar("current_role"),
+  yearsExperience: integer("years_experience"),
+  skills: text("skills").array(),
+  education: jsonb("education"),
+  experience: jsonb("experience"),
+  certifications: text("certifications").array(),
+  languages: text("languages").array(),
+  languagesWithProficiency: jsonb("languages_with_proficiency"),
+  summary: text("summary"),
+  salaryExpectation: integer("salary_expectation"),
+  availabilityDate: date("availability_date"),
+  gender: varchar("gender"),
+  nationality: varchar("nationality"),
+  birthYear: integer("birth_year"),
+  hasCar: boolean("has_car"),
+  hasLicense: boolean("has_license"),
+  willingToTravel: boolean("willing_to_travel"),
+  
+  // Vector embedding for semantic search (RAG)
+  embedding: vector("embedding", { dimensions: 1536 }),
+  embeddingModel: varchar("embedding_model").default('text-embedding-3-small'),
+  embeddingText: text("embedding_text"),
+  
+  // Metadata
+  sourceFileName: varchar("source_file_name"),
+  rawExtractedData: jsonb("raw_extracted_data"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_resume_user").on(table.userId),
+  index("IDX_resume_extraction").on(table.extractionId),
+]);
+
+export const insertResumeSchema = createInsertSchema(resumes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertResume = z.infer<typeof insertResumeSchema>;
+export type Resume = typeof resumes.$inferSelect;
 
 // ============================================================================
 // BILLING TABLES
