@@ -15,6 +15,7 @@ from app.services.storage import StorageService
 from app.services.object_storage import ObjectStorageService, ObjectAclPolicy
 from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
+from app.services.resume_service import ResumeService
 from app.models.user import User
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate
@@ -187,6 +188,24 @@ async def template_extraction(
             status="completed",
         ))
         
+        # If document type is resume, also save to resumes table with embedding
+        resume_id = None
+        if documentType == "resume" and result.extracted_data:
+            try:
+                resume_service = ResumeService(db)
+                resume = await resume_service.create_from_extraction(
+                    user_id=user.id,
+                    extraction_id=extraction.id,
+                    extracted_data=result.extracted_data,
+                    source_file_name=file.filename or "document",
+                    generate_embedding=True,
+                )
+                resume_id = resume.id
+                safe_print(f"[Template Extraction] Resume saved with ID: {resume_id}")
+            except Exception as e:
+                safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
+                # Continue without resume save - extraction is still saved
+        
         # Return result
         return {
             "success": result.success,
@@ -203,6 +222,7 @@ async def template_extraction(
             "mimeType": file.content_type,
             "documentId": document_id,
             "extractionId": extraction.id,
+            "resumeId": resume_id,
         }
     except LlamaExtractError as e:
         safe_print(f"[Template Extraction] Error: {e}")
@@ -442,6 +462,22 @@ async def batch_template_extraction(
                 status="completed",
             ))
             
+            # If document type is resume, also save to resumes table with embedding
+            resume_id = None
+            if documentType == "resume" and extraction_result.extracted_data:
+                try:
+                    resume_service = ResumeService(db)
+                    resume = await resume_service.create_from_extraction(
+                        user_id=current_user.id,
+                        extraction_id=extraction.id,
+                        extracted_data=extraction_result.extracted_data,
+                        source_file_name=file.filename or "document",
+                        generate_embedding=True,
+                    )
+                    resume_id = resume.id
+                except Exception as e:
+                    safe_print(f"[Batch Template] Warning: Failed to save resume: {e}")
+            
             result_item["success"] = True
             result_item["data"] = {
                 "headerFields": [
@@ -456,6 +492,7 @@ async def batch_template_extraction(
                 "mimeType": content_type,
                 "documentId": document_id,
                 "extractionId": extraction.id,
+                "resumeId": resume_id,
             }
             
         except LlamaExtractError as e:
