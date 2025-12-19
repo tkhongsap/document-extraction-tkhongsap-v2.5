@@ -27,3 +27,4 @@ class Extraction(Base):
     # Relationships
     user = relationship("User", back_populates="extractions")
     document = relationship("Document", back_populates="extractions")
+    resume = relationship("Resume", back_populates="extraction", uselist=False)

@@ -380,168 +380,172 @@ CONTRACT_SCHEMA = {
 }
 
 # ============ Resume/CV Schema ============
+# Schema aligned with database: resumes table
 RESUME_SCHEMA = {
     "type": "object",
     "properties": {
-        "full_name": {
+        "name": {
             "type": "string",
-            "description": "Candidate's full name",
+            "description": "Candidate's full name (required)",
         },
         "email": {
             "type": "string",
-            "description": "Primary email address",
+            "description": "Contact email address",
         },
         "phone": {
             "type": "string",
-            "description": "Phone number with country code",
+            "description": "Contact phone number",
         },
-        "address": {
-            "type": "object",
-            "description": "Location information",
-            "properties": {
-                "city": {"type": "string", "description": "City name"},
-                "state": {"type": "string", "description": "State or province"},
-                "country": {"type": "string", "description": "Country name"},
-                "postal_code": {"type": "string", "description": "Postal or ZIP code"},
-            },
-        },
-        "date_of_birth": {
+        "location": {
             "type": "string",
-            "description": "Birth date if present in YYYY-MM-DD format",
+            "description": "Current or preferred location (city, country)",
         },
-        "nationality": {
+        "currentRole": {
             "type": "string",
-            "description": "Nationality or citizenship",
+            "description": "Current job title or most recent position",
         },
-        "linkedin_url": {
-            "type": "string",
-            "description": "LinkedIn profile URL",
-        },
-        "github_url": {
-            "type": "string",
-            "description": "GitHub profile URL",
-        },
-        "portfolio_url": {
-            "type": "string",
-            "description": "Portfolio or personal website URL",
-        },
-        "professional_summary": {
-            "type": "string",
-            "description": "Summary or objective statement",
-        },
-        "total_years_experience": {
-            "type": "string",
+        "yearsExperience": {
+            "type": "integer",
             "description": "Total years of professional experience",
         },
-        "desired_position": {
-            "type": "string",
-            "description": "Target job title or role",
-        },
-        "desired_salary": {
-            "type": "string",
-            "description": "Expected salary if mentioned",
-        },
-        "availability": {
-            "type": "string",
-            "description": "Notice period or start date availability",
-        },
-        "work_experience": {
+        "skills": {
             "type": "array",
-            "description": "List of work experience entries",
+            "description": "Array of skill names",
             "items": {
-                "type": "object",
-                "properties": {
-                    "company_name": {"type": "string", "description": "Employer name"},
-                    "job_title": {"type": "string", "description": "Position or role title"},
-                    "location": {"type": "string", "description": "City, country"},
-                    "start_date": {"type": "string", "description": "Employment start date"},
-                    "end_date": {"type": "string", "description": "Employment end date or 'Present'"},
-                    "employment_type": {"type": "string", "description": "Full-time, Part-time, Contract, Intern"},
-                    "responsibilities": {"type": "string", "description": "Key duties and responsibilities"},
-                    "achievements": {"type": "string", "description": "Notable accomplishments and metrics"},
-                },
+                "type": "string",
+                "description": "Skill name (e.g., Python, React, Project Management)",
             },
         },
         "education": {
             "type": "array",
-            "description": "List of education entries",
+            "description": "Array of education entries",
             "items": {
                 "type": "object",
                 "properties": {
-                    "institution_name": {"type": "string", "description": "School or university name"},
-                    "degree": {"type": "string", "description": "Degree type (Bachelor's, Master's, PhD, etc.)"},
-                    "field_of_study": {"type": "string", "description": "Major or concentration"},
-                    "location": {"type": "string", "description": "City, country"},
-                    "start_date": {"type": "string", "description": "Start date"},
-                    "graduation_date": {"type": "string", "description": "Graduation or end date"},
-                    "gpa": {"type": "string", "description": "Grade point average if listed"},
-                    "honors": {"type": "string", "description": "Honors, awards, distinctions"},
+                    "degree": {
+                        "type": "string",
+                        "description": "Degree type (Bachelor, Master, PhD, Associate)",
+                    },
+                    "field": {
+                        "type": "string",
+                        "description": "Field of study or major",
+                    },
+                    "institution": {
+                        "type": "string",
+                        "description": "School or university name",
+                    },
+                    "year": {
+                        "type": "integer",
+                        "description": "Graduation year",
+                    },
                 },
             },
         },
-        "skills": {
+        "experience": {
             "type": "array",
-            "description": "List of skills",
+            "description": "Array of work experience entries",
             "items": {
                 "type": "object",
                 "properties": {
-                    "skill_name": {"type": "string", "description": "Name of the skill"},
-                    "category": {"type": "string", "description": "Technical, Soft Skill, Tool, Framework"},
-                    "proficiency_level": {"type": "string", "description": "Expert, Advanced, Intermediate, Beginner"},
+                    "title": {
+                        "type": "string",
+                        "description": "Job title",
+                    },
+                    "company": {
+                        "type": "string",
+                        "description": "Company name",
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Work location",
+                    },
+                    "startDate": {
+                        "type": "string",
+                        "description": "Start date in ISO 8601 format (YYYY-MM-DD)",
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "description": "End date in ISO 8601 format or null if current",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Job description and responsibilities",
+                    },
+                    "isCurrent": {
+                        "type": "boolean",
+                        "description": "Whether this is the current position",
+                    },
                 },
             },
         },
         "certifications": {
             "type": "array",
-            "description": "List of certifications",
+            "description": "Array of certification names",
             "items": {
-                "type": "object",
-                "properties": {
-                    "certification_name": {"type": "string", "description": "Name of certification"},
-                    "issuing_organization": {"type": "string", "description": "Certifying body"},
-                    "issue_date": {"type": "string", "description": "Date obtained"},
-                    "expiration_date": {"type": "string", "description": "Expiry date if applicable"},
-                    "credential_id": {"type": "string", "description": "Certificate or credential ID"},
-                },
+                "type": "string",
+                "description": "Certification name",
             },
         },
         "languages": {
             "type": "array",
-            "description": "List of languages",
+            "description": "Simple array of language names",
+            "items": {
+                "type": "string",
+                "description": "Language name",
+            },
+        },
+        "languagesWithProficiency": {
+            "type": "array",
+            "description": "Detailed language proficiency data",
             "items": {
                 "type": "object",
                 "properties": {
-                    "language": {"type": "string", "description": "Language name"},
-                    "proficiency": {"type": "string", "description": "Native, Fluent, Intermediate, Basic"},
+                    "language": {
+                        "type": "string",
+                        "description": "Language name",
+                    },
+                    "level": {
+                        "type": "string",
+                        "description": "Proficiency level (native, fluent, business, conversational, basic, N1-N5)",
+                    },
                 },
             },
         },
-        "projects": {
-            "type": "array",
-            "description": "List of projects",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "project_name": {"type": "string", "description": "Name of project"},
-                    "description": {"type": "string", "description": "Brief description"},
-                    "role": {"type": "string", "description": "Role in the project"},
-                    "technologies": {"type": "string", "description": "Technologies or tools used"},
-                    "url": {"type": "string", "description": "Project URL if available"},
-                },
-            },
+        "summary": {
+            "type": "string",
+            "description": "Professional summary or objective statement",
         },
-        "references": {
-            "type": "array",
-            "description": "List of references",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "reference_name": {"type": "string", "description": "Name of reference"},
-                    "relationship": {"type": "string", "description": "Professional relationship"},
-                    "company": {"type": "string", "description": "Reference's company"},
-                    "contact": {"type": "string", "description": "Contact information"},
-                },
-            },
+        "salaryExpectation": {
+            "type": "integer",
+            "description": "Expected salary in base currency units",
+        },
+        "availabilityDate": {
+            "type": "string",
+            "description": "When candidate is available to start (ISO 8601 date)",
+        },
+        "gender": {
+            "type": "string",
+            "description": "Gender (male, female, other)",
+        },
+        "nationality": {
+            "type": "string",
+            "description": "Candidate nationality",
+        },
+        "birthYear": {
+            "type": "integer",
+            "description": "Birth year for age calculation",
+        },
+        "hasCar": {
+            "type": "boolean",
+            "description": "Whether candidate owns a car",
+        },
+        "hasLicense": {
+            "type": "boolean",
+            "description": "Whether candidate has a driver's license",
+        },
+        "willingToTravel": {
+            "type": "boolean",
+            "description": "Travel willingness indicator",
         },
     },
 }

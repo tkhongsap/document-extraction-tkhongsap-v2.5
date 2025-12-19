@@ -9,6 +9,7 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { createLlamaParseService, LlamaParseError } from "./llamaParse";
 import { createLlamaExtractService, LlamaExtractError } from "./llamaExtract";
+import { createResumeService, type ResumeData } from "./resumeService";
 import type { DocumentType } from "./extractionSchemas";
 import { randomUUID } from "crypto";
 
@@ -433,6 +434,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update user's monthly usage after successful extraction
         await storage.updateUserUsage(userId, extractionResult.pagesProcessed);
 
+        // If document type is resume, also save to resumes table with embedding
+        let resumeId: string | undefined;
+        console.log(`[Template Extraction] Checking resume save: documentType=${documentType}, hasData=${!!extractionResult.extractedData}`);
+        if (documentType === "resume" && extractionResult.extractedData) {
+          try {
+            console.log(`[Template Extraction] Creating resume service...`);
+            const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+            console.log(`[Template Extraction] Calling createFromExtraction...`);
+            const resume = await resumeService.createFromExtraction(
+              userId,
+              documentId || randomUUID(), // Use extraction ID as fallback
+              extractionResult.extractedData as ResumeData,
+              originalname,
+              !!process.env.OPENAI_API_KEY // Only generate embedding if API key exists
+            );
+            resumeId = resume.id;
+            console.log(`[Template Extraction] Resume saved with ID: ${resumeId}, hasEmbedding: ${!!resume.embedding}`);
+          } catch (error: any) {
+            console.error("[Template Extraction] Warning: Failed to save resume:", error);
+            // Continue without resume save - extraction still returned
+          }
+        } else {
+          console.log(`[Template Extraction] Skipping resume save`);
+        }
+
         // Return the extraction result
         const responsePayload = {
           success: extractionResult.success,
@@ -445,6 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileSize: size,
           mimeType: mimetype,
           documentId, // Include documentId so frontend can link it
+          resumeId, // Include resumeId if resume was saved
         };
         console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields, ${Object.keys(extractionResult.confidenceScores || {}).length} confidence scores`);
         res.json(responsePayload);
@@ -552,6 +579,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // ==========================================================================
+  // SEARCH ROUTES - Semantic search for resumes
+  // ==========================================================================
+
+  // Semantic search for resumes
+  app.post("/api/search/resumes/semantic", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { query, limit = 10, threshold = 0.5 } = req.body;
+
+      if (!query || typeof query !== "string" || query.length < 3) {
+        return res.status(400).json({ message: "Query must be at least 3 characters" });
+      }
+
+      const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+      const results = await resumeService.searchSemantic(
+        query,
+        userId,
+        Math.min(limit, 50),
+        threshold
+      );
+
+      res.json({
+        results,
+        total: results.length,
+        query,
+      });
+    } catch (error: any) {
+      console.error("[Search] Semantic search error:", error);
+      res.status(500).json({ 
+        message: "Search failed. Please check if OpenAI API key is configured." 
+      });
+    }
+  });
+
+  // List all resumes for user
+  app.get("/api/search/resumes", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = Math.min(Number(req.query.limit) || 50, 100);
+      const offset = Number(req.query.offset) || 0;
+
+      const resumeService = createResumeService();
+      const resumes = await resumeService.getByUser(userId, limit, offset);
+      const total = await resumeService.countByUser(userId);
+
+      res.json({
+        results: resumes.map((r) => ({
+          id: r.id,
+          userId: r.userId,
+          extractionId: r.extractionId,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          location: r.location,
+          currentRole: r.currentRole,
+          yearsExperience: r.yearsExperience,
+          skills: r.skills,
+          summary: r.summary,
+          sourceFileName: r.sourceFileName,
+          createdAt: r.createdAt?.toISOString() || null,
+        })),
+        total,
+        query: "all",
+      });
+    } catch (error: any) {
+      console.error("[Search] List resumes error:", error);
+      res.status(500).json({ message: "Failed to list resumes" });
+    }
+  });
+
+  // Get single resume by ID
+  app.get("/api/search/resumes/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const resumeId = req.params.id;
+
+      const resumeService = createResumeService();
+      const resume = await resumeService.getById(resumeId);
+
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (resume.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Return full resume without embedding
+      const { embedding, ...resumeData } = resume;
+      res.json(resumeData);
+    } catch (error: any) {
+      console.error("[Search] Get resume error:", error);
+      res.status(500).json({ message: "Failed to get resume" });
+    }
+  });
+
+  // Delete resume
+  app.delete("/api/search/resumes/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const resumeId = req.params.id;
+
+      const resumeService = createResumeService();
+      const resume = await resumeService.getById(resumeId);
+
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (resume.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await resumeService.delete(resumeId);
+      res.json({ message: "Resume deleted successfully" });
+    } catch (error: any) {
+      console.error("[Search] Delete resume error:", error);
+      res.status(500).json({ message: "Failed to delete resume" });
+    }
+  });
+
+  // Regenerate embedding for resume
+  app.post("/api/search/resumes/:id/regenerate-embedding", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const resumeId = req.params.id;
+
+      const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+      const resume = await resumeService.getById(resumeId);
+
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (resume.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await resumeService.regenerateEmbedding(resumeId);
+
+      if (!updated) {
+        return res.status(500).json({ 
+          message: "Failed to regenerate embedding. Check OpenAI API key." 
+        });
+      }
+
+      res.json({
+        message: "Embedding regenerated successfully",
+        resumeId,
+        embeddingModel: updated.embeddingModel,
+      });
+    } catch (error: any) {
+      console.error("[Search] Regenerate embedding error:", error);
+      res.status(500).json({ message: "Failed to regenerate embedding" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

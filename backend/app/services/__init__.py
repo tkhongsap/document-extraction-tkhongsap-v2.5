@@ -32,6 +32,11 @@ from .llama_extract import (
     TemplateExtractionResult,
     ExtractedField,
 )
+from .embedding_service import (
+    EmbeddingService,
+    get_embedding_service,
+)
+from .resume_service import ResumeService
 
 __all__ = [
     # Storage
@@ -53,4 +58,9 @@ __all__ = [
     "create_llama_extract_service",
     "TemplateExtractionResult",
     "ExtractedField",
+    # Embedding
+    "EmbeddingService",
+    "get_embedding_service",
+    # Resume
+    "ResumeService",
 ]
