@@ -104,23 +104,51 @@ class Resume(Base):
         if self.summary:
             parts.append(f"Summary: {self.summary}")
         if self.skills:
-            parts.append(f"Skills: {', '.join(self.skills)}")
+            # Handle skills as list of strings or dicts
+            skill_texts = []
+            for skill in self.skills:
+                if isinstance(skill, dict):
+                    skill_texts.append(skill.get('name', skill.get('skill', str(skill))))
+                else:
+                    skill_texts.append(str(skill))
+            parts.append(f"Skills: {', '.join(skill_texts)}")
         if self.certifications:
-            parts.append(f"Certifications: {', '.join(self.certifications)}")
+            # Handle certifications as list of strings or dicts
+            cert_texts = []
+            for cert in self.certifications:
+                if isinstance(cert, dict):
+                    cert_texts.append(cert.get('name', cert.get('title', str(cert))))
+                else:
+                    cert_texts.append(str(cert))
+            parts.append(f"Certifications: {', '.join(cert_texts)}")
         if self.languages:
-            parts.append(f"Languages: {', '.join(self.languages)}")
+            # Handle languages as list of strings or dicts
+            lang_texts = []
+            for lang in self.languages:
+                if isinstance(lang, dict):
+                    lang_name = lang.get('language', lang.get('name', ''))
+                    lang_level = lang.get('level', lang.get('proficiency', ''))
+                    if lang_level:
+                        lang_texts.append(f"{lang_name} ({lang_level})")
+                    else:
+                        lang_texts.append(str(lang_name))
+                else:
+                    lang_texts.append(str(lang))
+            parts.append(f"Languages: {', '.join(lang_texts)}")
         if self.education:
             edu_texts = []
             for edu in self.education:
-                edu_text = f"{edu.get('degree', '')} in {edu.get('field', '')} from {edu.get('institution', '')}"
-                edu_texts.append(edu_text.strip())
+                if isinstance(edu, dict):
+                    edu_text = f"{edu.get('degree', '')} in {edu.get('field', '')} from {edu.get('institution', '')}"
+                    edu_texts.append(edu_text.strip())
             if edu_texts:
                 parts.append(f"Education: {'; '.join(edu_texts)}")
         if self.experience:
             exp_texts = []
             for exp in self.experience:
-                exp_text = f"{exp.get('title', '')} at {exp.get('company', '')}: {exp.get('description', '')}"
-                exp_texts.append(exp_text.strip())
+                if isinstance(exp, dict):
+                    exp_text = f"{exp.get('title', '')} at {exp.get('company', '')}: {exp.get('description', '')}"
+                    exp_texts.append(exp_text.strip())
             if exp_texts:
                 parts.append(f"Experience: {'; '.join(exp_texts)}")
         

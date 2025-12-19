@@ -41,39 +41,126 @@ class ResumeService:
         """
         # Parse availability_date if it's a string
         availability_date = None
-        if extracted_data.get("availabilityDate"):
+        availability_str = extracted_data.get("availabilityDate") or extracted_data.get("availability")
+        if availability_str:
             try:
                 availability_date = datetime.strptime(
-                    extracted_data["availabilityDate"], "%Y-%m-%d"
+                    str(availability_str), "%Y-%m-%d"
                 ).date()
             except (ValueError, TypeError):
                 pass
         
-        # Create resume object
+        # Map LlamaExtract snake_case to our camelCase (support both formats)
+        name = extracted_data.get("name") or extracted_data.get("full_name", "Unknown")
+        email = extracted_data.get("email")
+        phone = extracted_data.get("phone")
+        
+        # Handle location - can be string or dict with city/country
+        location = extracted_data.get("location")
+        if not location:
+            address = extracted_data.get("address")
+            if isinstance(address, dict):
+                location_parts = [address.get("city"), address.get("country")]
+                location = ", ".join(filter(None, location_parts))
+            elif address:
+                location = str(address)
+        
+        current_role = extracted_data.get("currentRole") or extracted_data.get("desired_position")
+        years_experience = extracted_data.get("yearsExperience") or extracted_data.get("total_years_experience")
+        summary = extracted_data.get("summary") or extracted_data.get("professional_summary") or None
+        salary_raw = extracted_data.get("salaryExpectation") or extracted_data.get("desired_salary")
+        salary_expectation = int(salary_raw) if salary_raw and str(salary_raw).isdigit() else None
+        nationality = extracted_data.get("nationality") or None
+        
+        # Handle skills - can be list of strings or list of dicts  
+        skills_raw = extracted_data.get("skills", [])
+        skills = []
+        if isinstance(skills_raw, list):
+            for skill in skills_raw:
+                if isinstance(skill, dict):
+                    skill_name = skill.get("skill_name") or skill.get("name") or skill.get("skill")
+                    if skill_name:
+                        skills.append(str(skill_name))
+                elif skill:
+                    skills.append(str(skill))
+        
+        # Handle languages - convert to simple list for languages column
+        languages_raw = extracted_data.get("languages", [])
+        languages = []
+        languages_with_proficiency = []
+        if isinstance(languages_raw, list):
+            for lang in languages_raw:
+                if isinstance(lang, dict):
+                    lang_name = lang.get("language") or lang.get("name", "")
+                    lang_level = lang.get("level") or lang.get("proficiency", "")
+                    if lang_name:
+                        languages.append(str(lang_name))
+                        languages_with_proficiency.append({"language": lang_name, "level": lang_level})
+                elif lang:
+                    languages.append(str(lang))
+        
+        # Handle experience/work_experience
+        experience = extracted_data.get("experience") or extracted_data.get("work_experience", [])
+        
+        # Handle education
+        education = extracted_data.get("education", [])
+        
+        # Handle certifications
+        certifications_raw = extracted_data.get("certifications", [])
+        certifications = []
+        if isinstance(certifications_raw, list):
+            for cert in certifications_raw:
+                if isinstance(cert, dict):
+                    cert_name = cert.get("name") or cert.get("title")
+                    if cert_name:
+                        certifications.append(str(cert_name))
+                elif cert:
+                    certifications.append(str(cert))
+        
+        # Helper to safely convert to int or None
+        def safe_int(value):
+            if value is None or value == "":
+                return None
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+        
+        # Helper to safely convert to bool or None
+        def safe_bool(value):
+            if value is None or value == "":
+                return None
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.lower() in ('true', 'yes', '1')
+            return bool(value)
+        
+        # Create resume object with proper type handling
         resume = Resume(
             user_id=user_id,
             extraction_id=extraction_id,
-            name=extracted_data.get("name", "Unknown"),
-            email=extracted_data.get("email"),
-            phone=extracted_data.get("phone"),
-            location=extracted_data.get("location"),
-            current_role=extracted_data.get("currentRole"),
-            years_experience=extracted_data.get("yearsExperience"),
-            skills=extracted_data.get("skills", []),
-            education=extracted_data.get("education", []),
-            experience=extracted_data.get("experience", []),
-            certifications=extracted_data.get("certifications", []),
-            languages=extracted_data.get("languages", []),
-            languages_with_proficiency=extracted_data.get("languagesWithProficiency", []),
-            summary=extracted_data.get("summary"),
-            salary_expectation=extracted_data.get("salaryExpectation"),
+            name=name or "Unknown",
+            email=email or None,
+            phone=phone or None,
+            location=location or None,
+            current_role=current_role or None,
+            years_experience=safe_int(years_experience),
+            skills=skills if skills else None,
+            education=education if education else None,
+            experience=experience if experience else None,
+            certifications=certifications if certifications else None,
+            languages=languages if languages else None,
+            languages_with_proficiency=languages_with_proficiency if languages_with_proficiency else None,
+            summary=summary or None,
+            salary_expectation=salary_expectation,
             availability_date=availability_date,
-            gender=extracted_data.get("gender"),
-            nationality=extracted_data.get("nationality"),
-            birth_year=extracted_data.get("birthYear"),
-            has_car=extracted_data.get("hasCar"),
-            has_license=extracted_data.get("hasLicense"),
-            willing_to_travel=extracted_data.get("willingToTravel"),
+            gender=extracted_data.get("gender") or None,
+            nationality=nationality,
+            birth_year=safe_int(extracted_data.get("birthYear") or extracted_data.get("birth_year")),
+            has_car=safe_bool(extracted_data.get("hasCar") or extracted_data.get("has_car")),
+            has_license=safe_bool(extracted_data.get("hasLicense") or extracted_data.get("has_license")),
+            willing_to_travel=safe_bool(extracted_data.get("willingToTravel") or extracted_data.get("willing_to_travel")),
             source_file_name=source_file_name,
             raw_extracted_data=extracted_data,
         )
@@ -81,20 +168,27 @@ class ResumeService:
         # Generate embedding text
         embedding_text = resume.to_embedding_text()
         resume.embedding_text = embedding_text
+        print(f"[ResumeService] Created resume object for: {resume.name}")
         
         # Generate embedding if enabled and API key is configured
         if generate_embedding:
             try:
+                print(f"[ResumeService] Generating embedding...")
                 embedding = await self.embedding_service.create_embedding(embedding_text)
                 resume.embedding = embedding
                 resume.embedding_model = self.embedding_service.model
+                print(f"[ResumeService] Embedding generated successfully")
             except Exception as e:
                 print(f"[ResumeService] Warning: Failed to generate embedding: {e}")
-                # Continue without embedding
+                # Continue without embedding - resume will still be saved
+        else:
+            print(f"[ResumeService] Skipping embedding generation (disabled)")
         
+        print(f"[ResumeService] Saving resume to database...")
         self.db.add(resume)
         await self.db.commit()
         await self.db.refresh(resume)
+        print(f"[ResumeService] Resume saved with ID: {resume.id}")
         
         return resume
     

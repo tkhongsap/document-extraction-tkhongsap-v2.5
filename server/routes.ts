@@ -436,22 +436,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // If document type is resume, also save to resumes table with embedding
         let resumeId: string | undefined;
+        console.log(`[Template Extraction] Checking resume save: documentType=${documentType}, hasData=${!!extractionResult.extractedData}`);
         if (documentType === "resume" && extractionResult.extractedData) {
           try {
+            console.log(`[Template Extraction] Creating resume service...`);
             const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+            console.log(`[Template Extraction] Calling createFromExtraction...`);
             const resume = await resumeService.createFromExtraction(
               userId,
               documentId || randomUUID(), // Use extraction ID as fallback
               extractionResult.extractedData as ResumeData,
               originalname,
-              true // Generate embedding
+              !!process.env.OPENAI_API_KEY // Only generate embedding if API key exists
             );
             resumeId = resume.id;
-            console.log(`[Template Extraction] Resume saved with ID: ${resumeId}`);
+            console.log(`[Template Extraction] Resume saved with ID: ${resumeId}, hasEmbedding: ${!!resume.embedding}`);
           } catch (error: any) {
             console.error("[Template Extraction] Warning: Failed to save resume:", error);
             // Continue without resume save - extraction still returned
           }
+        } else {
+          console.log(`[Template Extraction] Skipping resume save`);
         }
 
         // Return the extraction result
