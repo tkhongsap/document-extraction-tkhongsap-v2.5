@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Llama Cloud API
     llama_cloud_api_key: str
     
+    # OpenAI API (for embeddings)
+    openai_api_key: str = ""
+    
     # Object Storage
     private_object_dir: str = ""
     public_object_search_paths: str = ""
