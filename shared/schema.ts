@@ -1,0 +1,551 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, integer, timestamp, jsonb, index, boolean, decimal, uniqueIndex } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+// Plan types for subscription tiers
+export const planTypes = ["free", "pro", "enterprise"] as const;
+export type PlanType = typeof planTypes[number];
+
+// Subscription status
+export const subscriptionStatuses = ["active", "past_due", "cancelled", "trialing"] as const;
+export type SubscriptionStatus = typeof subscriptionStatuses[number];
+
+// Invoice status
+export const invoiceStatuses = ["draft", "open", "paid", "void", "uncollectible"] as const;
+export type InvoiceStatus = typeof invoiceStatuses[number];
+
+// Batch job status
+export const batchJobStatuses = ["pending", "processing", "completed", "failed", "cancelled"] as const;
+export type BatchJobStatus = typeof batchJobStatuses[number];
+
+// Batch item status
+export const batchItemStatuses = ["pending", "processing", "completed", "failed"] as const;
+export type BatchItemStatus = typeof batchItemStatuses[number];
+
+// Document types for extraction
+export const documentTypes = ["bank", "invoice", "po", "contract", "resume", "general"] as const;
+export type DocumentType = typeof documentTypes[number];
+
+// ============================================================================
+// CORE TABLES
+// ============================================================================
+
+// Session storage table.
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table.
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  // Plan type stored here for quick access (synced with subscription)
+  planType: text("plan_type").notNull().default('free'),
+  language: varchar("language", { length: 2 }).notNull().default('en'),
+  // Usage tracking
+  monthlyUsage: integer("monthly_usage").notNull().default(0),
+  monthlyLimit: integer("monthly_limit").notNull().default(100),
+  tier: varchar("tier").notNull().default('free'),
+  // Stripe integration
+  stripeCustomerId: varchar("stripe_customer_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// Documents table - stores uploaded documents metadata
+export const documents = pgTable("documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  objectPath: text("object_path").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type Document = typeof documents.$inferSelect;
+
+// Extractions table - stores extraction history
+export const extractions = pgTable("extractions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  documentId: varchar("document_id").references(() => documents.id),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  documentType: text("document_type").notNull(),
+  pagesProcessed: integer("pages_processed").notNull(),
+  extractedData: jsonb("extracted_data").notNull(),
+  status: text("status").notNull().default('completed'),
+  // Link to batch item if part of batch processing
+  batchItemId: varchar("batch_item_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertExtractionSchema = createInsertSchema(extractions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertExtraction = z.infer<typeof insertExtractionSchema>;
+export type Extraction = typeof extractions.$inferSelect;
+
+// Type for grouped extractions by document
+export interface DocumentWithExtractions {
+  fileName: string;
+  fileSize: number;
+  documentType: string;
+  extractions: Extraction[];
+  latestExtraction: Extraction;
+  totalExtractions: number;
+}
+
+// ============================================================================
+// BILLING TABLES
+// ============================================================================
+
+// Subscriptions table - manages user plans and usage
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  
+  // Plan details
+  planType: text("plan_type").notNull().default('free'), // free, pro, enterprise
+  status: text("status").notNull().default('active'), // active, past_due, cancelled, trialing
+  
+  // Usage limits (null = unlimited)
+  pagesLimit: integer("pages_limit"), // Monthly page quota
+  pagesUsed: integer("pages_used").notNull().default(0), // Pages used this cycle
+  
+  // Overage settings
+  overageEnabled: boolean("overage_enabled").notNull().default(false),
+  overageRate: decimal("overage_rate", { precision: 10, scale: 4 }), // Price per page overage
+  
+  // Feature flags (controlled by plan)
+  apiEnabled: boolean("api_enabled").notNull().default(false),
+  batchEnabled: boolean("batch_enabled").notNull().default(false),
+  
+  // Resource limits (null = unlimited)
+  maxApiKeys: integer("max_api_keys"), // Max API keys allowed
+  maxBatchFiles: integer("max_batch_files"), // Max files per batch
+  maxWebhooks: integer("max_webhooks"), // Max webhooks allowed
+  rateLimit: integer("rate_limit").notNull().default(10), // Requests per minute
+  
+  // Billing cycle
+  billingCycleStart: timestamp("billing_cycle_start").defaultNow(),
+  billingCycleEnd: timestamp("billing_cycle_end"),
+  
+  // Stripe integration
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  stripePriceId: varchar("stripe_price_id"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_subscription_user").on(table.userId),
+  index("IDX_subscription_status").on(table.status),
+]);
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Invoices table - billing history
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  
+  // Stripe integration
+  stripeInvoiceId: varchar("stripe_invoice_id"),
+  
+  // Amount details (in cents)
+  amount: integer("amount").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default('USD'),
+  status: text("status").notNull().default('draft'), // draft, open, paid, void, uncollectible
+  
+  // Billing period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Usage breakdown
+  pagesIncluded: integer("pages_included").notNull(),
+  pagesUsed: integer("pages_used").notNull(),
+  overagePages: integer("overage_pages").notNull().default(0),
+  overageAmount: integer("overage_amount").notNull().default(0), // cents
+  
+  // Invoice URLs
+  invoiceUrl: varchar("invoice_url"),
+  invoicePdf: varchar("invoice_pdf"),
+  
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_invoice_user").on(table.userId),
+  index("IDX_invoice_status").on(table.status),
+]);
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+// Usage history table - stores monthly usage snapshots (kept for backwards compatibility)
+export const usageHistory = pgTable("usage_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  month: varchar("month", { length: 7 }).notNull(), // Format: "2025-01"
+  pagesUsed: integer("pages_used").notNull(),
+  planType: text("plan_type").notNull(),
+  pagesLimit: integer("pages_limit"),
+  overagePages: integer("overage_pages").notNull().default(0),
+  recordedAt: timestamp("recorded_at").notNull().defaultNow(),
+});
+
+// ============================================================================
+// API ACCESS TABLES
+// ============================================================================
+
+// API Keys table - for public API access
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Key details
+  name: varchar("name", { length: 255 }).notNull(),
+  keyHash: varchar("key_hash", { length: 64 }).notNull(), // SHA-256 hash
+  keyPrefix: varchar("key_prefix", { length: 12 }).notNull(), // e.g., "dex_live_abc"
+  
+  // Permissions
+  scopes: jsonb("scopes").notNull().default(sql`'["extract", "read"]'::jsonb`), // ["extract", "batch", "read", "webhook"]
+  
+  // Rate limiting
+  rateLimit: integer("rate_limit").notNull().default(100), // Requests per minute
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"), // Optional expiration
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_apikey_user").on(table.userId),
+  index("IDX_apikey_hash").on(table.keyHash),
+  index("IDX_apikey_prefix").on(table.keyPrefix),
+]);
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// API Usage Logs table - tracks all API requests
+export const apiUsageLogs = pgTable("api_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id),
+  
+  // Request details
+  endpoint: varchar("endpoint", { length: 255 }).notNull(),
+  method: varchar("method", { length: 10 }).notNull(),
+  documentType: varchar("document_type", { length: 50 }),
+  
+  // Usage metrics
+  pagesProcessed: integer("pages_processed").notNull().default(0),
+  
+  // Response details
+  statusCode: integer("status_code").notNull(),
+  responseTimeMs: integer("response_time_ms"),
+  errorMessage: text("error_message"),
+  
+  // Client info
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 support
+  userAgent: varchar("user_agent", { length: 500 }),
+  requestId: varchar("request_id", { length: 36 }), // UUID for tracing
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_apiusage_user").on(table.userId),
+  index("IDX_apiusage_apikey").on(table.apiKeyId),
+  index("IDX_apiusage_created").on(table.createdAt),
+]);
+
+export const insertApiUsageLogSchema = createInsertSchema(apiUsageLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertApiUsageLog = z.infer<typeof insertApiUsageLogSchema>;
+export type ApiUsageLog = typeof apiUsageLogs.$inferSelect;
+
+// ============================================================================
+// BATCH PROCESSING TABLES
+// ============================================================================
+
+// Batch Jobs table - manages batch processing jobs
+export const batchJobs = pgTable("batch_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id), // If created via API
+  
+  // Job details
+  name: varchar("name", { length: 255 }),
+  documentType: text("document_type").notNull(), // bank, invoice, po, contract, general
+  status: text("status").notNull().default('pending'), // pending, processing, completed, failed, cancelled
+  
+  // Progress tracking
+  totalFiles: integer("total_files").notNull().default(0),
+  completedFiles: integer("completed_files").notNull().default(0),
+  failedFiles: integer("failed_files").notNull().default(0),
+  totalPages: integer("total_pages").notNull().default(0),
+  processedPages: integer("processed_pages").notNull().default(0),
+  
+  // Webhook notification
+  webhookUrl: varchar("webhook_url", { length: 2048 }),
+  
+  // Processing options
+  priority: integer("priority").notNull().default(2), // 1=low, 2=normal, 3=high
+  metadata: jsonb("metadata"), // Custom metadata from user
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  
+  // Timestamps
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_batchjob_user").on(table.userId),
+  index("IDX_batchjob_status").on(table.status),
+  index("IDX_batchjob_created").on(table.createdAt),
+]);
+
+export const insertBatchJobSchema = createInsertSchema(batchJobs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertBatchJob = z.infer<typeof insertBatchJobSchema>;
+export type BatchJob = typeof batchJobs.$inferSelect;
+
+// Batch Items table - individual files in a batch
+export const batchItems = pgTable("batch_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchJobId: varchar("batch_job_id").notNull().references(() => batchJobs.id, { onDelete: "cascade" }),
+  documentId: varchar("document_id").references(() => documents.id),
+  
+  // File info
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  objectPath: text("object_path"), // GCS path
+  
+  // Processing status
+  status: text("status").notNull().default('pending'), // pending, processing, completed, failed
+  extractionId: varchar("extraction_id").references(() => extractions.id),
+  
+  // Results
+  extractedData: jsonb("extracted_data"),
+  pagesProcessed: integer("pages_processed").notNull().default(0),
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  errorCode: varchar("error_code", { length: 50 }),
+  retryCount: integer("retry_count").notNull().default(0),
+  maxRetries: integer("max_retries").notNull().default(3),
+  
+  // Timestamps
+  processingStartedAt: timestamp("processing_started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_batchitem_job").on(table.batchJobId),
+  index("IDX_batchitem_status").on(table.status),
+]);
+
+export const insertBatchItemSchema = createInsertSchema(batchItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertBatchItem = z.infer<typeof insertBatchItemSchema>;
+export type BatchItem = typeof batchItems.$inferSelect;
+
+// ============================================================================
+// WEBHOOK TABLES
+// ============================================================================
+
+// Webhooks table - user-configured webhook endpoints
+export const webhooks = pgTable("webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Endpoint config
+  url: varchar("url", { length: 2048 }).notNull(),
+  description: varchar("description", { length: 255 }),
+  
+  // Events to subscribe to
+  events: jsonb("events").notNull().default(sql`'["extraction.completed", "batch.completed"]'::jsonb`),
+  
+  // Security
+  secret: varchar("secret", { length: 64 }).notNull(), // HMAC secret
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  failureCount: integer("failure_count").notNull().default(0), // Consecutive failures
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_webhook_user").on(table.userId),
+  index("IDX_webhook_active").on(table.isActive),
+]);
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
+
+// Webhook Logs table - delivery history
+export const webhookLogs = pgTable("webhook_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  webhookId: varchar("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+  
+  // Event details
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  payload: jsonb("payload").notNull(),
+  
+  // Delivery result
+  statusCode: integer("status_code"),
+  responseBody: text("response_body"), // Truncated response
+  responseTimeMs: integer("response_time_ms"),
+  success: boolean("success").notNull(),
+  
+  // Retry info
+  attemptNumber: integer("attempt_number").notNull().default(1),
+  nextRetryAt: timestamp("next_retry_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_webhooklog_webhook").on(table.webhookId),
+  index("IDX_webhooklog_created").on(table.createdAt),
+]);
+
+export const insertWebhookLogSchema = createInsertSchema(webhookLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWebhookLog = z.infer<typeof insertWebhookLogSchema>;
+export type WebhookLog = typeof webhookLogs.$inferSelect;
+
+// ============================================================================
+// PLAN CONFIGURATION (Constants)
+// ============================================================================
+
+export const PLAN_CONFIGS = {
+  free: {
+    planType: 'free' as PlanType,
+    pagesLimit: 100,
+    overageEnabled: false,
+    overageRate: null,
+    apiEnabled: false,
+    batchEnabled: false,
+    maxApiKeys: 0,
+    maxBatchFiles: 0,
+    maxWebhooks: 0,
+    rateLimit: 10,
+  },
+  pro: {
+    planType: 'pro' as PlanType,
+    pagesLimit: 5000,
+    overageEnabled: true,
+    overageRate: '0.03',
+    apiEnabled: true,
+    batchEnabled: true,
+    maxApiKeys: 5,
+    maxBatchFiles: 50,
+    maxWebhooks: 5,
+    rateLimit: 100,
+  },
+  enterprise: {
+    planType: 'enterprise' as PlanType,
+    pagesLimit: null, // Unlimited
+    overageEnabled: false,
+    overageRate: null,
+    apiEnabled: true,
+    batchEnabled: true,
+    maxApiKeys: null, // Unlimited
+    maxBatchFiles: null, // Unlimited
+    maxWebhooks: null, // Unlimited
+    rateLimit: 1000,
+  },
+} as const;
+
+// ============================================================================
+// WEBHOOK EVENTS
+// ============================================================================
+
+export const WEBHOOK_EVENTS = [
+  'extraction.completed',
+  'extraction.failed',
+  'batch.started',
+  'batch.completed',
+  'batch.failed',
+  'batch.item.completed',
+  'batch.item.failed',
+  'subscription.updated',
+  'usage.limit_approaching',
+  'usage.limit_exceeded',
+] as const;
+
+export type WebhookEvent = typeof WEBHOOK_EVENTS[number];
+
+// ============================================================================
+// API KEY SCOPES
+// ============================================================================
+
+export const API_KEY_SCOPES = [
+  'extract',    // Single file extraction
+  'batch',      // Batch processing
+  'read',       // Read results/history
+  'webhook',    // Manage webhooks
+] as const;
+
+export type ApiKeyScope = typeof API_KEY_SCOPES[number];
