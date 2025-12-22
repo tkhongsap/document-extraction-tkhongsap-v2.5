@@ -2,7 +2,7 @@
  * Resume Service
  * Handles CRUD operations and embedding generation for resumes
  */
-import { eq, sql, and, desc } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { db } from "./db";
 import { resumes, type Resume, type InsertResume } from "@shared/schema";
 import { createEmbeddingService, type EmbeddingService } from "./embeddingService";
@@ -67,8 +67,9 @@ export interface SemanticSearchResult {
 export class ResumeService {
   private embeddingService: EmbeddingService;
 
-  constructor(openaiApiKey?: string) {
-    this.embeddingService = createEmbeddingService(openaiApiKey);
+  constructor() {
+    // Uses environment variables for configuration (EMBEDDING_PROVIDER, OLLAMA_API_URL, etc.)
+    this.embeddingService = createEmbeddingService();
   }
 
   /**
@@ -123,7 +124,9 @@ export class ResumeService {
     if (generateEmbedding) {
       try {
         const result = await this.embeddingService.createEmbedding(embeddingText);
-        embedding = result.embedding;
+        embedding = Array.isArray(result.embedding) 
+          ? result.embedding as number[]
+          : Array.from(result.embedding) as number[];
         embeddingModel = result.model;
       } catch (error) {
         console.error("[ResumeService] Warning: Failed to generate embedding:", error);
@@ -173,7 +176,7 @@ export class ResumeService {
         embeddingText,
         sourceFileName,
         rawExtractedData: extractedData,
-      } as InsertResume)
+      })
       .returning();
 
     return resume;
@@ -278,7 +281,7 @@ export class ResumeService {
    * Delete a resume
    */
   async delete(resumeId: string): Promise<boolean> {
-    const result = await db
+    await db
       .delete(resumes)
       .where(eq(resumes.id, resumeId));
 
@@ -344,6 +347,6 @@ export class ResumeService {
 }
 
 // Factory function
-export function createResumeService(openaiApiKey?: string): ResumeService {
-  return new ResumeService(openaiApiKey);
+export function createResumeService(): ResumeService {
+  return new ResumeService();
 }

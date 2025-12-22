@@ -1,10 +1,14 @@
 /**
  * Embedding Service
- * Uses OpenAI API to generate vector embeddings for semantic search
+ * Supports both OpenAI API and local Ollama API for vector embeddings
  */
 
+export type EmbeddingProvider = 'openai' | 'ollama';
+
 export interface EmbeddingConfig {
-  apiKey: string;
+  provider?: EmbeddingProvider;
+  apiKey?: string;
+  apiBase?: string;
   model?: string;
 }
 
@@ -18,35 +22,93 @@ export interface EmbeddingResult {
 }
 
 export class EmbeddingService {
+  private provider: EmbeddingProvider;
   private apiKey: string;
   private model: string;
-  private apiBase = "https://api.openai.com/v1";
+  private apiBase: string;
 
   /**
    * Initialize embedding service
-   * @param config - Configuration with API key and optional model
+   * @param config - Configuration with provider, API key/base, and model
    */
   constructor(config: EmbeddingConfig) {
-    this.apiKey = config.apiKey;
-    this.model = config.model || "text-embedding-3-small";
+    this.provider = config.provider || 'ollama';
+    this.apiKey = config.apiKey || '';
+    
+    // Set defaults based on provider
+    if (this.provider === 'ollama') {
+      this.apiBase = config.apiBase || process.env.OLLAMA_API_URL || 'http://10.4.93.66:9020';
+      this.model = config.model || process.env.OLLAMA_EMBEDDING_MODEL || 'bge-m3:latest';
+    } else {
+      this.apiBase = config.apiBase || 'https://api.openai.com/v1';
+      this.model = config.model || 'text-embedding-3-small';
+    }
   }
 
   /**
    * Create embedding for a single text
-   * @param text - Text to embed (max ~8191 tokens for text-embedding-3-small)
+   * @param text - Text to embed
    * @returns Embedding vector and metadata
    */
   async createEmbedding(text: string): Promise<EmbeddingResult> {
-    if (!this.apiKey) {
+    if (this.provider === 'openai' && !this.apiKey) {
       throw new Error(
         "OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
       );
     }
 
-    // Truncate text if too long (rough estimate: 4 chars per token)
-    const maxChars = 30000; // ~7500 tokens, leaving some buffer
+    // Truncate text if too long
+    const maxChars = 30000;
     const truncatedText = text.length > maxChars ? text.slice(0, maxChars) : text;
 
+    if (this.provider === 'ollama') {
+      return this.createOllamaEmbedding(truncatedText);
+    } else {
+      return this.createOpenAIEmbedding(truncatedText);
+    }
+  }
+
+  /**
+   * Create embedding using Ollama API
+   */
+  private async createOllamaEmbedding(text: string): Promise<EmbeddingResult> {
+    const response = await fetch(`${this.apiBase}/api/embed`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: this.model,
+        input: text,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData?.error || response.statusText;
+      throw new Error(`Ollama API error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    // Ollama returns { embeddings: [[...]] } for single input
+    const embedding = Array.isArray(data.embeddings?.[0]) 
+      ? data.embeddings[0] 
+      : data.embedding || [];
+    
+    return {
+      embedding,
+      model: data.model || this.model,
+      usage: {
+        promptTokens: data.prompt_eval_count || 0,
+        totalTokens: data.prompt_eval_count || 0,
+      },
+    };
+  }
+
+  /**
+   * Create embedding using OpenAI API
+   */
+  private async createOpenAIEmbedding(text: string): Promise<EmbeddingResult> {
     const response = await fetch(`${this.apiBase}/embeddings`, {
       method: "POST",
       headers: {
@@ -55,7 +117,7 @@ export class EmbeddingService {
       },
       body: JSON.stringify({
         model: this.model,
-        input: truncatedText,
+        input: text,
       }),
     });
 
@@ -79,14 +141,14 @@ export class EmbeddingService {
   /**
    * Create embeddings for multiple texts in batch
    * @param texts - Array of texts to embed
-   * @param batchSize - Number of texts per API call (max 2048)
+   * @param batchSize - Number of texts per API call
    * @returns Array of embedding vectors
    */
   async createEmbeddingsBatch(
     texts: string[],
     batchSize = 100
   ): Promise<number[][]> {
-    if (!this.apiKey) {
+    if (this.provider === 'openai' && !this.apiKey) {
       throw new Error(
         "OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
       );
@@ -104,6 +166,14 @@ export class EmbeddingService {
         t.length > maxChars ? t.slice(0, maxChars) : t
       );
 
+      if (this.provider === 'ollama') {
+        // Ollama: process one by one (doesn't support batch in /api/embed)
+        for (const text of truncatedTexts) {
+          const result = await this.createOllamaEmbedding(text);
+          allEmbeddings.push(result.embedding);
+        }
+      } else {
+      // OpenAI: batch request
       const response = await fetch(`${this.apiBase}/embeddings`, {
         method: "POST",
         headers: {
@@ -117,20 +187,21 @@ export class EmbeddingService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData?.error?.message || response.statusText;
-        throw new Error(`OpenAI API error: ${errorMessage}`);
-      }
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData?.error?.message || response.statusText;
+          throw new Error(`OpenAI API error: ${errorMessage}`);
+        }
 
-      const data = await response.json();
-      // Sort by index to maintain order
-      const sortedData = [...data.data].sort(
-        (a: { index: number }, b: { index: number }) => a.index - b.index
-      );
-      const batchEmbeddings = sortedData.map(
-        (item: { embedding: number[] }) => item.embedding
-      );
-      allEmbeddings.push(...batchEmbeddings);
+        const data = await response.json();
+        // Sort by index to maintain order
+        const sortedData = [...data.data].sort(
+          (a: { index: number }, b: { index: number }) => a.index - b.index
+        );
+        const batchEmbeddings = sortedData.map(
+          (item: { embedding: number[] }) => item.embedding
+        );
+        allEmbeddings.push(...batchEmbeddings);
+      }
     }
 
     return allEmbeddings;
@@ -141,11 +212,17 @@ export class EmbeddingService {
    */
   getModelDimensions(): number {
     const dimensions: Record<string, number> = {
+      // OpenAI models
       "text-embedding-3-small": 1536,
       "text-embedding-3-large": 3072,
       "text-embedding-ada-002": 1536,
+      // Ollama models (BGE-M3)
+      "bge-m3:latest": 1024,
+      "bge-m3": 1024,
+      "nomic-embed-text": 768,
+      "mxbai-embed-large": 1024,
     };
-    return dimensions[this.model] || 1536;
+    return dimensions[this.model] || 1024;
   }
 
   /**
@@ -154,6 +231,20 @@ export class EmbeddingService {
   getModel(): string {
     return this.model;
   }
+
+  /**
+   * Get the current provider
+   */
+  getProvider(): EmbeddingProvider {
+    return this.provider;
+  }
+
+  /**
+   * Get the API base URL
+   */
+  getApiBase(): string {
+    return this.apiBase;
+  }
 }
 
 // Singleton instance
@@ -161,14 +252,24 @@ let embeddingService: EmbeddingService | null = null;
 
 /**
  * Get or create embedding service instance
+ * Defaults to Ollama with BGE-M3 model
  */
 export function createEmbeddingService(
-  apiKey?: string,
-  model = "text-embedding-3-small"
+  config?: Partial<EmbeddingConfig>
 ): EmbeddingService {
-  const key = apiKey || process.env.OPENAI_API_KEY || "";
-  if (!embeddingService || embeddingService.getModel() !== model) {
-    embeddingService = new EmbeddingService({ apiKey: key, model });
+  const provider = config?.provider || (process.env.EMBEDDING_PROVIDER as EmbeddingProvider) || 'ollama';
+  const model = config?.model || 
+    (provider === 'ollama' 
+      ? (process.env.OLLAMA_EMBEDDING_MODEL || 'bge-m3:latest')
+      : (process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small'));
+  const apiBase = config?.apiBase || 
+    (provider === 'ollama'
+      ? (process.env.OLLAMA_API_URL || 'http://10.4.93.66:9020')
+      : 'https://api.openai.com/v1');
+  const apiKey = config?.apiKey || process.env.OPENAI_API_KEY || '';
+  
+  if (!embeddingService || embeddingService.getModel() !== model || embeddingService.getProvider() !== provider) {
+    embeddingService = new EmbeddingService({ provider, apiKey, apiBase, model });
   }
   return embeddingService;
 }

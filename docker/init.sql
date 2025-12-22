@@ -42,8 +42,9 @@ CREATE TABLE IF NOT EXISTS resumes (
   willing_to_travel BOOLEAN,
   
   -- Vector embedding for semantic search (RAG)
-  embedding vector(1536),
-  embedding_model VARCHAR DEFAULT 'text-embedding-3-small',
+  -- BGE-M3: 1024 dimensions
+  embedding vector(1024),
+  embedding_model VARCHAR DEFAULT 'bge-m3:latest',
   embedding_text TEXT,
   
   -- Metadata
