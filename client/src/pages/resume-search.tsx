@@ -21,24 +21,22 @@ import {
   ChevronUp,
   Sparkles,
   AlertCircle,
-  Loader2,
-  RefreshCw
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   searchResumesSemanticApi, 
   listResumesApi, 
   deleteResumeApi,
-  regenerateAllEmbeddingsApi,
   type ResumeSearchResult,
-  type ResumeSearchResponse 
+  type SearchResponse 
 } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function ResumeSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLimit, setSearchLimit] = useState(10);
-  const [threshold, setThreshold] = useState(0.0);  // Start with 0 to show all results
+  const [threshold, setThreshold] = useState(0.5);
   const [useSemanticSearch, setUseSemanticSearch] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
@@ -71,18 +69,6 @@ export default function ResumeSearch() {
     },
   });
 
-  // Regenerate embeddings mutation
-  const regenerateMutation = useMutation({
-    mutationFn: regenerateAllEmbeddingsApi,
-    onSuccess: (data) => {
-      toast.success(`${data.message}`);
-      refetchAll();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to regenerate embeddings");
-    },
-  });
-
   const handleSearch = () => {
     if (!searchQuery.trim()) {
       toast.error("Please enter a search query");
@@ -103,7 +89,7 @@ export default function ResumeSearch() {
 
   // Determine which results to show
   const displayResults = searchMutation.data?.results || 
-    (searchQuery ? [] : allResumes?.resumes) || 
+    (searchQuery ? [] : allResumes?.results) || 
     [];
 
   const suggestions = [
@@ -227,39 +213,18 @@ export default function ResumeSearch() {
                 ? `Search Results (${searchMutation.data.results.length})` 
                 : `All Resumes (${allResumes?.total || 0})`}
             </h2>
-            <div className="flex items-center gap-2">
-              {/* Regenerate Embeddings Button */}
+            {searchMutation.data && (
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm"
-                onClick={() => regenerateMutation.mutate()}
-                disabled={regenerateMutation.isPending}
+                onClick={() => {
+                  searchMutation.reset();
+                  setSearchQuery("");
+                }}
               >
-                {regenerateMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Regenerate Embeddings
-                  </>
-                )}
+                Clear search
               </Button>
-              {searchMutation.data && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    searchMutation.reset();
-                    setSearchQuery("");
-                  }}
-                >
-                  Clear search
-                </Button>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Error State */}
@@ -294,7 +259,7 @@ export default function ResumeSearch() {
 
           {/* Resume Cards */}
           <div className="grid gap-4">
-            {displayResults.map((resume: ResumeSearchResult) => (
+            {displayResults.map((resume) => (
               <ResumeCard
                 key={resume.id}
                 resume={resume}
@@ -329,21 +294,21 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
             </div>
             <div>
               <CardTitle className="text-lg">{resume.name}</CardTitle>
-              {resume.current_role && (
+              {resume.currentRole && (
                 <CardDescription className="flex items-center gap-1">
                   <Briefcase className="h-3 w-3" />
-                  {resume.current_role}
+                  {resume.currentRole}
                 </CardDescription>
               )}
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {resume.similarity_score !== undefined && (
+            {resume.similarity !== undefined && (
               <Badge 
-                variant={resume.similarity_score > 0.8 ? "default" : resume.similarity_score > 0.6 ? "secondary" : "outline"}
+                variant={resume.similarity > 0.8 ? "default" : resume.similarity > 0.6 ? "secondary" : "outline"}
               >
-                {Math.round(resume.similarity_score * 100)}% match
+                {Math.round(resume.similarity * 100)}% match
               </Badge>
             )}
             <Button
@@ -380,10 +345,10 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
               {resume.location}
             </span>
           )}
-          {resume.years_experience && (
+          {resume.yearsExperience && (
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {resume.years_experience} years exp
+              {resume.yearsExperience} years exp
             </span>
           )}
         </div>
@@ -412,10 +377,10 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
         )}
 
         {/* Source file */}
-        {resume.source_file_name && (
+        {resume.sourceFileName && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <FileText className="h-3 w-3" />
-            {resume.source_file_name}
+            {resume.sourceFileName}
           </div>
         )}
 
