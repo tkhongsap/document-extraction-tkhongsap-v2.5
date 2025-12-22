@@ -402,3 +402,108 @@ export async function changeTier(tier: 'free' | 'pro' | 'enterprise'): Promise<{
 
   return res.json();
 }
+
+// ============================================================================
+// Resume Search API
+// ============================================================================
+
+export interface ResumeSearchResult {
+  id: string;
+  userId: string;
+  extractionId?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  currentRole?: string;
+  yearsExperience?: number;
+  skills?: string[];
+  summary?: string;
+  sourceFileName?: string;
+  createdAt?: string;
+  similarity?: number;
+}
+
+export interface SearchResponse {
+  results: ResumeSearchResult[];
+  total: number;
+  query: string;
+}
+
+/**
+ * Semantic search for resumes using natural language
+ */
+export async function searchResumesSemanticApi(
+  query: string, 
+  limit: number = 10, 
+  threshold: number = 0.5
+): Promise<SearchResponse> {
+  const res = await fetch("/api/search/resumes/semantic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ query, limit, threshold }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Search failed");
+  }
+
+  return res.json();
+}
+
+/**
+ * Search resumes by required skills
+ */
+export async function searchResumesBySkillsApi(
+  skills: string[], 
+  limit: number = 10
+): Promise<SearchResponse> {
+  const res = await fetch("/api/search/resumes/skills", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ skills, limit }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Search failed");
+  }
+
+  return res.json();
+}
+
+/**
+ * List all resumes for current user
+ */
+export async function listResumesApi(limit: number = 50, offset: number = 0): Promise<SearchResponse> {
+  const res = await fetch(`/api/search/resumes?limit=${limit}&offset=${offset}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to list resumes");
+  }
+
+  return res.json();
+}
+
+/**
+ * Delete a resume
+ */
+export async function deleteResumeApi(resumeId: string): Promise<{ message: string }> {
+  const res = await fetch(`/api/search/resumes/${resumeId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to delete resume");
+  }
+
+  return res.json();
+}
