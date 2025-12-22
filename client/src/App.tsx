@@ -20,6 +20,7 @@ import History from "@/pages/history";
 import ExtractionDetail from "@/pages/extraction-detail";
 import Templates from "@/pages/templates";
 import Settings from "@/pages/settings";
+import ResumeSearch from "@/pages/resume-search";
 import NotFound from "@/pages/not-found";
 
 function PrivateRoute({ component: Component, ...rest }: any) {
@@ -81,6 +82,10 @@ function Router() {
 
         <Route path="/templates">
           {() => <PrivateRoute component={Templates} />}
+        </Route>
+
+        <Route path="/resume-search">
+          {() => <PrivateRoute component={ResumeSearch} />}
         </Route>
 
         <Route path="/settings">
