@@ -43,8 +43,9 @@ class Resume(Base):
     willing_to_travel = Column(Boolean, nullable=True)
     
     # Vector embedding for semantic search (RAG)
-    embedding = Column(Vector(1536), nullable=True)
-    embedding_model = Column(String, default='text-embedding-3-small')
+    # BGE-M3: 1024 dimensions, OpenAI text-embedding-3-small: 1536
+    embedding = Column(Vector(1024), nullable=True)
+    embedding_model = Column(String, default='bge-m3:latest')
     embedding_text = Column(Text, nullable=True)
     
     # Metadata

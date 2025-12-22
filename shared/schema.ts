@@ -182,8 +182,9 @@ export const resumes = pgTable("resumes", {
   willingToTravel: boolean("willing_to_travel"),
   
   // Vector embedding for semantic search (RAG)
-  embedding: vector("embedding", { dimensions: 1536 }),
-  embeddingModel: varchar("embedding_model").default('text-embedding-3-small'),
+  // BGE-M3: 1024 dimensions, OpenAI text-embedding-3-small: 1536
+  embedding: vector("embedding", { dimensions: 1024 }),
+  embeddingModel: varchar("embedding_model").default('bge-m3:latest'),
   embeddingText: text("embedding_text"),
   
   // Metadata
