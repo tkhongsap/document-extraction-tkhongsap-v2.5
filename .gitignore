@@ -60,3 +60,6 @@ backend/storage/
 attached_assets/*.pdf
 attached_assets/*.png
 attached_assets/*.jpg
+
+backend/app/Batch_extract/Resume/input
+backend/app/Batch_extract/Resume/output
