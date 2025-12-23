@@ -629,3 +629,42 @@ export const API_KEY_SCOPES = [
 ] as const;
 
 export type ApiKeyScope = typeof API_KEY_SCOPES[number];
+
+// ============================================================================
+// DOCUMENT CHUNKS (for RAG / chunking)
+// ============================================================================
+
+// Document chunks table - stores text chunks extracted from documents with embeddings
+export const documentChunks = pgTable("document_chunks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  documentId: varchar("document_id").references(() => documents.id),
+  extractionId: varchar("extraction_id").references(() => extractions.id),
+
+  // chunk metadata
+  chunkIndex: integer("chunk_index").notNull().default(0),
+  pageNumber: integer("page_number"),
+  startOffset: integer("start_offset"),
+  endOffset: integer("end_offset"),
+  text: text("text").notNull(),
+
+  // Vector embedding for semantic search
+  embedding: vector("embedding", { dimensions: 1536 }),
+  embeddingModel: varchar("embedding_model").default('text-embedding-3-small'),
+  embeddingText: text("embedding_text"),
+
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_docchunk_user").on(table.userId),
+  index("IDX_docchunk_document").on(table.documentId),
+]);
+
+export const insertDocumentChunkSchema = createInsertSchema(documentChunks, {
+  embedding: z.array(z.number()).nullable(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDocumentChunk = z.infer<typeof insertDocumentChunkSchema>;
+export type DocumentChunk = typeof documentChunks.$inferSelect;
