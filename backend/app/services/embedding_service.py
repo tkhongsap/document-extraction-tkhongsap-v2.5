@@ -38,10 +38,16 @@ class EmbeddingService:
             self.api_base = api_base or os.getenv("OLLAMA_API_URL", "http://10.4.93.66:9020")
             self.model = model or os.getenv("OLLAMA_EMBEDDING_MODEL", "bge-m3:latest")
             self.api_key = None
+            self._dimensions = 1024  # BGE-M3 dimensions
         else:
             self.api_base = "https://api.openai.com/v1"
             self.model = model or "text-embedding-3-small"
             self.api_key = self.settings.openai_api_key
+            self._dimensions = 1536  # text-embedding-3-small dimensions
+    
+    def get_dimensions(self) -> int:
+        """Get the embedding dimensions for the current model"""
+        return self._dimensions
         
     def _check_api_key(self):
         """Verify API key is configured (only for OpenAI)"""
