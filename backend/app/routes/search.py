@@ -32,28 +32,34 @@ class SkillSearchRequest(BaseModel):
 
 
 class ResumeSearchResult(BaseModel):
-    """Search result item"""
+    """Search result item - using snake_case for frontend compatibility"""
     id: str
-    userId: str
-    extractionId: Optional[str]
+    user_id: Optional[str] = None
+    extraction_id: Optional[str] = None
     name: str
-    email: Optional[str]
-    phone: Optional[str]
-    location: Optional[str]
-    currentRole: Optional[str]
-    yearsExperience: Optional[int]
-    skills: Optional[List[str]]
-    summary: Optional[str]
-    sourceFileName: Optional[str]
-    createdAt: Optional[str]
-    similarity: Optional[float] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    current_role: Optional[str] = None
+    years_experience: Optional[int] = None
+    skills: Optional[List[str]] = None
+    summary: Optional[str] = None
+    source_file_name: Optional[str] = None
+    created_at: Optional[str] = None
+    similarity_score: Optional[float] = None
 
 
 class SearchResponse(BaseModel):
-    """Search response"""
+    """Search response for semantic search"""
     results: List[ResumeSearchResult]
     total: int
     query: str
+
+
+class ResumeListResponse(BaseModel):
+    """Response for listing resumes"""
+    resumes: List[ResumeSearchResult]
+    total: int
 
 
 # ============================================================================
@@ -74,6 +80,8 @@ async def search_resumes_semantic(
     - "Data scientist in Bangkok with machine learning skills"
     - "Project manager with PMP certification"
     """
+    print(f"[Search] Received request: query='{request.query}', limit={request.limit}, threshold={request.threshold}")
+    print(f"[Search] User: {current_user.id}")
     try:
         resume_service = ResumeService(db)
         
@@ -126,18 +134,18 @@ async def search_resumes_by_skills(
         results = [
             ResumeSearchResult(
                 id=r.id,
-                userId=r.user_id,
-                extractionId=r.extraction_id,
+                user_id=r.user_id,
+                extraction_id=r.extraction_id,
                 name=r.name,
                 email=r.email,
                 phone=r.phone,
                 location=r.location,
-                currentRole=r.current_role,
-                yearsExperience=r.years_experience,
+                current_role=r.current_role,
+                years_experience=r.years_experience,
                 skills=r.skills,
                 summary=r.summary,
-                sourceFileName=r.source_file_name,
-                createdAt=r.created_at.isoformat() if r.created_at else None,
+                source_file_name=r.source_file_name,
+                created_at=r.created_at.isoformat() if r.created_at else None,
             )
             for r in resumes
         ]
@@ -156,7 +164,7 @@ async def search_resumes_by_skills(
         )
 
 
-@router.get("/resumes", response_model=SearchResponse)
+@router.get("/resumes", response_model=ResumeListResponse)
 async def list_resumes(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -180,30 +188,31 @@ async def list_resumes(
         results = [
             ResumeSearchResult(
                 id=r.id,
-                userId=r.user_id,
-                extractionId=r.extraction_id,
+                user_id=r.user_id,
+                extraction_id=r.extraction_id,
                 name=r.name,
                 email=r.email,
                 phone=r.phone,
                 location=r.location,
-                currentRole=r.current_role,
-                yearsExperience=r.years_experience,
+                current_role=r.current_role,
+                years_experience=r.years_experience,
                 skills=r.skills,
                 summary=r.summary,
-                sourceFileName=r.source_file_name,
-                createdAt=r.created_at.isoformat() if r.created_at else None,
+                source_file_name=r.source_file_name,
+                created_at=r.created_at.isoformat() if r.created_at else None,
             )
             for r in resumes
         ]
         
-        return SearchResponse(
-            results=results,
+        return ResumeListResponse(
+            resumes=results,
             total=total,
-            query="all",
         )
     
     except Exception as e:
+        import traceback
         print(f"[Search] Error listing resumes: {e}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail="Failed to list resumes",
@@ -310,3 +319,52 @@ async def regenerate_resume_embedding(
     except Exception as e:
         print(f"[Search] Error regenerating embedding: {e}")
         raise HTTPException(status_code=500, detail="Failed to regenerate embedding")
+
+
+@router.post("/resumes/regenerate-all-embeddings")
+async def regenerate_all_embeddings(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Regenerate embeddings for all resumes belonging to the current user.
+    Useful after changing embedding model or when embeddings are missing.
+    """
+    try:
+        resume_service = ResumeService(db)
+        
+        # Get all resumes for user
+        resumes = await resume_service.get_by_user(
+            user_id=current_user.id,
+            limit=1000,  # Get all
+        )
+        
+        success_count = 0
+        failed_count = 0
+        errors = []
+        
+        for resume in resumes:
+            try:
+                updated = await resume_service.regenerate_embedding(resume.id)
+                if updated:
+                    success_count += 1
+                    print(f"[Search] Regenerated embedding for: {resume.name}")
+                else:
+                    failed_count += 1
+                    errors.append(f"{resume.name}: Failed to generate")
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"{resume.name}: {str(e)}")
+                print(f"[Search] Error regenerating embedding for {resume.name}: {e}")
+        
+        return {
+            "message": f"Regenerated {success_count} embeddings, {failed_count} failed",
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "total": len(resumes),
+            "errors": errors[:10] if errors else [],  # Return first 10 errors
+        }
+    
+    except Exception as e:
+        print(f"[Search] Error in bulk regenerate: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to regenerate embeddings: {str(e)}")
