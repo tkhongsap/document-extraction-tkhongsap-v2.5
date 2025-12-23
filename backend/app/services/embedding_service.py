@@ -31,7 +31,8 @@ class EmbeddingService:
             api_base: API base URL (for Ollama)
         """
         self.settings = get_settings()
-        self.provider = provider or os.getenv("EMBEDDING_PROVIDER", "ollama")
+        # Default to OpenAI for embeddings
+        self.provider = provider or os.getenv("EMBEDDING_PROVIDER", "openai")
         
         # Set defaults based on provider
         if self.provider == "ollama":
@@ -40,8 +41,9 @@ class EmbeddingService:
             self.api_key = None
             self._dimensions = 1024  # BGE-M3 dimensions
         else:
+            # OpenAI (default)
             self.api_base = "https://api.openai.com/v1"
-            self.model = model or "text-embedding-3-small"
+            self.model = model or os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
             self.api_key = self.settings.openai_api_key
             self._dimensions = 1536  # text-embedding-3-small dimensions
     
@@ -208,9 +210,9 @@ def get_embedding_service(
     provider: Optional[EmbeddingProvider] = None,
     model: Optional[str] = None
 ) -> EmbeddingService:
-    """Get or create embedding service instance (defaults to Ollama)"""
+    """Get or create embedding service instance (defaults to OpenAI)"""
     global _embedding_service
-    target_provider = provider or os.getenv("EMBEDDING_PROVIDER", "ollama")
+    target_provider = provider or os.getenv("EMBEDDING_PROVIDER", "openai")
     if _embedding_service is None or _embedding_service.provider != target_provider:
         _embedding_service = EmbeddingService(provider=target_provider, model=model)
     return _embedding_service
