@@ -402,3 +402,106 @@ export async function changeTier(tier: 'free' | 'pro' | 'enterprise'): Promise<{
 
   return res.json();
 }
+
+// Resume Search API
+export interface ResumeSearchResult {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  current_role?: string;
+  years_experience?: number;
+  skills?: string[];
+  education?: any[];
+  experience?: any[];
+  certifications?: string[];
+  languages?: string[];
+  summary?: string;
+  source_file_name?: string;
+  similarity_score?: number;
+  created_at?: string;
+}
+
+export interface ResumeSearchResponse {
+  results: ResumeSearchResult[];
+  total: number;
+  query: string;
+}
+
+export interface ResumeListResponse {
+  resumes: ResumeSearchResult[];
+  total: number;
+}
+
+export async function searchResumesSemanticApi(
+  query: string,
+  limit: number = 10,
+  threshold: number = 0.5
+): Promise<ResumeSearchResponse> {
+  const res = await fetch("/api/search/resumes/semantic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ query, limit, threshold }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Search failed");
+  }
+
+  return res.json();
+}
+
+export async function listResumesApi(
+  limit: number = 100,
+  offset: number = 0
+): Promise<ResumeListResponse> {
+  const res = await fetch(`/api/search/resumes?limit=${limit}&offset=${offset}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to fetch resumes");
+  }
+
+  return res.json();
+}
+
+export async function deleteResumeApi(id: string): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/search/resumes/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to delete resume");
+  }
+
+  return res.json();
+}
+
+export interface RegenerateEmbeddingsResponse {
+  message: string;
+  success_count: number;
+  failed_count: number;
+  total: number;
+  errors: string[];
+}
+
+export async function regenerateAllEmbeddingsApi(): Promise<RegenerateEmbeddingsResponse> {
+  const res = await fetch("/api/search/resumes/regenerate-all-embeddings", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to regenerate embeddings");
+  }
+
+  return res.json();
+}
