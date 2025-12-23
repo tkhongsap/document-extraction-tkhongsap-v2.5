@@ -84,12 +84,12 @@ function Router() {
           {() => <PrivateRoute component={Templates} />}
         </Route>
 
-        <Route path="/resume-search">
-          {() => <PrivateRoute component={ResumeSearch} />}
-        </Route>
-
         <Route path="/settings">
           {() => <PrivateRoute component={Settings} />}
+        </Route>
+
+        <Route path="/resume-search">
+          {() => <PrivateRoute component={ResumeSearch} />}
         </Route>
 
         <Route component={NotFound} />
