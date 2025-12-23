@@ -195,18 +195,20 @@ async def template_extraction(
             try:
                 safe_print(f"[Template Extraction] Attempting to save resume...")
                 resume_service = ResumeService(db)
-                # Check if OpenAI API key is configured
+                # Check if OpenAI API key exists for embedding generation
                 from app.core.config import get_settings
                 settings = get_settings()
-                has_openai_key = bool(settings.openai_api_key)
-                safe_print(f"[Template Extraction] OpenAI key configured: {has_openai_key}")
+                
+                # Always generate embedding if OpenAI API key is configured
+                can_generate_embedding = bool(settings.openai_api_key)
+                safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
                 
                 resume = await resume_service.create_from_extraction(
                     user_id=user.id,
                     extraction_id=extraction.id,
                     extracted_data=result.extracted_data,
                     source_file_name=file.filename or "document",
-                    generate_embedding=has_openai_key,  # Only generate if API key exists
+                    generate_embedding=can_generate_embedding,
                 )
                 resume_id = resume.id
                 embedding_status = "with embedding" if resume.embedding else "without embedding"
@@ -480,17 +482,19 @@ async def batch_template_extraction(
             if documentType == "resume" and extraction_result.extracted_data:
                 try:
                     resume_service = ResumeService(db)
-                    # Check if OpenAI API key is configured
+                    # Check if OpenAI API key exists for embedding generation
                     from app.core.config import get_settings
                     settings = get_settings()
-                    has_openai_key = bool(settings.openai_api_key)
+                    
+                    # Always generate embedding if OpenAI API key is configured
+                    can_generate_embedding = bool(settings.openai_api_key)
                     
                     resume = await resume_service.create_from_extraction(
                         user_id=current_user.id,
                         extraction_id=extraction.id,
                         extracted_data=extraction_result.extracted_data,
                         source_file_name=file.filename or "document",
-                        generate_embedding=has_openai_key,  # Only generate if API key exists
+                        generate_embedding=can_generate_embedding,
                     )
                     resume_id = resume.id
                 except Exception as e:

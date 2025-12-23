@@ -15,7 +15,8 @@ import {
   X,
   Check,
   Plus,
-  ChevronDown
+  ChevronDown,
+  Search
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -451,6 +452,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
     { href: '/extraction/general', icon: Plus, label: t('nav.general'), isPrimary: true },
     { href: '/templates', icon: Files, label: t('nav.templates') },
+    { href: '/resume-search', icon: Search, label: 'Resume Search' },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];

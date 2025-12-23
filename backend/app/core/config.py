@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     
     class Config:
         # Look for .env in the project root directory (parent of backend)
+        # Path: backend/app/core/config.py -> ../../.. = project root
         env_file = os.path.join(Path(__file__).parent.parent.parent.parent, ".env")
         case_sensitive = False
         extra = "ignore"  # Allow extra fields in .env file

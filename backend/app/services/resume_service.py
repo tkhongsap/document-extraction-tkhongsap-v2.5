@@ -193,9 +193,12 @@ class ResumeService:
         return resume
     
     async def get_by_id(self, resume_id: str) -> Optional[Resume]:
-        """Get resume by ID"""
+        """Get resume by ID (excludes embedding)"""
+        from sqlalchemy.orm import defer
         result = await self.db.execute(
-            select(Resume).where(Resume.id == resume_id)
+            select(Resume)
+            .options(defer(Resume.embedding), defer(Resume.embedding_text))
+            .where(Resume.id == resume_id)
         )
         return result.scalar_one_or_none()
     
@@ -205,9 +208,13 @@ class ResumeService:
         limit: int = 50,
         offset: int = 0,
     ) -> List[Resume]:
-        """Get all resumes for a user"""
+        """Get all resumes for a user (excludes embedding for performance)"""
+        # Select all columns except embedding to avoid pgvector deserialization issues
+        # and improve query performance
+        from sqlalchemy.orm import defer
         result = await self.db.execute(
             select(Resume)
+            .options(defer(Resume.embedding), defer(Resume.embedding_text))
             .where(Resume.user_id == user_id)
             .order_by(Resume.created_at.desc())
             .limit(limit)
@@ -220,7 +227,7 @@ class ResumeService:
         query: str,
         user_id: Optional[str] = None,
         limit: int = 10,
-        threshold: float = 0.7,
+        threshold: float = 0.3,  # Lowered default for semantic search
     ) -> List[Dict[str, Any]]:
         """
         Semantic search for resumes using vector similarity
@@ -237,86 +244,83 @@ class ResumeService:
         # Generate embedding for query
         query_embedding = await self.embedding_service.create_embedding(query)
         
+        # Debug: Log embedding info
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Generated embedding for query '{query}': length={len(query_embedding)}, first 5 values={query_embedding[:5]}")
+        logger.info(f"Search params: user_id={user_id}, threshold={threshold}, limit={limit}")
+        
         # Build SQL query with cosine similarity
         # pgvector uses <=> for cosine distance (1 - similarity)
         # So we use 1 - distance to get similarity
         
-        embedding_str = f"[{','.join(map(str, query_embedding))}]"
-        
-        sql = text("""
-            SELECT 
-                id, user_id, extraction_id, name, email, phone, location,
-                current_role, years_experience, skills, summary,
-                source_file_name, created_at,
-                1 - (embedding <=> :embedding::vector) as similarity
-            FROM resumes
-            WHERE embedding IS NOT NULL
-            AND 1 - (embedding <=> :embedding::vector) >= :threshold
-        """)
+        # Format embedding as PostgreSQL vector literal - embed directly in SQL
+        # because asyncpg has issues with binding vector types
+        embedding_str = f"'[{','.join(map(str, query_embedding))}]'"
         
         if user_id:
-            sql = text("""
+            # Use string formatting for embedding, bindparams for other values
+            sql = text(f"""
                 SELECT 
                     id, user_id, extraction_id, name, email, phone, location,
                     current_role, years_experience, skills, summary,
                     source_file_name, created_at,
-                    1 - (embedding <=> :embedding::vector) as similarity
+                    1 - (embedding <=> {embedding_str}::vector) as similarity
                 FROM resumes
                 WHERE embedding IS NOT NULL
                 AND user_id = :user_id
-                AND 1 - (embedding <=> :embedding::vector) >= :threshold
-                ORDER BY embedding <=> :embedding::vector
+                AND 1 - (embedding <=> {embedding_str}::vector) >= :threshold
+                ORDER BY embedding <=> {embedding_str}::vector
                 LIMIT :limit
-            """)
-            result = await self.db.execute(
-                sql, 
-                {
-                    "embedding": embedding_str, 
-                    "user_id": user_id,
-                    "threshold": threshold,
-                    "limit": limit,
-                }
+            """).bindparams(
+                user_id=user_id,
+                threshold=threshold,
+                limit=limit,
             )
+            result = await self.db.execute(sql)
         else:
-            sql = text("""
+            sql = text(f"""
                 SELECT 
                     id, user_id, extraction_id, name, email, phone, location,
                     current_role, years_experience, skills, summary,
                     source_file_name, created_at,
-                    1 - (embedding <=> :embedding::vector) as similarity
+                    1 - (embedding <=> {embedding_str}::vector) as similarity
                 FROM resumes
                 WHERE embedding IS NOT NULL
-                AND 1 - (embedding <=> :embedding::vector) >= :threshold
-                ORDER BY embedding <=> :embedding::vector
+                AND 1 - (embedding <=> {embedding_str}::vector) >= :threshold
+                ORDER BY embedding <=> {embedding_str}::vector
                 LIMIT :limit
-            """)
-            result = await self.db.execute(
-                sql, 
-                {
-                    "embedding": embedding_str, 
-                    "threshold": threshold,
-                    "limit": limit,
-                }
+            """).bindparams(
+                threshold=threshold,
+                limit=limit,
             )
+            result = await self.db.execute(sql)
         
         rows = result.fetchall()
+        
+        # Debug: Log similarity scores
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Semantic search: found {len(rows)} results for query '{query[:50]}...'")
+        for row in rows:
+            logger.info(f"  - {row.name}: similarity={row.similarity:.4f}")
         
         return [
             {
                 "id": row.id,
-                "userId": row.user_id,
-                "extractionId": row.extraction_id,
+                "user_id": row.user_id,
+                "extraction_id": row.extraction_id,
                 "name": row.name,
                 "email": row.email,
                 "phone": row.phone,
                 "location": row.location,
-                "currentRole": row.current_role,
-                "yearsExperience": row.years_experience,
+                "current_role": row.current_role,
+                "years_experience": row.years_experience,
                 "skills": row.skills,
                 "summary": row.summary,
-                "sourceFileName": row.source_file_name,
-                "createdAt": row.created_at.isoformat() if row.created_at else None,
-                "similarity": round(row.similarity, 4),
+                "source_file_name": row.source_file_name,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "similarity_score": round(row.similarity, 4),
             }
             for row in rows
         ]
