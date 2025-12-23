@@ -195,18 +195,13 @@ async def template_extraction(
             try:
                 safe_print(f"[Template Extraction] Attempting to save resume...")
                 resume_service = ResumeService(db)
-                # Check embedding provider configuration
-                import os
-                embedding_provider = os.getenv("EMBEDDING_PROVIDER", "ollama")
+                # Check if OpenAI API key exists for embedding generation
                 from app.core.config import get_settings
                 settings = get_settings()
                 
-                # Enable embedding if Ollama is configured OR OpenAI key exists
-                can_generate_embedding = (
-                    embedding_provider == "ollama" or 
-                    bool(settings.openai_api_key)
-                )
-                safe_print(f"[Template Extraction] Embedding provider: {embedding_provider}, can_generate: {can_generate_embedding}")
+                # Always generate embedding if OpenAI API key is configured
+                can_generate_embedding = bool(settings.openai_api_key)
+                safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
                 
                 resume = await resume_service.create_from_extraction(
                     user_id=user.id,
@@ -487,17 +482,12 @@ async def batch_template_extraction(
             if documentType == "resume" and extraction_result.extracted_data:
                 try:
                     resume_service = ResumeService(db)
-                    # Check embedding provider configuration
-                    import os
-                    embedding_provider = os.getenv("EMBEDDING_PROVIDER", "ollama")
+                    # Check if OpenAI API key exists for embedding generation
                     from app.core.config import get_settings
                     settings = get_settings()
                     
-                    # Enable embedding if Ollama is configured OR OpenAI key exists
-                    can_generate_embedding = (
-                        embedding_provider == "ollama" or 
-                        bool(settings.openai_api_key)
-                    )
+                    # Always generate embedding if OpenAI API key is configured
+                    can_generate_embedding = bool(settings.openai_api_key)
                     
                     resume = await resume_service.create_from_extraction(
                         user_id=current_user.id,
