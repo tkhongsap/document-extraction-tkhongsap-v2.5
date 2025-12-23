@@ -73,9 +73,11 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  passwordHash: varchar("password_hash"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  emailVerified: boolean("email_verified").default(false),
   // Plan type stored here for quick access (synced with subscription)
   planType: text("plan_type").notNull().default('free'),
   language: varchar("language", { length: 2 }).notNull().default('en'),
@@ -87,6 +89,7 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  lastResetAt: timestamp("last_reset_at"),
 });
 
 export type UpsertUser = typeof users.$inferInsert;
@@ -182,9 +185,9 @@ export const resumes = pgTable("resumes", {
   willingToTravel: boolean("willing_to_travel"),
   
   // Vector embedding for semantic search (RAG)
-  // BGE-M3: 1024 dimensions, OpenAI text-embedding-3-small: 1536
-  embedding: vector("embedding", { dimensions: 1024 }),
-  embeddingModel: varchar("embedding_model").default('bge-m3:latest'),
+  // OpenAI text-embedding-3-small: 1536 dimensions
+  embedding: vector("embedding", { dimensions: 1536 }),
+  embeddingModel: varchar("embedding_model").default('text-embedding-3-small'),
   embeddingText: text("embedding_text"),
   
   // Metadata
