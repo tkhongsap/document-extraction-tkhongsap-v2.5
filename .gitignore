@@ -63,3 +63,5 @@ attached_assets/*.jpg
 
 backend/app/Batch_extract/Resume/input
 backend/app/Batch_extract/Resume/output
+
+migrations/
