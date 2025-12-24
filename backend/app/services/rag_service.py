@@ -306,6 +306,7 @@ class RAGService:
 def get_rag_service(
     db: AsyncSession,
     top_k: int = 5,
+    similarity_threshold: float = 0.3,
 ) -> RAGService:
     """Get RAG service instance"""
-    return RAGService(db=db, top_k=top_k)
+    return RAGService(db=db, top_k=top_k, similarity_threshold=similarity_threshold)

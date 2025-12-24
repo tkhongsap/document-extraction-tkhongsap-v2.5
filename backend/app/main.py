@@ -38,7 +38,16 @@ from app.routes import (
     extract_router,
     user_router,
 )
-from app.routes.rag import router as rag_router
+
+print("[FastAPI] About to import RAG router...")
+
+# Import RAG router with error handling
+try:
+    from app.routes.rag import router as rag_router
+    print("[FastAPI] RAG router loaded successfully")
+except Exception as e:
+    print(f"[FastAPI] ERROR loading RAG router: {e}")
+    rag_router = None
 
 
 # Background task for cleanup
@@ -143,7 +152,9 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
-app.include_router(rag_router)
+if rag_router:
+    app.include_router(rag_router)
+    print("[FastAPI] RAG router registered")
 
 
 # Object storage routes for serving files

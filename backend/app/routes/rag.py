@@ -22,7 +22,7 @@ from ..services import get_rag_service, get_embedding_service, get_llm_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/rag", tags=["RAG"])
+router = APIRouter(prefix="/api/rag", tags=["RAG"])
 
 
 @router.post("/query", response_model=RAGQueryResponse)
@@ -49,39 +49,39 @@ async def query_resumes(
     start_time = time.time()
     
     try:
-        rag_service = get_rag_service()
+        rag_service = get_rag_service(
+            db=db, 
+            top_k=request.top_k,
+            similarity_threshold=request.similarity_threshold,
+        )
         
         # Execute RAG query
         result = await rag_service.query(
             query=request.query,
-            db=db,
-            top_k=request.top_k,
-            similarity_threshold=request.similarity_threshold,
-            model=request.model,
             temperature=request.temperature,
         )
         
         # Build source list
         sources = [
             ResumeSource(
-                resume_id=source["resume_id"],
+                resume_id=source.get("id", 0),
                 name=source.get("name", "Unknown"),
                 similarity_score=source.get("similarity_score", 0.0),
-                position=source.get("position"),
-                email=source.get("email"),
+                position=source.get("current_role"),
+                email=None,
             )
-            for source in result.get("sources", [])
+            for source in result.sources
         ]
         
         processing_time_ms = (time.time() - start_time) * 1000
         
         return RAGQueryResponse(
-            answer=result["answer"],
+            answer=result.answer,
             query=request.query,
             sources=sources,
-            context=result.get("context") if request.include_context else None,
-            tokens_used=result.get("tokens_used"),
-            model=result.get("model", "gpt-4o-mini"),
+            context=None,
+            tokens_used=result.usage.get("total_tokens") if result.usage else None,
+            model=result.model,
             processing_time_ms=processing_time_ms,
         )
         
@@ -114,15 +114,15 @@ async def query_resumes_stream(
     """
     async def generate_stream():
         try:
-            rag_service = get_rag_service()
+            rag_service = get_rag_service(
+                db=db, 
+                top_k=request.top_k,
+                similarity_threshold=request.similarity_threshold,
+            )
             
             # Stream the response
             async for chunk in rag_service.query_stream(
                 query=request.query,
-                db=db,
-                top_k=request.top_k,
-                similarity_threshold=request.similarity_threshold,
-                model=request.model,
                 temperature=request.temperature,
             ):
                 # Convert to SSE format
@@ -131,11 +131,11 @@ async def query_resumes_stream(
                     content=chunk.get("content"),
                     sources=[
                         ResumeSource(
-                            resume_id=s["resume_id"],
+                            resume_id=s.get("id", 0),
                             name=s.get("name", "Unknown"),
                             similarity_score=s.get("similarity_score", 0.0),
-                            position=s.get("position"),
-                            email=s.get("email"),
+                            position=s.get("current_role"),
+                            email=None,
                         )
                         for s in chunk.get("sources", [])
                     ] if chunk.get("sources") else None,
