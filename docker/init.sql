@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS resumes (
   willing_to_travel BOOLEAN,
   
   -- Vector embedding for semantic search (RAG)
-  -- BGE-M3: 1024 dimensions
-  embedding vector(1024),
-  embedding_model VARCHAR DEFAULT 'bge-m3:latest',
+  -- text-embedding-3-small: 1536 dimensions
+  embedding vector(1536),
+  embedding_model VARCHAR DEFAULT 'text-embedding-3-small',
   embedding_text TEXT,
   
   -- Metadata
@@ -72,3 +72,38 @@ DO $$
 BEGIN
   RAISE NOTICE 'DocEx database initialized successfully!';
 END $$;
+
+-- ============================================================================
+-- DOCUMENT CHUNKS TABLE (for RAG / chunking)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS document_chunks (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR NOT NULL,
+  document_id VARCHAR,
+  extraction_id VARCHAR,
+
+  chunk_index INTEGER NOT NULL DEFAULT 0,
+  page_number INTEGER,
+  start_offset INTEGER,
+  end_offset INTEGER,
+  chunk_type VARCHAR,  -- e.g., 'personal_info', 'experience', 'skills', 'education'
+  text TEXT NOT NULL,
+
+  -- embedding vector (1536 dims by default)
+  embedding vector(1536),
+  embedding_model VARCHAR DEFAULT 'text-embedding-3-small',
+  embedding_text TEXT,
+
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- IVFFlat index for vector similarity
+CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding ON document_chunks
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Useful indexes
+CREATE INDEX IF NOT EXISTS idx_document_chunks_user ON document_chunks(user_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_document ON document_chunks(document_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_extraction ON document_chunks(extraction_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_type ON document_chunks(chunk_type);
