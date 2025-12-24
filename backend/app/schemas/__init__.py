@@ -12,6 +12,10 @@ from .extraction import (
     ParsedPageResponse, GeneralExtractionResponse
 )
 from .common import UploadURLResponse, ErrorResponse
+from .rag import (
+    RAGQueryRequest, RAGQueryResponse, 
+    RAGStreamChunk, RAGHealthResponse, ResumeSource
+)
 
 __all__ = [
     # User
@@ -36,4 +40,10 @@ __all__ = [
     # Common
     "UploadURLResponse",
     "ErrorResponse",
+    # RAG
+    "RAGQueryRequest",
+    "RAGQueryResponse",
+    "RAGStreamChunk",
+    "RAGHealthResponse",
+    "ResumeSource",
 ]

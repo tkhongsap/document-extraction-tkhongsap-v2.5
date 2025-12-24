@@ -38,6 +38,7 @@ from app.routes import (
     extract_router,
     user_router,
 )
+from app.routes.rag import router as rag_router
 
 
 # Background task for cleanup
@@ -142,6 +143,7 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
+app.include_router(rag_router)
 
 
 # Object storage routes for serving files
