@@ -39,8 +39,9 @@ class DocumentChunk(Base):
     embedding_model = Column(String, default='text-embedding-3-small')
     embedding_text = Column(Text, nullable=True)  # Text used for embedding (may differ from main text)
     
-    # Metadata (flexible JSON for additional info)
-    metadata = Column(JSONB, nullable=True)
+    # Chunk metadata (flexible JSON for additional info)
+    # Note: Named 'chunk_metadata' to avoid SQLAlchemy reserved 'metadata'
+    chunk_metadata = Column("metadata", JSONB, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -64,7 +65,7 @@ class DocumentChunk(Base):
             "chunkType": self.chunk_type,
             "text": self.text,
             "embeddingModel": self.embedding_model,
-            "metadata": self.metadata,
+            "metadata": self.chunk_metadata,
             "createdAt": self.created_at.isoformat() if self.created_at else None,
         }
         

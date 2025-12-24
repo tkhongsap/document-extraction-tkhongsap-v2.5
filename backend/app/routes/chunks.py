@@ -8,7 +8,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
-from app.core.auth import get_current_user_id
+from app.core.auth import get_current_user
 from app.services.chunking_service import ChunkingService
 from app.models.user import User
 
@@ -74,7 +74,7 @@ class ChunkStatsResponse(BaseModel):
 @router.post("/create", response_model=CreateChunksResponse)
 async def create_chunks(
     request: CreateChunksRequest,
-    user_id: str = Depends(get_current_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -89,7 +89,7 @@ async def create_chunks(
         
         # Create chunks with embeddings
         chunks = await chunking_service.chunk_and_save_resume(
-            user_id=user_id,
+            user_id=current_user.id,
             extraction_id=request.extraction_id,
             extracted_data=request.extracted_data,
             document_id=request.document_id,
@@ -117,7 +117,7 @@ async def create_chunks(
 @router.post("/search", response_model=SearchChunksResponse)
 async def search_chunks(
     request: SearchChunksRequest,
-    user_id: str = Depends(get_current_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -134,7 +134,7 @@ async def search_chunks(
         
         results = await chunking_service.search_similar_chunks(
             query=request.query,
-            user_id=user_id,
+            user_id=current_user.id,
             limit=request.limit,
             chunk_types=request.chunk_types,
             similarity_threshold=request.similarity_threshold
@@ -154,7 +154,7 @@ async def search_chunks(
 
 @router.get("/stats", response_model=ChunkStatsResponse)
 async def get_chunk_stats(
-    user_id: str = Depends(get_current_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -163,7 +163,7 @@ async def get_chunk_stats(
     """
     try:
         chunking_service = ChunkingService(db)
-        stats = await chunking_service.count_user_chunks(user_id)
+        stats = await chunking_service.count_user_chunks(current_user.id)
         
         return ChunkStatsResponse(
             success=True,
@@ -178,7 +178,7 @@ async def get_chunk_stats(
 @router.get("/extraction/{extraction_id}")
 async def get_chunks_for_extraction(
     extraction_id: str,
-    user_id: str = Depends(get_current_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -189,7 +189,7 @@ async def get_chunks_for_extraction(
         chunks = await chunking_service.get_chunks_for_extraction(extraction_id)
         
         # Verify ownership
-        if chunks and chunks[0].user_id != user_id:
+        if chunks and chunks[0].user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
         
         return {
@@ -209,7 +209,7 @@ async def get_chunks_for_extraction(
 @router.delete("/extraction/{extraction_id}")
 async def delete_chunks_for_extraction(
     extraction_id: str,
-    user_id: str = Depends(get_current_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -220,7 +220,7 @@ async def delete_chunks_for_extraction(
         
         # First verify ownership by checking chunks
         chunks = await chunking_service.get_chunks_for_extraction(extraction_id)
-        if chunks and chunks[0].user_id != user_id:
+        if chunks and chunks[0].user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Delete chunks

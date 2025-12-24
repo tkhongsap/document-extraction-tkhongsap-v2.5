@@ -496,7 +496,7 @@ class ChunkingService:
                 embedding=embedding,
                 embedding_model=self.embedding_service.model if embedding else None,
                 embedding_text=chunk.text if embedding else None,
-                metadata=chunk.metadata,
+                chunk_metadata=chunk.metadata,
                 page_number=chunk.page_number
             )
             

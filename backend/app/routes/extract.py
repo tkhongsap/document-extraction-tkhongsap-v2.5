@@ -511,7 +511,6 @@ async def batch_template_extraction(
                         extracted_data=extraction_result.extracted_data,
                         source_file_name=file.filename or "document",
                         generate_embedding=can_generate_embedding,
-                        generate_embedding=can_generate_embedding,
                     )
                     resume_id = resume.id
                 except Exception as e:

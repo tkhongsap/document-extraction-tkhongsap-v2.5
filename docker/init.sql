@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
   page_number INTEGER,
   start_offset INTEGER,
   end_offset INTEGER,
+  chunk_type VARCHAR,  -- e.g., 'personal_info', 'experience', 'skills', 'education'
   text TEXT NOT NULL,
 
   -- embedding vector (1536 dims by default)
@@ -104,3 +105,5 @@ CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding ON document_chunks
 -- Useful indexes
 CREATE INDEX IF NOT EXISTS idx_document_chunks_user ON document_chunks(user_id);
 CREATE INDEX IF NOT EXISTS idx_document_chunks_document ON document_chunks(document_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_extraction ON document_chunks(extraction_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_type ON document_chunks(chunk_type);
