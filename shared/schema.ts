@@ -9,9 +9,8 @@ import { z } from "zod";
 
 // Custom type for pgvector - stores vector embeddings
 const vector = customType<{ data: number[]; driverData: string }>({
-  dataType(config: unknown) {
-    const cfg = config as { dimensions?: number } | undefined;
-    return `vector(${cfg?.dimensions ?? 1536})`;
+  dataType(config) {
+    return `vector(${config?.dimensions ?? 1536})`;
   },
   toDriver(value: number[]): string {
     return JSON.stringify(value);
