@@ -27,10 +27,10 @@ class RAGQueryRequest(BaseModel):
         description="Number of relevant resumes to retrieve"
     )
     similarity_threshold: float = Field(
-        default=0.5,
+        default=0.2,
         ge=0.0,
         le=1.0,
-        description="Minimum similarity score for relevance"
+        description="Minimum similarity score for relevance (0.2-0.4 recommended)"
     )
     include_context: bool = Field(
         default=False,
@@ -50,7 +50,7 @@ class RAGQueryRequest(BaseModel):
 
 class ResumeSource(BaseModel):
     """Source resume information"""
-    resume_id: int
+    resume_id: str  # UUID
     name: str
     similarity_score: float
     position: Optional[str] = None
