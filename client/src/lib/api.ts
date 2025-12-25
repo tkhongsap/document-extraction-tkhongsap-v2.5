@@ -505,3 +505,77 @@ export async function regenerateAllEmbeddingsApi(): Promise<RegenerateEmbeddings
 
   return res.json();
 }
+
+// =============================================================================
+// RAG (AI Chat) API
+// =============================================================================
+
+export interface RAGSource {
+  resume_id: string;
+  name: string;
+  similarity_score: number;
+  position?: string;
+  email?: string;
+}
+
+export interface RAGQueryRequest {
+  query: string;
+  top_k?: number;
+  similarity_threshold?: number;
+  include_context?: boolean;
+  temperature?: number;
+}
+
+export interface RAGQueryResponse {
+  answer: string;
+  query: string;
+  sources: RAGSource[];
+  context?: string;
+  tokens_used: number;
+  model: string;
+  processing_time_ms: number;
+  timestamp: string;
+}
+
+export async function ragQueryApi(request: RAGQueryRequest): Promise<RAGQueryResponse> {
+  const res = await fetch("/api/rag/query", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      query: request.query,
+      top_k: request.top_k ?? 5,
+      similarity_threshold: request.similarity_threshold ?? 0.2,
+      include_context: request.include_context ?? false,
+      temperature: request.temperature ?? 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "RAG query failed");
+  }
+
+  return res.json();
+}
+
+export interface RAGExamplesResponse {
+  examples: Array<{
+    category: string;
+    queries: string[];
+  }>;
+}
+
+export async function ragExamplesApi(): Promise<RAGExamplesResponse> {
+  const res = await fetch("/api/rag/examples", {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to fetch RAG examples");
+  }
+
+  return res.json();
+}
+
