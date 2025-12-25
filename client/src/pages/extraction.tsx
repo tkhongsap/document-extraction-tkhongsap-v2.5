@@ -67,9 +67,9 @@ export default function Extraction() {
   // Handle file drop - just store file for preview (two-phase UX for all types)
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (isBatchMode) {
-      // Batch mode: add to existing files (up to 10)
+      // Batch mode: add to existing files (up to BATCH_FILE_LIMIT)
       setBatchFiles(prev => {
-        const newFiles = [...prev, ...acceptedFiles].slice(0, 10);
+        const newFiles = [...prev, ...acceptedFiles].slice(0, BATCH_FILE_LIMIT);
         return newFiles;
       });
     } else {
