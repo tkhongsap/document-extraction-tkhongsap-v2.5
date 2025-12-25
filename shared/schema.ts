@@ -630,6 +630,7 @@ export const API_KEY_SCOPES = [
 
 export type ApiKeyScope = typeof API_KEY_SCOPES[number];
 
+
 // ============================================================================
 // DOCUMENT CHUNKS (for RAG / chunking)
 // ============================================================================
