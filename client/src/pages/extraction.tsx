@@ -69,6 +69,20 @@ export default function Extraction() {
     if (isBatchMode) {
       // Batch mode: add to existing files (up to BATCH_FILE_LIMIT)
       setBatchFiles(prev => {
+        const totalFiles = prev.length + acceptedFiles.length;
+        const remainingSlots = BATCH_FILE_LIMIT - prev.length;
+        
+        // Check if files will be truncated
+        if (acceptedFiles.length > remainingSlots) {
+          const truncatedCount = acceptedFiles.length - remainingSlots;
+          if (remainingSlots <= 0) {
+            toast.error(`Batch limit reached (${BATCH_FILE_LIMIT} files max). Cannot add more files.`);
+            return prev;
+          } else {
+            toast.warning(`Only ${remainingSlots} of ${acceptedFiles.length} files added. Batch limit is ${BATCH_FILE_LIMIT} files.`);
+          }
+        }
+        
         const newFiles = [...prev, ...acceptedFiles].slice(0, BATCH_FILE_LIMIT);
         return newFiles;
       });
