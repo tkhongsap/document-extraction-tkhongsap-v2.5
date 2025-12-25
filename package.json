@@ -79,8 +79,11 @@
     "openid-client": "^6.8.1",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+<<<<<<< HEAD
     "pdf-lib": "^1.17.1",
+=======
     "postgres": "^3.4.7",
+>>>>>>> 5d5c6af944418c8f7fdcf2be87720c85c7377bc9
     "react": "^19.2.0",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.0",
