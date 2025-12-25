@@ -460,12 +460,15 @@ function ChatResultsArea({ response, isLoading, error }: ChatResultsAreaProps) {
       {/* Sources Panel - Takes 1 column */}
       <div>
         <Card className="h-full border-2 shadow-lg">
-          <CardHeader className="border-b">
+          <CardHeader className="border-b pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5 text-primary" />
-              Sources
+              <Users className="h-5 w-5 text-primary" />
+              Candidates Analyzed
               <Badge variant="secondary" className="ml-auto">{response.sources.length}</Badge>
             </CardTitle>
+            <CardDescription className="text-xs">
+              AI analyzed these top matching candidates to answer your question
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-4">
             {response.sources.length === 0 ? (
@@ -474,7 +477,7 @@ function ChatResultsArea({ response, isLoading, error }: ChatResultsAreaProps) {
               <div className="space-y-2">
                 {response.sources.map((source, idx) => (
                   <SourceCard key={source.resume_id} source={source} rank={idx + 1} />
-                ))}
+                ))}}
               </div>
             )}
           </CardContent>
