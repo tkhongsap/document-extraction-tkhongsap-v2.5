@@ -1,11 +1,14 @@
 """
 Embedding Service
 Supports both Ollama (local) and OpenAI API for vector embeddings
+With Recursive Character Text Splitting for long texts
 """
 import os
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any
 import httpx
+import numpy as np
 from app.core.config import get_settings
+from app.utils.text_splitter import RecursiveCharacterTextSplitter, split_text
 
 
 EmbeddingProvider = Literal["ollama", "openai"]
@@ -59,27 +62,133 @@ class EmbeddingService:
                 "Set OPENAI_API_KEY environment variable."
             )
     
-    async def create_embedding(self, text: str) -> List[float]:
+    async def create_embedding(self, text: str, use_chunking: bool = True) -> List[float]:
         """
         Create embedding for a single text
+        Uses recursive text splitting for long texts and averages chunk embeddings
         
         Args:
             text: Text to embed
+            use_chunking: Whether to use chunking for long texts (default: True)
             
         Returns:
             List of floats representing the embedding vector
         """
         self._check_api_key()
         
-        # Truncate text if too long
-        max_chars = 30000
-        if len(text) > max_chars:
-            text = text[:max_chars]
+        if not text or not text.strip():
+            # Return zero vector for empty text
+            return [0.0] * self._dimensions
         
-        if self.provider == "ollama":
-            return await self._create_ollama_embedding(text)
+        # For short texts, embed directly
+        max_single_chars = 8000  # Safe limit for single embedding
+        if len(text) <= max_single_chars or not use_chunking:
+            # Simple truncation for very long texts without chunking
+            if len(text) > 30000:
+                text = text[:30000]
+            if self.provider == "ollama":
+                return await self._create_ollama_embedding(text)
+            else:
+                return await self._create_openai_embedding(text)
+        
+        # For longer texts, use recursive text splitting
+        return await self._create_chunked_embedding(text)
+    
+    async def _create_chunked_embedding(self, text: str) -> List[float]:
+        """
+        Create embedding for long text by:
+        1. Splitting into chunks using recursive character splitting
+        2. Creating embeddings for each chunk
+        3. Averaging the embeddings (weighted by chunk length)
+        
+        Args:
+            text: Long text to embed
+            
+        Returns:
+            Averaged embedding vector
+        """
+        # Split text into chunks
+        chunks = split_text(
+            text,
+            chunk_size=2000,  # ~500 tokens for OpenAI
+            chunk_overlap=200,
+        )
+        
+        if not chunks:
+            return [0.0] * self._dimensions
+        
+        if len(chunks) == 1:
+            # Single chunk, embed directly
+            if self.provider == "ollama":
+                return await self._create_ollama_embedding(chunks[0])
+            else:
+                return await self._create_openai_embedding(chunks[0])
+        
+        # Get embeddings for all chunks
+        chunk_embeddings = []
+        chunk_weights = []
+        
+        for chunk in chunks:
+            if self.provider == "ollama":
+                embedding = await self._create_ollama_embedding(chunk)
+            else:
+                embedding = await self._create_openai_embedding(chunk)
+            chunk_embeddings.append(embedding)
+            chunk_weights.append(len(chunk))  # Weight by character count
+        
+        # Weighted average of embeddings
+        return self._average_embeddings(chunk_embeddings, chunk_weights)
+    
+    def _average_embeddings(
+        self, 
+        embeddings: List[List[float]], 
+        weights: Optional[List[float]] = None
+    ) -> List[float]:
+        """
+        Compute weighted average of multiple embedding vectors
+        
+        Args:
+            embeddings: List of embedding vectors
+            weights: Optional weights for each embedding (default: equal weights)
+            
+        Returns:
+            Averaged embedding vector (normalized)
+        """
+        if not embeddings:
+            return [0.0] * self._dimensions
+        
+        if len(embeddings) == 1:
+            return embeddings[0]
+        
+        # Convert to numpy for efficient computation
+        arr = np.array(embeddings)
+        
+        if weights:
+            weights = np.array(weights)
+            weights = weights / weights.sum()  # Normalize weights
+            averaged = np.average(arr, axis=0, weights=weights)
         else:
-            return await self._create_openai_embedding(text)
+            averaged = np.mean(arr, axis=0)
+        
+        # Normalize to unit vector (important for cosine similarity)
+        norm = np.linalg.norm(averaged)
+        if norm > 0:
+            averaged = averaged / norm
+        
+        return averaged.tolist()
+    
+    async def create_embedding_simple(self, text: str) -> List[float]:
+        """
+        Create embedding with simple truncation (no chunking)
+        Use this for short texts like resume fields
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Embedding vector
+        """
+        return await self.create_embedding(text, use_chunking=False)
     
     async def _create_ollama_embedding(self, text: str) -> List[float]:
         """Create embedding using Ollama API"""
@@ -131,10 +240,39 @@ class EmbeddingService:
     async def create_embeddings_batch(
         self, 
         texts: List[str],
-        batch_size: int = 100
+        batch_size: int = 100,
+        use_chunking: bool = True
     ) -> List[List[float]]:
         """
         Create embeddings for multiple texts
+        Uses recursive text splitting for long texts
+        
+        Args:
+            texts: List of texts to embed
+            batch_size: Number of texts per API call (for OpenAI)
+            use_chunking: Whether to use chunking for long texts
+            
+        Returns:
+            List of embedding vectors
+        """
+        self._check_api_key()
+        
+        all_embeddings = []
+        
+        for text in texts:
+            embedding = await self.create_embedding(text, use_chunking=use_chunking)
+            all_embeddings.append(embedding)
+        
+        return all_embeddings
+    
+    async def create_embeddings_batch_simple(
+        self, 
+        texts: List[str],
+        batch_size: int = 100
+    ) -> List[List[float]]:
+        """
+        Create embeddings for multiple short texts (no chunking)
+        More efficient for texts under 8000 chars
         
         Args:
             texts: List of texts to embed
@@ -147,19 +285,19 @@ class EmbeddingService:
         
         all_embeddings = []
         
-        # Truncate each text
-        max_chars = 30000
-        truncated_texts = [t[:max_chars] if len(t) > max_chars else t for t in texts]
+        # Simple truncation for short texts
+        max_chars = 8000
+        processed_texts = [t[:max_chars] if len(t) > max_chars else t for t in texts]
         
         if self.provider == "ollama":
             # Ollama: process one by one
-            for text in truncated_texts:
+            for text in processed_texts:
                 embedding = await self._create_ollama_embedding(text)
                 all_embeddings.append(embedding)
         else:
-            # OpenAI: batch request
-            for i in range(0, len(truncated_texts), batch_size):
-                batch_texts = truncated_texts[i:i + batch_size]
+            # OpenAI: batch request for efficiency
+            for i in range(0, len(processed_texts), batch_size):
+                batch_texts = processed_texts[i:i + batch_size]
                 
                 async with httpx.AsyncClient() as client:
                     response = await client.post(

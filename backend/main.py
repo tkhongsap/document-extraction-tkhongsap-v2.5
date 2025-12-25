@@ -4,8 +4,17 @@ Document AI Extractor Backend
 """
 import os
 import sys
+import io
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
+
+# Fix Windows console encoding for UTF-8 support (Thai, Chinese, etc.)
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+os.environ['PYTHONUTF8'] = '1'
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,17 +27,36 @@ import uvicorn
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.core.config import get_settings
-from app.core.database import init_db
+from app.core.database import init_db, async_session_maker
+from app.services.storage import StorageService
 from app.routes import (
     auth_router,
     documents_router,
     extractions_router,
+    docs_with_extractions_router,
     objects_router,
     extract_router,
     user_router,
     search_router,
     chunks_router,
 )
+from app.routes.rag import router as rag_router
+
+
+async def cleanup_old_extractions_task():
+    """Background task to cleanup old extractions every 6 hours"""
+    while True:
+        try:
+            await asyncio.sleep(6 * 60 * 60)  # Run every 6 hours
+            async with async_session_maker() as db:
+                storage = StorageService(db)
+                deleted_count = await storage.cleanup_old_extractions()
+                if deleted_count > 0:
+                    print(f"[Cleanup] Deleted {deleted_count} old extractions (older than 3 days)")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[Cleanup] Error: {e}")
 
 
 @asynccontextmanager
@@ -44,9 +72,18 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("[FastAPI] Database initialized")
     
+    # Start background cleanup task
+    cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
+    print("[FastAPI] Started extraction cleanup background task")
+    
     yield
     
     # Shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
     print("[FastAPI] Shutting down...")
 
 
@@ -108,10 +145,12 @@ async def log_requests(request: Request, call_next):
 app.include_router(auth_router)
 app.include_router(documents_router)
 app.include_router(extractions_router)
+app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
 app.include_router(search_router)
+app.include_router(rag_router)
 app.include_router(chunks_router)
 
 
