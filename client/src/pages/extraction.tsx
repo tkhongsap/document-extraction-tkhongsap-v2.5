@@ -74,6 +74,10 @@ export default function Extraction() {
   const [showLimitDialog, setShowLimitDialog] = useState(false);
   const [limitDialogMessage, setLimitDialogMessage] = useState({ files: 0, remaining: 0, excess: 0 });
 
+  // File limit exceeded dialog state
+  const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
+  const [fileLimitDialogMessage, setFileLimitDialogMessage] = useState({ attempted: 0, limit: BATCH_FILE_LIMIT, current: 0 });
+
   // Check if this is a general extraction
   const isGeneralExtraction = !type || type === 'general';
 
@@ -305,6 +309,30 @@ export default function Extraction() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
+    onDropRejected: (fileRejections) => {
+      // Check if files were rejected due to too many files
+      const tooManyFiles = fileRejections.some(
+        rejection => rejection.errors.some(e => e.code === 'too-many-files')
+      );
+      
+      if (tooManyFiles) {
+        // Show popup dialog for file limit exceeded
+        setFileLimitDialogMessage({
+          attempted: fileRejections.length,
+          limit: BATCH_FILE_LIMIT,
+          current: batchFiles.length
+        });
+        setShowFileLimitDialog(true);
+      } else {
+        // Other rejection reasons (file type, size, etc.)
+        const invalidTypes = fileRejections.filter(
+          r => r.errors.some(e => e.code === 'file-invalid-type')
+        );
+        if (invalidTypes.length > 0) {
+          toast.error(`${invalidTypes.length} ไฟล์ถูกปฏิเสธเนื่องจากประเภทไฟล์ไม่รองรับ`);
+        }
+      }
+    },
     accept: isGeneralExtraction 
       ? {
           'application/pdf': ['.pdf'],
@@ -794,6 +822,38 @@ export default function Extraction() {
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setShowLimitDialog(false)}>
               OK, I understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* File Limit Exceeded Dialog */}
+      <AlertDialog open={showFileLimitDialog} onOpenChange={setShowFileLimitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle className="h-5 w-5" />
+              {t('fileLimit.title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                {t('fileLimit.attempted')} <strong>{fileLimitDialogMessage.attempted} {t('fileLimit.files')}</strong> {t('fileLimit.maxAllowed')} <strong>{fileLimitDialogMessage.limit} {t('fileLimit.filesPerBatch')}</strong>
+              </p>
+              {fileLimitDialogMessage.current > 0 && (
+                <p>
+                  {t('fileLimit.currentFiles')} <strong>{fileLimitDialogMessage.current} {t('fileLimit.canAddMore')}</strong> <strong>{fileLimitDialogMessage.limit - fileLimitDialogMessage.current} {t('fileLimit.moreFiles')}</strong>
+                </p>
+              )}
+              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                <p><strong>{t('fileLimit.limit')}:</strong> {fileLimitDialogMessage.limit} {t('fileLimit.filesPerBatch')}</p>
+                <p><strong>{t('fileLimit.current')}:</strong> {fileLimitDialogMessage.current} {t('fileLimit.files')}</p>
+                <p><strong>{t('fileLimit.canAdd')}:</strong> {fileLimitDialogMessage.limit - fileLimitDialogMessage.current} {t('fileLimit.files')}</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowFileLimitDialog(false)}>
+              {t('fileLimit.understand')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
