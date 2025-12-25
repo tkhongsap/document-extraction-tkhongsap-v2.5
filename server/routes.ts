@@ -458,22 +458,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             resumeId = resume.id;
             console.log(`[Template Extraction] Resume saved with ID: ${resumeId}, hasEmbedding: ${!!resume.embedding}`);
-
-            // สร้าง semantic chunks สำหรับ resume (RAG)
-            try {
-              console.log(`[Template Extraction] Creating semantic chunks for resume...`);
-              const chunkResult = await chunkAndSaveResume({
-                userId,
-                documentId,
-                extractionId: resume.extractionId || undefined,
-                resumeData: extractionResult.extractedData as ExtractedResumeData,
-                includeFullResume: true
-              });
-              console.log(`[Template Extraction] Created ${chunkResult.totalChunks} chunks for resume`);
-            } catch (chunkError: any) {
-              console.error("[Template Extraction] Warning: Failed to create chunks:", chunkError);
-              // Continue without chunks - resume still saved
-            }
           } catch (error: any) {
             console.error("[Template Extraction] Warning: Failed to save resume:", error);
             // Continue without resume save - extraction still returned
@@ -760,8 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to regenerate embedding" });
     }
   });
-
-  // ==========================================================================
+ // ==========================================================================
   // CHUNK ROUTES - Document chunking for RAG
   // ==========================================================================
 
