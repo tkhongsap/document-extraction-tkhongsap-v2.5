@@ -405,8 +405,8 @@ async def batch_template_extraction(
     
     # Configuration for batch processing
     MAX_RETRIES = 3
-    RETRY_DELAY = 2.0  # seconds between retries
-    BATCH_DELAY = 0.5  # seconds between files to avoid overwhelming the API
+    RETRY_DELAY = 3.0  # seconds between retries (increased for stability)
+    BATCH_DELAY = 1.5  # seconds between files to avoid rate limiting (increased)
     
     results = []
     
@@ -596,8 +596,8 @@ async def batch_general_extraction(
     
     # Configuration for batch processing
     MAX_RETRIES = 3
-    RETRY_DELAY = 2.0  # seconds between retries
-    BATCH_DELAY = 0.5  # seconds between files to avoid overwhelming the API
+    RETRY_DELAY = 3.0  # seconds between retries (increased for stability)
+    BATCH_DELAY = 1.5  # seconds between files to avoid rate limiting (increased)
     
     results = []
     

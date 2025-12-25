@@ -37,9 +37,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PDFDocument } from "pdf-lib";
 
 // Batch processing limit - realistic limit to avoid network issues
 const BATCH_FILE_LIMIT = 100;
+
+// Helper to count PDF pages from a File
+async function countPdfPages(file: File): Promise<number> {
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    return 1; // Non-PDF files count as 1 page
+  }
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+    return pdfDoc.getPageCount();
+  } catch (error) {
+    console.warn(`[PDF] Could not count pages for ${file.name}:`, error);
+    return 1; // Default to 1 page on error
+  }
+}
+
+// Helper to count total pages for multiple files
+async function countTotalPages(files: File[]): Promise<number> {
+  const pageCounts = await Promise.all(files.map(countPdfPages));
+  return pageCounts.reduce((sum, count) => sum + count, 0);
+}
 
 export default function Extraction() {
   const { t } = useLanguage();
@@ -180,22 +202,27 @@ export default function Extraction() {
       return;
     }
 
+    // Count total pages from all PDFs
+    setIsProcessing(true);
+    toast.info("Counting pages...");
+    const totalPages = await countTotalPages(batchFiles);
+    
     // Debug log
-    console.log('[Batch] userData:', userData, 'pagesRemaining:', pagesRemaining, 'batchFiles:', batchFiles.length);
+    console.log('[Batch] userData:', userData, 'pagesRemaining:', pagesRemaining, 'batchFiles:', batchFiles.length, 'totalPages:', totalPages);
 
-    // Check monthly limit before processing
-    if (batchFiles.length > pagesRemaining) {
+    // Check monthly limit before processing (using actual page count)
+    if (totalPages > pagesRemaining) {
+      setIsProcessing(false);
       setLimitDialogMessage({
-        files: batchFiles.length,
+        files: totalPages, // Now this is pages, not files
         remaining: pagesRemaining,
-        excess: batchFiles.length - pagesRemaining
+        excess: totalPages - pagesRemaining
       });
       setShowLimitDialog(true);
       return;
     }
 
-    console.log('[Batch Extraction] Starting batch template extraction for:', batchFiles.length, 'files');
-    setIsProcessing(true);
+    console.log('[Batch Extraction] Starting batch template extraction for:', batchFiles.length, 'files,', totalPages, 'pages');
     setBatchTemplateResults(null);
 
     try {
@@ -220,19 +247,24 @@ export default function Extraction() {
   const handleBatchGeneralExtraction = async () => {
     if (batchFiles.length === 0) return;
 
-    // Check monthly limit before processing
-    if (batchFiles.length > pagesRemaining) {
+    // Count total pages from all PDFs
+    setIsProcessing(true);
+    toast.info("Counting pages...");
+    const totalPages = await countTotalPages(batchFiles);
+
+    // Check monthly limit before processing (using actual page count)
+    if (totalPages > pagesRemaining) {
+      setIsProcessing(false);
       setLimitDialogMessage({
-        files: batchFiles.length,
+        files: totalPages, // Now this is pages, not files
         remaining: pagesRemaining,
-        excess: batchFiles.length - pagesRemaining
+        excess: totalPages - pagesRemaining
       });
       setShowLimitDialog(true);
       return;
     }
 
-    console.log('[Batch General Extraction] Starting for:', batchFiles.length, 'files');
-    setIsProcessing(true);
+    console.log('[Batch General Extraction] Starting for:', batchFiles.length, 'files,', totalPages, 'pages');
     setBatchGeneralResults(null);
 
     try {
@@ -805,17 +837,19 @@ export default function Extraction() {
               <AlertCircle className="h-5 w-5" />
               Monthly Limit Exceeded
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>
-                You are trying to process <strong>{limitDialogMessage.files} files</strong>, 
-                but you only have <strong>{limitDialogMessage.remaining} pages remaining</strong> this month.
-              </p>
-              <p>
-                Please remove <strong>{limitDialogMessage.excess} file(s)</strong> or upgrade your plan to continue.
-              </p>
-              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-                <p><strong>Current usage:</strong> {userData?.monthly_usage || 0} / {userData?.monthly_limit || 0} pages</p>
-                <p><strong>Pages remaining:</strong> {pagesRemaining}</p>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Your files contain <strong>{limitDialogMessage.files} pages</strong>, 
+                  but you only have <strong>{limitDialogMessage.remaining} pages remaining</strong> this month.
+                </p>
+                <p>
+                  You need <strong>{limitDialogMessage.excess} more pages</strong>. Please remove some files or upgrade your plan.
+                </p>
+                <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                  <p><strong>Current usage:</strong> {userData?.monthlyUsage || 0} / {userData?.monthlyLimit || 0} pages</p>
+                  <p><strong>Pages remaining:</strong> {pagesRemaining}</p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -835,19 +869,21 @@ export default function Extraction() {
               <AlertCircle className="h-5 w-5" />
               {t('fileLimit.title')}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>
-                {t('fileLimit.attempted')} <strong>{fileLimitDialogMessage.attempted} {t('fileLimit.files')}</strong> {t('fileLimit.maxAllowed')} <strong>{fileLimitDialogMessage.limit} {t('fileLimit.filesPerBatch')}</strong>
-              </p>
-              {fileLimitDialogMessage.current > 0 && (
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  {t('fileLimit.currentFiles')} <strong>{fileLimitDialogMessage.current} {t('fileLimit.canAddMore')}</strong> <strong>{fileLimitDialogMessage.limit - fileLimitDialogMessage.current} {t('fileLimit.moreFiles')}</strong>
+                  {t('fileLimit.attempted')} <strong>{fileLimitDialogMessage.attempted} {t('fileLimit.files')}</strong> {t('fileLimit.maxAllowed')} <strong>{fileLimitDialogMessage.limit} {t('fileLimit.filesPerBatch')}</strong>
                 </p>
-              )}
-              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-                <p><strong>{t('fileLimit.limit')}:</strong> {fileLimitDialogMessage.limit} {t('fileLimit.filesPerBatch')}</p>
-                <p><strong>{t('fileLimit.current')}:</strong> {fileLimitDialogMessage.current} {t('fileLimit.files')}</p>
-                <p><strong>{t('fileLimit.canAdd')}:</strong> {fileLimitDialogMessage.limit - fileLimitDialogMessage.current} {t('fileLimit.files')}</p>
+                {fileLimitDialogMessage.current > 0 && (
+                  <p>
+                    {t('fileLimit.currentFiles')} <strong>{fileLimitDialogMessage.current} {t('fileLimit.canAddMore')}</strong> <strong>{fileLimitDialogMessage.limit - fileLimitDialogMessage.current} {t('fileLimit.moreFiles')}</strong>
+                  </p>
+                )}
+                <div className="mt-4 p-3 bg-muted rounded-lg">
+                  <p><strong>{t('fileLimit.limit')}:</strong> {fileLimitDialogMessage.limit} {t('fileLimit.filesPerBatch')}</p>
+                  <p><strong>{t('fileLimit.current')}:</strong> {fileLimitDialogMessage.current} {t('fileLimit.files')}</p>
+                  <p><strong>{t('fileLimit.canAdd')}:</strong> {fileLimitDialogMessage.limit - fileLimitDialogMessage.current} {t('fileLimit.files')}</p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

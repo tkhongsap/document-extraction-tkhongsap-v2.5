@@ -270,7 +270,8 @@ export async function processBatchTemplateExtraction(
   files: File[],
   documentType: DocumentType
 ): Promise<BatchExtractionResponse<BatchTemplateResultData>> {
-  const CHUNK_SIZE = 10; // Process 10 files at a time
+  const CHUNK_SIZE = 5; // Process 5 files at a time to avoid rate limiting
+  const CHUNK_DELAY = 2000; // 2 second delay between chunks
   const allResults: BatchResultItem<BatchTemplateResultData>[] = [];
   let successCount = 0;
   let failureCount = 0;
@@ -278,6 +279,11 @@ export async function processBatchTemplateExtraction(
   // Split files into chunks
   for (let i = 0; i < files.length; i += CHUNK_SIZE) {
     const chunk = files.slice(i, i + CHUNK_SIZE);
+    
+    // Add delay between chunks (not before the first chunk)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
+    }
     
     const formData = new FormData();
     chunk.forEach((file) => {
@@ -336,14 +342,15 @@ export async function processBatchTemplateExtraction(
 
 /**
  * Batch process multiple documents using LlamaParse for general extraction.
- * Processes in chunks of 10 files to avoid timeout issues.
+ * Processes in chunks of 5 files to avoid timeout and rate limiting issues.
  * @param files - Array of files to process
  * @returns Batch results with individual file statuses
  */
 export async function processBatchGeneralExtraction(
   files: File[]
 ): Promise<BatchExtractionResponse<BatchGeneralResultData>> {
-  const CHUNK_SIZE = 10; // Process 10 files at a time
+  const CHUNK_SIZE = 5; // Process 5 files at a time to avoid rate limiting
+  const CHUNK_DELAY = 2000; // 2 second delay between chunks
   const allResults: BatchResultItem<BatchGeneralResultData>[] = [];
   let successCount = 0;
   let failureCount = 0;
@@ -351,6 +358,11 @@ export async function processBatchGeneralExtraction(
   // Split files into chunks
   for (let i = 0; i < files.length; i += CHUNK_SIZE) {
     const chunk = files.slice(i, i + CHUNK_SIZE);
+    
+    // Add delay between chunks (not before the first chunk)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
+    }
     
     const formData = new FormData();
     chunk.forEach((file) => {
