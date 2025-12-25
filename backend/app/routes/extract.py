@@ -16,6 +16,7 @@ from app.services.object_storage import ObjectStorageService, ObjectAclPolicy
 from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
 from app.services.resume_service import ResumeService
+from app.services.chunking_service import ChunkingService
 from app.models.user import User
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate
@@ -213,6 +214,21 @@ async def template_extraction(
                 resume_id = resume.id
                 embedding_status = "with embedding" if resume.embedding else "without embedding"
                 safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
+             
+                # Auto-create chunks for RAG
+                try:
+                    chunking_service = ChunkingService(db)
+                    chunks = await chunking_service.chunk_and_save_resume(
+                        user_id=user.id,
+                        extraction_id=extraction.id,
+                        extracted_data=result.extracted_data,
+                        document_id=document_id,
+                        generate_embeddings=can_generate_embedding
+                    )
+                    safe_print(f"[Template Extraction] Created {len(chunks)} chunks for resume")
+                except Exception as chunk_error:
+                    safe_print(f"[Template Extraction] Warning: Failed to create chunks: {chunk_error}")
+                    # Continue without chunks - resume is still saved
             except Exception as e:
                 safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
                 import traceback
