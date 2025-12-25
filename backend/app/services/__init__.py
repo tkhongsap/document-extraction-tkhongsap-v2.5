@@ -37,6 +37,8 @@ from .embedding_service import (
     get_embedding_service,
 )
 from .resume_service import ResumeService
+from .llm_service import LLMService, get_llm_service
+from .rag_service import RAGService, get_rag_service
 
 __all__ = [
     # Storage
@@ -63,4 +65,10 @@ __all__ = [
     "get_embedding_service",
     # Resume
     "ResumeService",
+    # LLM
+    "LLMService",
+    "get_llm_service",
+    # RAG
+    "RAGService",
+    "get_rag_service",
 ]

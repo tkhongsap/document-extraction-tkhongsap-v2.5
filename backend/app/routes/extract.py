@@ -17,6 +17,7 @@ from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
 from app.services.resume_service import ResumeService
 from app.services.chunking_service import ChunkingService
+from app.services.chunking_service import ChunkingService
 from app.models.user import User
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate

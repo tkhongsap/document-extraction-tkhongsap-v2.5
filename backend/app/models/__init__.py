@@ -10,7 +10,6 @@ from .email_verification import EmailVerification
 from .resume import Resume
 from .document_chunk import DocumentChunk
 
-
 __all__ = [
     "User",
     "Document", 
@@ -20,5 +19,4 @@ __all__ = [
     "EmailVerification",
     "Resume",
     "DocumentChunk",
-
 ]

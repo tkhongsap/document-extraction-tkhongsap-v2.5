@@ -22,4 +22,5 @@ __all__ = [
     "objects_router",
     "search_router",
     "chunks_router",
+    "chunks_router",
 ]
