@@ -477,7 +477,7 @@ function ChatResultsArea({ response, isLoading, error }: ChatResultsAreaProps) {
               <div className="space-y-2">
                 {response.sources.map((source, idx) => (
                   <SourceCard key={source.resume_id} source={source} rank={idx + 1} />
-                ))}}
+                ))}
               </div>
             )}
           </CardContent>
