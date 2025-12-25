@@ -1,7 +1,7 @@
 import { useLanguage } from "@/lib/i18n";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -28,6 +28,15 @@ import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Batch processing limit - realistic limit to avoid network issues
 const BATCH_FILE_LIMIT = 100;
@@ -61,8 +70,25 @@ export default function Extraction() {
   // Selected batch result for viewing
   const [selectedBatchIndex, setSelectedBatchIndex] = useState<number>(0);
 
+  // Limit exceeded dialog state
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [limitDialogMessage, setLimitDialogMessage] = useState({ files: 0, remaining: 0, excess: 0 });
+
   // Check if this is a general extraction
   const isGeneralExtraction = !type || type === 'general';
+
+  // Get user data for monthly limit check
+  const { data: userData } = useQuery<{ monthlyUsage: number; monthlyLimit: number }>({
+    queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/user", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch user data");
+      return res.json();
+    },
+  });
+  
+  // Calculate remaining pages
+  const pagesRemaining = userData ? userData.monthlyLimit - userData.monthlyUsage : 0;
 
   // Handle file drop - just store file for preview (two-phase UX for all types)
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -150,6 +176,20 @@ export default function Extraction() {
       return;
     }
 
+    // Debug log
+    console.log('[Batch] userData:', userData, 'pagesRemaining:', pagesRemaining, 'batchFiles:', batchFiles.length);
+
+    // Check monthly limit before processing
+    if (batchFiles.length > pagesRemaining) {
+      setLimitDialogMessage({
+        files: batchFiles.length,
+        remaining: pagesRemaining,
+        excess: batchFiles.length - pagesRemaining
+      });
+      setShowLimitDialog(true);
+      return;
+    }
+
     console.log('[Batch Extraction] Starting batch template extraction for:', batchFiles.length, 'files');
     setIsProcessing(true);
     setBatchTemplateResults(null);
@@ -175,6 +215,17 @@ export default function Extraction() {
   // Handle batch general extraction
   const handleBatchGeneralExtraction = async () => {
     if (batchFiles.length === 0) return;
+
+    // Check monthly limit before processing
+    if (batchFiles.length > pagesRemaining) {
+      setLimitDialogMessage({
+        files: batchFiles.length,
+        remaining: pagesRemaining,
+        excess: batchFiles.length - pagesRemaining
+      });
+      setShowLimitDialog(true);
+      return;
+    }
 
     console.log('[Batch General Extraction] Starting for:', batchFiles.length, 'files');
     setIsProcessing(true);
@@ -717,6 +768,36 @@ export default function Extraction() {
           </Card>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* Monthly Limit Exceeded Dialog */}
+      <AlertDialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Monthly Limit Exceeded
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                You are trying to process <strong>{limitDialogMessage.files} files</strong>, 
+                but you only have <strong>{limitDialogMessage.remaining} pages remaining</strong> this month.
+              </p>
+              <p>
+                Please remove <strong>{limitDialogMessage.excess} file(s)</strong> or upgrade your plan to continue.
+              </p>
+              <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
+                <p><strong>Current usage:</strong> {userData?.monthly_usage || 0} / {userData?.monthly_limit || 0} pages</p>
+                <p><strong>Pages remaining:</strong> {pagesRemaining}</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowLimitDialog(false)}>
+              OK, I understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
