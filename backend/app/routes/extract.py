@@ -17,7 +17,6 @@ from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
 from app.services.resume_service import ResumeService
 from app.services.chunking_service import ChunkingService
-from app.services.chunking_service import ChunkingService
 from app.models.user import User
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate
@@ -30,9 +29,13 @@ def safe_print(message: str) -> None:
     """Print message safely with UTF-8 encoding, handling encoding errors gracefully"""
     try:
         print(message)
-    except UnicodeEncodeError:
-        # Fallback: encode with errors='replace' for Windows console
-        print(message.encode('utf-8', errors='replace').decode('utf-8', errors='replace'))
+        # Also write to debug log file
+        with open("backend/debug_extract.log", "a", encoding="utf-8") as f:
+            import datetime
+            timestamp = datetime.datetime.now().isoformat()
+            f.write(f"[{timestamp}] {message}\n")
+    except Exception:
+        pass
 
 
 # Allowed MIME types for upload
@@ -193,17 +196,26 @@ async def template_extraction(
         # If document type is resume, also save to resumes table with embedding
         resume_id = None
         safe_print(f"[Template Extraction] Checking resume save: documentType={documentType}, has_data={bool(result.extracted_data)}")
+        
         if documentType == "resume" and result.extracted_data:
+            # Check if OpenAI API key exists for embedding generation
+            from app.core.config import get_settings
+            settings = get_settings()
+            # Always generate embedding if OpenAI API key is configured
+            can_generate_embedding = bool(settings.openai_api_key)
+            safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
+
+            # 1. Try to save to Resumes table
             try:
                 safe_print(f"[Template Extraction] Attempting to save resume...")
                 resume_service = ResumeService(db)
-                # Check if OpenAI API key exists for embedding generation
-                from app.core.config import get_settings
-                settings = get_settings()
+                # # Check if OpenAI API key exists for embedding generation
+                # from app.core.config import get_settings
+                # settings = get_settings()
                 
-                # Always generate embedding if OpenAI API key is configured
-                can_generate_embedding = bool(settings.openai_api_key)
-                safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
+                # # Always generate embedding if OpenAI API key is configured
+                # can_generate_embedding = bool(settings.openai_api_key)
+                # safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
                 
                 resume = await resume_service.create_from_extraction(
                     user_id=user.id,
@@ -215,26 +227,28 @@ async def template_extraction(
                 resume_id = resume.id
                 embedding_status = "with embedding" if resume.embedding else "without embedding"
                 safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
-             
-                # Auto-create chunks for RAG
-                try:
-                    chunking_service = ChunkingService(db)
-                    chunks = await chunking_service.chunk_and_save_resume(
-                        user_id=user.id,
-                        extraction_id=extraction.id,
-                        extracted_data=result.extracted_data,
-                        document_id=document_id,
-                        generate_embeddings=can_generate_embedding
-                    )
-                    safe_print(f"[Template Extraction] Created {len(chunks)} chunks for resume")
-                except Exception as chunk_error:
-                    safe_print(f"[Template Extraction] Warning: Failed to create chunks: {chunk_error}")
-                    # Continue without chunks - resume is still saved
             except Exception as e:
                 safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
                 import traceback
                 traceback.print_exc()
                 # Continue without resume save - extraction is still saved
+
+            # 2. Try to create chunks (Independent of Resume table success)
+            try:
+                safe_print(f"[Template Extraction] Attempting to create chunks...")
+                chunking_service = ChunkingService(db)
+                chunks = await chunking_service.chunk_and_save_resume(
+                    user_id=user.id,
+                    extraction_id=extraction.id,
+                    extracted_data=result.extracted_data,
+                    document_id=resume_id if resume_id else document_id,
+                    generate_embeddings=can_generate_embedding
+                )
+                safe_print(f"[Template Extraction] Created {len(chunks)} chunks for resume")
+            except Exception as chunk_error:
+                safe_print(f"[Template Extraction] Warning: Failed to create chunks: {chunk_error}")
+                import traceback
+                traceback.print_exc()
         else:
             safe_print(f"[Template Extraction] Skipping resume save")
         
@@ -497,14 +511,16 @@ async def batch_template_extraction(
             # If document type is resume, also save to resumes table with embedding
             resume_id = None
             if documentType == "resume" and extraction_result.extracted_data:
+                # Check if OpenAI API key exists for embedding generation
+                from app.core.config import get_settings
+                settings = get_settings()
+                
+                # Always generate embedding if OpenAI API key is configured
+                can_generate_embedding = bool(settings.openai_api_key)
+
+                # 1. Try to save to Resumes table
                 try:
                     resume_service = ResumeService(db)
-                    # Check if OpenAI API key exists for embedding generation
-                    from app.core.config import get_settings
-                    settings = get_settings()
-                    
-                    # Always generate embedding if OpenAI API key is configured
-                    can_generate_embedding = bool(settings.openai_api_key)
                     
                     resume = await resume_service.create_from_extraction(
                         user_id=current_user.id,
@@ -516,6 +532,23 @@ async def batch_template_extraction(
                     resume_id = resume.id
                 except Exception as e:
                     safe_print(f"[Batch Template] Warning: Failed to save resume: {e}")
+
+                # 2. Try to create chunks (Independent of Resume table success)
+                try:
+                    safe_print(f"[Batch Template] Attempting to create chunks...")
+                    chunking_service = ChunkingService(db)
+                    chunks = await chunking_service.chunk_and_save_resume(
+                        user_id=current_user.id,
+                        extraction_id=extraction.id,
+                        extracted_data=extraction_result.extracted_data,
+                        document_id=resume_id if resume_id else document_id,
+                        generate_embeddings=can_generate_embedding
+                    )
+                    safe_print(f"[Batch Template] Created {len(chunks)} chunks for resume")
+                except Exception as chunk_error:
+                    safe_print(f"[Batch Template] Warning: Failed to create chunks: {chunk_error}")
+                    import traceback
+                    traceback.print_exc()
             
             result_item["success"] = True
             result_item["data"] = {

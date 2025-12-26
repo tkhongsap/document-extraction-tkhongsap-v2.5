@@ -71,6 +71,9 @@ class ChunkingService:
         chunks: List[ResumeChunk] = []
         chunk_index = 0
         
+        # Extract candidate name for metadata grouping
+        candidate_name = extracted_data.get("name") or extracted_data.get("full_name")
+        
         # 1. Personal Info Chunk
         personal_chunk = self._create_personal_info_chunk(extracted_data, chunk_index)
         if personal_chunk:
@@ -116,6 +119,11 @@ class ChunkingService:
         full_chunk = self._create_full_resume_chunk(extracted_data, chunk_index, chunks)
         if full_chunk:
             chunks.append(full_chunk)
+        
+        # Add candidate name to all chunks metadata for grouping
+        if candidate_name:
+            for chunk in chunks:
+                chunk.metadata["candidate_name"] = candidate_name
         
         # Count chunk types
         type_counts: Dict[str, int] = {}
@@ -544,11 +552,11 @@ class ChunkingService:
             SELECT 
                 id, user_id, document_id, extraction_id,
                 chunk_index, chunk_type, text, metadata, created_at,
-                1 - (embedding <=> :embedding::vector) as similarity
+                1 - (embedding <=> CAST(:embedding AS vector)) as similarity
             FROM document_chunks
             WHERE user_id = :user_id
                 AND embedding IS NOT NULL
-                AND 1 - (embedding <=> :embedding::vector) >= :threshold
+                AND 1 - (embedding <=> CAST(:embedding AS vector)) >= :threshold
         """
         
         if chunk_types:
