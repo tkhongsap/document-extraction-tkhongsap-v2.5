@@ -1,5 +1,5 @@
 import { useLanguage } from "@/lib/i18n";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,33 @@ export default function Extraction() {
   const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
   const [fileLimitDialogMessage, setFileLimitDialogMessage] = useState({ attempted: 0, limit: BATCH_FILE_LIMIT, current: 0 });
 
+  // Batch processing timer state
+  const [batchStartTime, setBatchStartTime] = useState<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Single file state for page count and timer
+  const [singleFilePages, setSingleFilePages] = useState<number>(1);
+  const [singleFileStartTime, setSingleFileStartTime] = useState<number | null>(null);
+
+  // Timer effect for real-time countdown (works for both batch and single file)
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const startTime = isBatchMode ? batchStartTime : singleFileStartTime;
+    
+    if (isProcessing && startTime) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setElapsedSeconds(elapsed);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing, isBatchMode, batchStartTime, singleFileStartTime]);
+
   // Check if this is a general extraction
   const isGeneralExtraction = !type || type === 'general';
 
@@ -183,9 +210,25 @@ export default function Extraction() {
       return;
     }
 
-    console.log('[Extraction] Starting template extraction for:', file.name, 'type:', type);
+    // Count pages first
+    const pageCount = await countPdfPages(file);
+    setSingleFilePages(pageCount);
+
+    // Check monthly limit
+    if (pageCount > pagesRemaining) {
+      setLimitDialogMessage({
+        files: pageCount,
+        remaining: pagesRemaining,
+        excess: pageCount - pagesRemaining
+      });
+      setShowLimitDialog(true);
+      return;
+    }
+
+    console.log('[Extraction] Starting template extraction for:', file.name, 'type:', type, 'pages:', pageCount);
     setIsProcessing(true);
     setTemplateResults(null);
+    setSingleFileStartTime(Date.now());
 
     try {
       console.log('[Extraction] Calling processTemplateExtraction API...');
@@ -209,6 +252,7 @@ export default function Extraction() {
       setTemplateResults(null);
     } finally {
       setIsProcessing(false);
+      setSingleFileStartTime(null);
       console.log('[Extraction] Processing complete, isProcessing set to false');
     }
   };
@@ -245,6 +289,7 @@ export default function Extraction() {
 
     console.log('[Batch Extraction] Starting batch template extraction for:', batchFiles.length, 'files,', totalPages, 'pages');
     setBatchTemplateResults(null);
+    setBatchStartTime(Date.now());
 
     try {
       const response = await processBatchTemplateExtraction(batchFiles, type as DocumentType);
@@ -261,6 +306,7 @@ export default function Extraction() {
       setBatchTemplateResults(null);
     } finally {
       setIsProcessing(false);
+      setBatchStartTime(null);
     }
   };
 
@@ -287,6 +333,7 @@ export default function Extraction() {
 
     console.log('[Batch General Extraction] Starting for:', batchFiles.length, 'files,', totalPages, 'pages');
     setBatchGeneralResults(null);
+    setBatchStartTime(Date.now());
 
     try {
       const response = await processBatchGeneralExtraction(batchFiles);
@@ -303,6 +350,7 @@ export default function Extraction() {
       setBatchGeneralResults(null);
     } finally {
       setIsProcessing(false);
+      setBatchStartTime(null);
     }
   };
 
@@ -310,8 +358,25 @@ export default function Extraction() {
   const handleParseDocument = async () => {
     if (!file) return;
     
+    // Count pages first
+    const pageCount = await countPdfPages(file);
+    setSingleFilePages(pageCount);
+
+    // Check monthly limit
+    if (pageCount > pagesRemaining) {
+      setLimitDialogMessage({
+        files: pageCount,
+        remaining: pagesRemaining,
+        excess: pageCount - pagesRemaining
+      });
+      setShowLimitDialog(true);
+      return;
+    }
+
+    console.log('[General Extraction] Starting for:', file.name, 'pages:', pageCount);
     setIsProcessing(true);
     setGeneralResults(null);
+    setSingleFileStartTime(Date.now());
 
     try {
       const response = await processGeneralExtraction(file);
@@ -328,6 +393,7 @@ export default function Extraction() {
       setGeneralResults(null);
     } finally {
       setIsProcessing(false);
+      setSingleFileStartTime(null);
     }
   };
 
@@ -711,39 +777,86 @@ export default function Extraction() {
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isBatchMode ? (
               // Loading state for batch processing
-              <div className="h-full flex flex-col items-center justify-center space-y-4 p-8">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <div className="text-center">
-                  <p className="text-muted-foreground font-medium">
-                    {t('extract.batch_processing') || 'Processing batch...'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Processing {batchFiles.length} files sequentially
-                  </p>
-                  <p className="text-sm text-primary mt-2 font-medium">
-                    {formatEstimatedTime(Math.ceil(batchFiles.length * (isGeneralExtraction ? 15 : 20)))} estimated
-                  </p>
-                </div>
-              </div>
-            ) : isProcessing && isGeneralExtraction ? (
-              // Loading state for general extraction
-              <div className="h-full flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <div className="text-center">
-                  <p className="text-muted-foreground font-medium">
-                    {t('extract.parsing') || 'Parsing document with LlamaParse...'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t('extract.parsing_sub') || 'This may take a moment for larger documents'}
-                  </p>
-                </div>
-              </div>
-            ) : isProcessing && !isGeneralExtraction ? (
-              // Loading state for template extraction
-              <div className="h-full flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-muted-foreground font-medium">{t('extract.processing')}</p>
-              </div>
+              (() => {
+                const totalEstimatedSeconds = Math.ceil(batchFiles.length * (isGeneralExtraction ? 20 : 30));
+                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
+                return (
+                  <div className="h-full flex flex-col items-center justify-center space-y-4 p-8">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <div className="text-center">
+                      <p className="text-muted-foreground font-medium">
+                        {t('extract.batch_processing') || 'Processing batch...'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Processing {batchFiles.length} files sequentially
+                      </p>
+                      <p className="text-sm text-primary mt-2 font-medium">
+                        {remainingSeconds > 0 
+                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
+                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : isProcessing && isGeneralExtraction && !isBatchMode ? (
+              // Loading state for single file general extraction
+              (() => {
+                const totalEstimatedSeconds = Math.ceil(singleFilePages * 20);
+                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
+                return (
+                  <div className="h-full flex flex-col items-center justify-center space-y-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <div className="text-center">
+                      <p className="text-muted-foreground font-medium">
+                        {t('extract.parsing') || 'Parsing document with LlamaParse...'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Processing {singleFilePages} page{singleFilePages > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm text-primary mt-2 font-medium">
+                        {remainingSeconds > 0 
+                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
+                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : isProcessing && !isGeneralExtraction && !isBatchMode ? (
+              // Loading state for single file template extraction
+              (() => {
+                const totalEstimatedSeconds = Math.ceil(singleFilePages * 30);
+                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
+                return (
+                  <div className="h-full flex flex-col items-center justify-center space-y-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <div className="text-center">
+                      <p className="text-muted-foreground font-medium">{t('extract.processing')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Processing {singleFilePages} page{singleFilePages > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm text-primary mt-2 font-medium">
+                        {remainingSeconds > 0 
+                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
+                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()
             ) : isBatchMode && batchGeneralResults ? (
               // Batch general results
               (() => {
