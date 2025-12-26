@@ -261,6 +261,7 @@ export type BatchGeneralResultData = {
 
 /**
  * Batch process multiple documents using LlamaExtract templates.
+ * Processes in chunks of 10 files to avoid timeout issues.
  * @param files - Array of files to process
  * @param documentType - The type of document (bank, invoice, po, contract, resume)
  * @returns Batch results with individual file statuses
@@ -269,51 +270,152 @@ export async function processBatchTemplateExtraction(
   files: File[],
   documentType: DocumentType
 ): Promise<BatchExtractionResponse<BatchTemplateResultData>> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-  formData.append("documentType", documentType);
+  const CHUNK_SIZE = 5; // Process 5 files at a time to avoid rate limiting
+  const CHUNK_DELAY = 2000; // 2 second delay between chunks
+  const allResults: BatchResultItem<BatchTemplateResultData>[] = [];
+  let successCount = 0;
+  let failureCount = 0;
 
-  const res = await fetch("/api/extract/batch/process", {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
+  // Split files into chunks
+  for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+    const chunk = files.slice(i, i + CHUNK_SIZE);
+    
+    // Add delay between chunks (not before the first chunk)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
+    }
+    
+    const formData = new FormData();
+    chunk.forEach((file) => {
+      formData.append("files", file);
+    });
+    formData.append("documentType", documentType);
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || error.message || "Batch template extraction failed");
+    try {
+      const res = await fetch("/api/extract/batch/process", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        // Mark all files in this chunk as failed
+        chunk.forEach((file) => {
+          allResults.push({
+            fileName: file.name,
+            success: false,
+            error: error.detail || error.message || "Batch extraction failed",
+            data: null,
+          });
+          failureCount++;
+        });
+        continue;
+      }
+
+      const chunkResult: BatchExtractionResponse<BatchTemplateResultData> = await res.json();
+      allResults.push(...chunkResult.results);
+      successCount += chunkResult.successCount;
+      failureCount += chunkResult.failureCount;
+    } catch (error: any) {
+      // Network error - mark all files in chunk as failed
+      chunk.forEach((file) => {
+        allResults.push({
+          fileName: file.name,
+          success: false,
+          error: error.message || "Network error",
+          data: null,
+        });
+        failureCount++;
+      });
+    }
   }
 
-  return res.json();
+  return {
+    success: true,
+    totalFiles: files.length,
+    successCount,
+    failureCount,
+    results: allResults,
+  };
 }
 
 /**
  * Batch process multiple documents using LlamaParse for general extraction.
+ * Processes in chunks of 5 files to avoid timeout and rate limiting issues.
  * @param files - Array of files to process
  * @returns Batch results with individual file statuses
  */
 export async function processBatchGeneralExtraction(
   files: File[]
 ): Promise<BatchExtractionResponse<BatchGeneralResultData>> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
+  const CHUNK_SIZE = 5; // Process 5 files at a time to avoid rate limiting
+  const CHUNK_DELAY = 2000; // 2 second delay between chunks
+  const allResults: BatchResultItem<BatchGeneralResultData>[] = [];
+  let successCount = 0;
+  let failureCount = 0;
 
-  const res = await fetch("/api/extract/batch/general", {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
+  // Split files into chunks
+  for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+    const chunk = files.slice(i, i + CHUNK_SIZE);
+    
+    // Add delay between chunks (not before the first chunk)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
+    }
+    
+    const formData = new FormData();
+    chunk.forEach((file) => {
+      formData.append("files", file);
+    });
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || error.message || "Batch general extraction failed");
+    try {
+      const res = await fetch("/api/extract/batch/general", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        // Mark all files in this chunk as failed
+        chunk.forEach((file) => {
+          allResults.push({
+            fileName: file.name,
+            success: false,
+            error: error.detail || error.message || "Batch extraction failed",
+            data: null,
+          });
+          failureCount++;
+        });
+        continue;
+      }
+
+      const chunkResult: BatchExtractionResponse<BatchGeneralResultData> = await res.json();
+      allResults.push(...chunkResult.results);
+      successCount += chunkResult.successCount;
+      failureCount += chunkResult.failureCount;
+    } catch (error: any) {
+      // Network error - mark all files in chunk as failed
+      chunk.forEach((file) => {
+        allResults.push({
+          fileName: file.name,
+          success: false,
+          error: error.message || "Network error",
+          data: null,
+        });
+        failureCount++;
+      });
+    }
   }
 
-  return res.json();
+  return {
+    success: true,
+    totalFiles: files.length,
+    successCount,
+    failureCount,
+    results: allResults,
+  };
 }
 
 export interface SaveExtractionRequest {

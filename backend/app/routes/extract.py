@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import httpx
 import io
+import asyncio
 
 from pypdf import PdfReader
 
@@ -391,7 +392,7 @@ async def batch_template_extraction(
 ):
     """
     Batch process multiple documents using LlamaExtract templates.
-    Processes files sequentially to avoid rate limiting.
+    Processes files sequentially with retry and delay to avoid rate limiting.
     """
     safe_print(f"[Batch Template Extraction] Processing {len(files)} files with template: {documentType}")
     
@@ -403,9 +404,14 @@ async def batch_template_extraction(
             detail=f"Invalid document type. Must be one of: {', '.join(valid_types)}"
         )
     
+    # Configuration for batch processing
+    MAX_RETRIES = 3
+    RETRY_DELAY = 3.0  # seconds between retries (increased for stability)
+    BATCH_DELAY = 1.5  # seconds between files to avoid rate limiting (increased)
+    
     results = []
     
-    for file in files:
+    for idx, file in enumerate(files):
         result_item = {
             "fileName": file.filename,
             "success": False,
@@ -467,14 +473,29 @@ async def batch_template_extraction(
                 db=db,
             )
             
-            # Process with LlamaExtract
+            # Process with LlamaExtract (with retry for network errors)
             extract_service = create_llama_extract_service()
             
-            extraction_result = await extract_service.extract_document(
-                file_buffer=content,
-                file_name=file.filename or "document",
-                document_type=documentType,  # Pass string directly, already validated
-            )
+            extraction_result = None
+            last_error = None
+            for retry in range(MAX_RETRIES):
+                try:
+                    extraction_result = await extract_service.extract_document(
+                        file_buffer=content,
+                        file_name=file.filename or "document",
+                        document_type=documentType,
+                    )
+                    break  # Success, exit retry loop
+                except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+                    last_error = e
+                    if retry < MAX_RETRIES - 1:
+                        safe_print(f"[Batch Template] Retry {retry + 1}/{MAX_RETRIES} for {file.filename}: {e}")
+                        await asyncio.sleep(RETRY_DELAY * (retry + 1))  # Exponential backoff
+                    else:
+                        raise  # Re-raise on final retry
+            
+            if extraction_result is None:
+                raise last_error or Exception("Extraction failed after retries")
             
             # Update usage
             current_user.monthly_usage += page_count
@@ -536,10 +557,16 @@ async def batch_template_extraction(
             
         except LlamaExtractError as e:
             result_item["error"] = str(e)
+        except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+            result_item["error"] = f"Network error: {e}"
         except Exception as e:
             result_item["error"] = str(e)
         
         results.append(result_item)
+        
+        # Add delay between files to avoid overwhelming the API (not after the last file)
+        if idx < len(files) - 1:
+            await asyncio.sleep(BATCH_DELAY)
     
     # Count successes and failures
     success_count = sum(1 for r in results if r["success"])
@@ -564,13 +591,18 @@ async def batch_general_extraction(
 ):
     """
     Batch process multiple documents using LlamaParse for general extraction.
-    Processes files sequentially to avoid rate limiting.
+    Processes files sequentially with retry and delay to avoid rate limiting.
     """
     safe_print(f"[Batch General Extraction] Processing {len(files)} files")
     
+    # Configuration for batch processing
+    MAX_RETRIES = 3
+    RETRY_DELAY = 3.0  # seconds between retries (increased for stability)
+    BATCH_DELAY = 1.5  # seconds between files to avoid rate limiting (increased)
+    
     results = []
     
-    for file in files:
+    for idx, file in enumerate(files):
         result_item = {
             "fileName": file.filename,
             "success": False,
@@ -636,13 +668,28 @@ async def batch_general_extraction(
                 db=db,
             )
             
-            # Process with LlamaParse
+            # Process with LlamaParse (with retry for network errors)
             parse_service = create_llama_parse_service()
             
-            extraction_result = await parse_service.parse_document(
-                file_buffer=content,
-                file_name=file.filename or "document",
-            )
+            extraction_result = None
+            last_error = None
+            for retry in range(MAX_RETRIES):
+                try:
+                    extraction_result = await parse_service.parse_document(
+                        file_buffer=content,
+                        file_name=file.filename or "document",
+                    )
+                    break  # Success, exit retry loop
+                except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+                    last_error = e
+                    if retry < MAX_RETRIES - 1:
+                        safe_print(f"[Batch General] Retry {retry + 1}/{MAX_RETRIES} for {file.filename}: {e}")
+                        await asyncio.sleep(RETRY_DELAY * (retry + 1))  # Exponential backoff
+                    else:
+                        raise  # Re-raise on final retry
+            
+            if extraction_result is None:
+                raise last_error or Exception("Extraction failed after retries")
             
             # Update usage
             current_user.monthly_usage += page_count
@@ -692,10 +739,16 @@ async def batch_general_extraction(
             
         except LlamaParseError as e:
             result_item["error"] = str(e)
+        except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+            result_item["error"] = f"Network error: {e}"
         except Exception as e:
             result_item["error"] = str(e)
         
         results.append(result_item)
+        
+        # Add delay between files to avoid overwhelming the API (not after the last file)
+        if idx < len(files) - 1:
+            await asyncio.sleep(BATCH_DELAY)
     
     # Count successes and failures
     success_count = sum(1 for r in results if r["success"])
