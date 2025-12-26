@@ -63,6 +63,27 @@ async function countTotalPages(files: File[]): Promise<number> {
   return pageCounts.reduce((sum, count) => sum + count, 0);
 }
 
+// Helper to format seconds into human-readable time
+function formatEstimatedTime(totalSeconds: number): string {
+  if (totalSeconds < 60) {
+    return `~${totalSeconds} seconds`;
+  } else if (totalSeconds < 3600) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (seconds === 0) {
+      return `~${minutes} minute${minutes > 1 ? 's' : ''}`;
+    }
+    return `~${minutes}m ${seconds}s`;
+  } else {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (minutes === 0) {
+      return `~${hours} hour${hours > 1 ? 's' : ''}`;
+    }
+    return `~${hours}h ${minutes}m`;
+  }
+}
+
 export default function Extraction() {
   const { t } = useLanguage();
   const { type } = useParams();
@@ -700,7 +721,7 @@ export default function Extraction() {
                     Processing {batchFiles.length} files sequentially
                   </p>
                   <p className="text-sm text-primary mt-2 font-medium">
-                    ~{Math.ceil(batchFiles.length * (isGeneralExtraction ? 15 : 20))} seconds estimated
+                    {formatEstimatedTime(Math.ceil(batchFiles.length * (isGeneralExtraction ? 15 : 20)))} estimated
                   </p>
                 </div>
               </div>
