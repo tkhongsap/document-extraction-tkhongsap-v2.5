@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import httpx
 import io
+import asyncio
 
 from pypdf import PdfReader
 
@@ -358,6 +359,30 @@ async def general_extraction(
             status="completed",
         ))
         
+        # Auto-create chunks for RAG
+        chunks_created = 0
+        try:
+            from app.core.config import get_settings
+            settings = get_settings()
+            can_generate_embedding = bool(settings.openai_api_key)
+            
+            chunking_service = ChunkingService(db)
+            chunks = await chunking_service.chunk_and_save_general_document(
+                user_id=user.id,
+                extraction_id=extraction.id,
+                extracted_data={
+                    "markdown": result.markdown,
+                    "text": result.text,
+                    "pageCount": result.page_count,
+                },
+                document_id=document_id,
+                generate_embeddings=can_generate_embedding
+            )
+            chunks_created = len(chunks)
+            safe_print(f"[General Extraction] Created {chunks_created} chunks for document")
+        except Exception as chunk_error:
+            safe_print(f"[General Extraction] Warning: Failed to create chunks: {chunk_error}")
+        
         # Return result
         return {
             "success": True,
@@ -380,6 +405,7 @@ async def general_extraction(
             "confidenceStats": result.confidence_stats,
             "documentId": document_id,
             "extractionId": extraction.id,
+            "chunksCreated": chunks_created,
         }
     except LlamaParseError as e:
         safe_print(f"[General Extraction] Error: {e}")
@@ -405,7 +431,7 @@ async def batch_template_extraction(
 ):
     """
     Batch process multiple documents using LlamaExtract templates.
-    Processes files sequentially to avoid rate limiting.
+    Processes files sequentially with retry and delay to avoid rate limiting.
     """
     safe_print(f"[Batch Template Extraction] Processing {len(files)} files with template: {documentType}")
     
@@ -417,9 +443,14 @@ async def batch_template_extraction(
             detail=f"Invalid document type. Must be one of: {', '.join(valid_types)}"
         )
     
+    # Configuration for batch processing
+    MAX_RETRIES = 3
+    RETRY_DELAY = 3.0  # seconds between retries (increased for stability)
+    BATCH_DELAY = 1.5  # seconds between files to avoid rate limiting (increased)
+    
     results = []
     
-    for file in files:
+    for idx, file in enumerate(files):
         result_item = {
             "fileName": file.filename,
             "success": False,
@@ -481,14 +512,29 @@ async def batch_template_extraction(
                 db=db,
             )
             
-            # Process with LlamaExtract
+            # Process with LlamaExtract (with retry for network errors)
             extract_service = create_llama_extract_service()
             
-            extraction_result = await extract_service.extract_document(
-                file_buffer=content,
-                file_name=file.filename or "document",
-                document_type=documentType,  # Pass string directly, already validated
-            )
+            extraction_result = None
+            last_error = None
+            for retry in range(MAX_RETRIES):
+                try:
+                    extraction_result = await extract_service.extract_document(
+                        file_buffer=content,
+                        file_name=file.filename or "document",
+                        document_type=documentType,
+                    )
+                    break  # Success, exit retry loop
+                except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+                    last_error = e
+                    if retry < MAX_RETRIES - 1:
+                        safe_print(f"[Batch Template] Retry {retry + 1}/{MAX_RETRIES} for {file.filename}: {e}")
+                        await asyncio.sleep(RETRY_DELAY * (retry + 1))  # Exponential backoff
+                    else:
+                        raise  # Re-raise on final retry
+            
+            if extraction_result is None:
+                raise last_error or Exception("Extraction failed after retries")
             
             # Update usage
             current_user.monthly_usage += page_count
@@ -510,6 +556,7 @@ async def batch_template_extraction(
             
             # If document type is resume, also save to resumes table with embedding
             resume_id = None
+            chunks_created = 0
             if documentType == "resume" and extraction_result.extracted_data:
                 # Check if OpenAI API key exists for embedding generation
                 from app.core.config import get_settings
@@ -530,6 +577,22 @@ async def batch_template_extraction(
                         generate_embedding=can_generate_embedding,
                     )
                     resume_id = resume.id
+                    
+                    # Auto-create chunks for RAG
+                    try:
+                        chunking_service = ChunkingService(db)
+                        chunks = await chunking_service.chunk_and_save_resume(
+                            user_id=current_user.id,
+                            extraction_id=extraction.id,
+                            extracted_data=extraction_result.extracted_data,
+                            document_id=document_id,
+                            generate_embeddings=can_generate_embedding
+                        )
+                        chunks_created = len(chunks)
+                        safe_print(f"[Batch Template] Created {chunks_created} chunks for resume: {file.filename}")
+                    except Exception as chunk_error:
+                        safe_print(f"[Batch Template] Warning: Failed to create chunks: {chunk_error}")
+                        
                 except Exception as e:
                     safe_print(f"[Batch Template] Warning: Failed to save resume: {e}")
 
@@ -565,14 +628,21 @@ async def batch_template_extraction(
                 "documentId": document_id,
                 "extractionId": extraction.id,
                 "resumeId": resume_id,
+                "chunksCreated": chunks_created,
             }
             
         except LlamaExtractError as e:
             result_item["error"] = str(e)
+        except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+            result_item["error"] = f"Network error: {e}"
         except Exception as e:
             result_item["error"] = str(e)
         
         results.append(result_item)
+        
+        # Add delay between files to avoid overwhelming the API (not after the last file)
+        if idx < len(files) - 1:
+            await asyncio.sleep(BATCH_DELAY)
     
     # Count successes and failures
     success_count = sum(1 for r in results if r["success"])
@@ -597,13 +667,18 @@ async def batch_general_extraction(
 ):
     """
     Batch process multiple documents using LlamaParse for general extraction.
-    Processes files sequentially to avoid rate limiting.
+    Processes files sequentially with retry and delay to avoid rate limiting.
     """
     safe_print(f"[Batch General Extraction] Processing {len(files)} files")
     
+    # Configuration for batch processing
+    MAX_RETRIES = 3
+    RETRY_DELAY = 3.0  # seconds between retries (increased for stability)
+    BATCH_DELAY = 1.5  # seconds between files to avoid rate limiting (increased)
+    
     results = []
     
-    for file in files:
+    for idx, file in enumerate(files):
         result_item = {
             "fileName": file.filename,
             "success": False,
@@ -669,13 +744,28 @@ async def batch_general_extraction(
                 db=db,
             )
             
-            # Process with LlamaParse
+            # Process with LlamaParse (with retry for network errors)
             parse_service = create_llama_parse_service()
             
-            extraction_result = await parse_service.parse_document(
-                file_buffer=content,
-                file_name=file.filename or "document",
-            )
+            extraction_result = None
+            last_error = None
+            for retry in range(MAX_RETRIES):
+                try:
+                    extraction_result = await parse_service.parse_document(
+                        file_buffer=content,
+                        file_name=file.filename or "document",
+                    )
+                    break  # Success, exit retry loop
+                except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+                    last_error = e
+                    if retry < MAX_RETRIES - 1:
+                        safe_print(f"[Batch General] Retry {retry + 1}/{MAX_RETRIES} for {file.filename}: {e}")
+                        await asyncio.sleep(RETRY_DELAY * (retry + 1))  # Exponential backoff
+                    else:
+                        raise  # Re-raise on final retry
+            
+            if extraction_result is None:
+                raise last_error or Exception("Extraction failed after retries")
             
             # Update usage
             current_user.monthly_usage += page_count
@@ -701,6 +791,30 @@ async def batch_general_extraction(
                 status="completed",
             ))
             
+            # Auto-create chunks for RAG
+            chunks_created = 0
+            try:
+                from app.core.config import get_settings
+                settings = get_settings()
+                can_generate_embedding = bool(settings.openai_api_key)
+                
+                chunking_service = ChunkingService(db)
+                chunks = await chunking_service.chunk_and_save_general_document(
+                    user_id=current_user.id,
+                    extraction_id=extraction.id,
+                    extracted_data={
+                        "markdown": extraction_result.markdown,
+                        "text": extraction_result.text,
+                        "pageCount": extraction_result.page_count,
+                    },
+                    document_id=document_id,
+                    generate_embeddings=can_generate_embedding
+                )
+                chunks_created = len(chunks)
+                safe_print(f"[Batch General] Created {chunks_created} chunks for: {file.filename}")
+            except Exception as chunk_error:
+                safe_print(f"[Batch General] Warning: Failed to create chunks: {chunk_error}")
+            
             result_item["success"] = True
             result_item["data"] = {
                 "markdown": extraction_result.markdown,
@@ -721,14 +835,21 @@ async def batch_general_extraction(
                 "confidenceStats": extraction_result.confidence_stats,
                 "documentId": document_id,
                 "extractionId": extraction.id,
+                "chunksCreated": chunks_created,
             }
             
         except LlamaParseError as e:
             result_item["error"] = str(e)
+        except (OSError, httpx.ConnectError, httpx.TimeoutException) as e:
+            result_item["error"] = f"Network error: {e}"
         except Exception as e:
             result_item["error"] = str(e)
         
         results.append(result_item)
+        
+        # Add delay between files to avoid overwhelming the API (not after the last file)
+        if idx < len(files) - 1:
+            await asyncio.sleep(BATCH_DELAY)
     
     # Count successes and failures
     success_count = sum(1 for r in results if r["success"])

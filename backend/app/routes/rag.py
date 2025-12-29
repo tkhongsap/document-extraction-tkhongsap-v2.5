@@ -53,6 +53,7 @@ async def query_resumes(
             db=db, 
             top_k=request.top_k,
             similarity_threshold=request.similarity_threshold,
+            use_chunks=request.use_chunks,
         )
         
         # Execute RAG query
@@ -118,6 +119,7 @@ async def query_resumes_stream(
                 db=db, 
                 top_k=request.top_k,
                 similarity_threshold=request.similarity_threshold,
+                use_chunks=request.use_chunks,
             )
             
             # Stream the response
