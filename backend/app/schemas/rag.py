@@ -32,6 +32,10 @@ class RAGQueryRequest(BaseModel):
         le=1.0,
         description="Minimum similarity score for relevance (0.2-0.4 recommended)"
     )
+    use_chunks: bool = Field(
+        default=True,
+        description="Use semantic chunks for search (True = more precise, False = broader matching)"
+    )
     include_context: bool = Field(
         default=False,
         description="Include retrieved context in response"

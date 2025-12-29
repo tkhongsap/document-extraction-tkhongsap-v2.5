@@ -38,6 +38,7 @@ from app.routes import (
     extract_router,
     user_router,
     chunks_router,
+    api_keys_router,
 )
 
 
@@ -145,6 +146,7 @@ app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
 app.include_router(chunks_router)
+app.include_router(api_keys_router)
 
 
 
