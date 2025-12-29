@@ -556,6 +556,98 @@ export type InsertWebhookLog = z.infer<typeof insertWebhookLogSchema>;
 export type WebhookLog = typeof webhookLogs.$inferSelect;
 
 // ============================================================================
+// API KEYS TABLE
+// ============================================================================
+
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Key identification
+  name: varchar("name", { length: 255 }).notNull(),
+  prefix: varchar("prefix", { length: 8 }).notNull(), // First 8 chars for identification (e.g., "dae_abc1")
+  hashedKey: varchar("hashed_key", { length: 255 }).notNull().unique(), // SHA-256 hash of full key
+  
+  // Usage limits
+  monthlyLimit: integer("monthly_limit").notNull().default(1000),
+  monthlyUsage: integer("monthly_usage").notNull().default(0),
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Expiration (optional)
+  expiresAt: timestamp("expires_at"),
+  
+  // Scopes/permissions
+  scopes: text("scopes").notNull().default("extract,read"),
+  
+  // Timestamps
+  lastUsedAt: timestamp("last_used_at"),
+  lastResetAt: timestamp("last_reset_at").defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_api_keys_hashed_key").on(table.hashedKey),
+  index("idx_api_keys_user_id").on(table.userId),
+  index("idx_api_keys_prefix").on(table.prefix),
+  index("idx_api_keys_is_active").on(table.isActive),
+]);
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// ============================================================================
+// API USAGE LOGS TABLE
+// ============================================================================
+
+export const apiUsageLogs = pgTable("api_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  apiKeyId: varchar("api_key_id").notNull().references(() => apiKeys.id, { onDelete: "cascade" }),
+  
+  // Request details
+  endpoint: varchar("endpoint", { length: 255 }).notNull(),
+  method: varchar("method", { length: 10 }).notNull().default("POST"),
+  
+  // Response details
+  statusCode: integer("status_code").notNull(),
+  responseTimeMs: integer("response_time_ms"),
+  
+  // Usage tracking
+  pagesProcessed: integer("pages_processed").default(0),
+  
+  // Request metadata
+  requestMetadata: jsonb("request_metadata"),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  
+  // Client info
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  
+  // Timestamp
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_api_usage_api_key_id").on(table.apiKeyId),
+  index("idx_api_usage_created_at").on(table.createdAt),
+  index("idx_api_usage_endpoint").on(table.endpoint),
+  index("idx_api_usage_status_code").on(table.statusCode),
+  index("idx_api_usage_key_date").on(table.apiKeyId, table.createdAt),
+]);
+
+export const insertApiUsageLogSchema = createInsertSchema(apiUsageLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertApiUsageLog = z.infer<typeof insertApiUsageLogSchema>;
+export type ApiUsageLog = typeof apiUsageLogs.$inferSelect;
+
+// ============================================================================
 // PLAN CONFIGURATION (Constants)
 // ============================================================================
 

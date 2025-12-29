@@ -9,6 +9,8 @@ from .usage_history import UsageHistory
 from .email_verification import EmailVerification
 from .resume import Resume
 from .document_chunk import DocumentChunk
+from .api_key import ApiKey
+from .api_usage_log import ApiUsageLog
 
 __all__ = [
     "User",
@@ -19,4 +21,6 @@ __all__ = [
     "EmailVerification",
     "Resume",
     "DocumentChunk",
+    "ApiKey",
+    "ApiUsageLog",
 ]
