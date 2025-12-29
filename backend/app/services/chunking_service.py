@@ -1,8 +1,8 @@
 """
-Chunking Service for Resume Documents
-Implements Semantic Chunking - splits resume by logical sections for better RAG retrieval
+Chunking Service for Resume and General Documents
+Implements Semantic Chunking - splits documents by logical sections for better RAG retrieval
 """
-from typing import List, Dict, Any, Optional, Literal
+from typing import List, Dict, Any, Optional, Literal, Union
 from dataclasses import dataclass, field
 from datetime import datetime
 from sqlalchemy import select, func, delete, text
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import DocumentChunk
 from app.services.embedding_service import get_embedding_service
+from app.utils.text_splitter import get_document_splitter, get_large_document_splitter
 
 
 # Chunk types for resume sections
@@ -24,6 +25,15 @@ ResumeChunkType = Literal[
     'full_resume'        # Complete resume text for broad matching
 ]
 
+# Chunk types for general documents
+GeneralChunkType = Literal[
+    'content',           # Main content chunk
+    'header',            # Header/title section
+    'section',           # Named section
+    'page',              # Full page content
+    'full_document'      # Complete document summary
+]
+
 
 @dataclass
 class ResumeChunk:
@@ -36,27 +46,40 @@ class ResumeChunk:
 
 
 @dataclass
+class GeneralChunk:
+    """Represents a single chunk of general document data"""
+    chunk_type: GeneralChunkType
+    text: str
+    chunk_index: int
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    page_number: Optional[int] = None
+
+
+@dataclass
 class ChunkingResult:
     """Result of chunking operation"""
-    chunks: List[ResumeChunk]
+    chunks: List[Union[ResumeChunk, GeneralChunk]]
     total_chunks: int
     chunk_types_count: Dict[str, int]
 
 
 class ChunkingService:
     """
-    Service for chunking resume documents into semantic sections.
+    Service for chunking resume and general documents into semantic sections.
     
     Chunking Strategy:
-    - Section-based (Semantic) Chunking
+    - Section-based (Semantic) Chunking for resumes
+    - Recursive text splitting for general documents
     - Each logical section becomes one or more chunks
     - Experience entries are split per job for better matching
-    - Full resume chunk for broad queries
+    - Full resume/document chunk for broad queries
     """
     
     def __init__(self, db: AsyncSession):
         self.db = db
         self.embedding_service = get_embedding_service()
+        self.text_splitter = get_document_splitter()
+        self.large_text_splitter = get_large_document_splitter()
     
     def chunk_resume(self, extracted_data: Dict[str, Any]) -> ChunkingResult:
         """
@@ -511,7 +534,166 @@ class ChunkingService:
         
         print(f"[ChunkingService] Saved {len(saved_chunks)} chunks for extraction {extraction_id}")
         return saved_chunks
+
+    # =========================================================================
+    # GENERAL DOCUMENT CHUNKING
+    # =========================================================================
     
+    def chunk_general_document(
+        self, 
+        extracted_data: Dict[str, Any],
+        include_full_document: bool = True
+    ) -> ChunkingResult:
+        """
+        Split general document data into chunks using text splitting.
+        
+        Args:
+            extracted_data: Document data from LlamaParse (contains markdown, text, etc.)
+            include_full_document: Whether to include a full document summary chunk
+            
+        Returns:
+            ChunkingResult with list of chunks
+        """
+        chunks: List[GeneralChunk] = []
+        chunk_index = 0
+        
+        # Get text content from extracted data
+        text_content = extracted_data.get("text") or extracted_data.get("markdown") or ""
+        page_count = extracted_data.get("pageCount") or 1
+        
+        if not text_content.strip():
+            return ChunkingResult(
+                chunks=[],
+                total_chunks=0,
+                chunk_types_count={}
+            )
+        
+        # Use larger splitter for documents with many pages
+        splitter = self.large_text_splitter if page_count > 10 else self.text_splitter
+        
+        # Split text into chunks
+        text_chunks = splitter.split_text(text_content)
+        
+        # Create GeneralChunk objects for each text chunk
+        for text_chunk in text_chunks:
+            chunk = GeneralChunk(
+                chunk_type="content",
+                text=text_chunk,
+                chunk_index=chunk_index,
+                metadata={
+                    "section": "content",
+                    "char_count": len(text_chunk),
+                    "page_count": page_count,
+                }
+            )
+            chunks.append(chunk)
+            chunk_index += 1
+        
+        # Add full document summary chunk if requested
+        if include_full_document and len(text_content) > 100:
+            # Create a summary chunk (truncated if too long)
+            max_summary_chars = 15000
+            summary_text = text_content[:max_summary_chars]
+            if len(text_content) > max_summary_chars:
+                summary_text += "..."
+            
+            full_doc_chunk = GeneralChunk(
+                chunk_type="full_document",
+                text=summary_text,
+                chunk_index=chunk_index,
+                metadata={
+                    "section": "full_document",
+                    "original_length": len(text_content),
+                    "truncated": len(text_content) > max_summary_chars,
+                    "total_chunks": len(chunks),
+                }
+            )
+            chunks.append(full_doc_chunk)
+        
+        # Count chunk types
+        type_counts: Dict[str, int] = {}
+        for chunk in chunks:
+            type_counts[chunk.chunk_type] = type_counts.get(chunk.chunk_type, 0) + 1
+        
+        return ChunkingResult(
+            chunks=chunks,
+            total_chunks=len(chunks),
+            chunk_types_count=type_counts
+        )
+    
+    async def chunk_and_save_general_document(
+        self,
+        user_id: str,
+        extraction_id: str,
+        extracted_data: Dict[str, Any],
+        document_id: Optional[str] = None,
+        generate_embeddings: bool = True,
+        include_full_document: bool = True
+    ) -> List[DocumentChunk]:
+        """
+        Chunk general document and save to database with embeddings.
+        
+        Args:
+            user_id: User ID
+            extraction_id: Extraction ID
+            extracted_data: Document data from LlamaParse
+            document_id: Optional document ID
+            generate_embeddings: Whether to generate embeddings
+            include_full_document: Whether to include a full document summary chunk
+            
+        Returns:
+            List of saved DocumentChunk objects
+        """
+        # Generate chunks
+        result = self.chunk_general_document(extracted_data, include_full_document)
+        
+        if not result.chunks:
+            print(f"[ChunkingService] No chunks generated for extraction {extraction_id}")
+            return []
+        
+        # Generate embeddings for all chunks
+        embeddings = []
+        if generate_embeddings:
+            try:
+                chunk_texts = [chunk.text for chunk in result.chunks]
+                embeddings = await self.embedding_service.create_embeddings_batch(chunk_texts)
+            except Exception as e:
+                print(f"[ChunkingService] Failed to generate embeddings: {e}")
+                embeddings = [None] * len(result.chunks)
+        else:
+            embeddings = [None] * len(result.chunks)
+        
+        # Save chunks to database
+        saved_chunks = []
+        for i, chunk in enumerate(result.chunks):
+            embedding = embeddings[i] if i < len(embeddings) else None
+            
+            db_chunk = DocumentChunk(
+                user_id=user_id,
+                document_id=document_id,
+                extraction_id=extraction_id,
+                chunk_index=chunk.chunk_index,
+                chunk_type=chunk.chunk_type,
+                text=chunk.text,
+                embedding=embedding,
+                embedding_model=self.embedding_service.model if embedding else None,
+                embedding_text=chunk.text if embedding else None,
+                chunk_metadata=chunk.metadata,
+                page_number=chunk.page_number
+            )
+            
+            self.db.add(db_chunk)
+            saved_chunks.append(db_chunk)
+        
+        await self.db.commit()
+        
+        # Refresh to get IDs
+        for chunk in saved_chunks:
+            await self.db.refresh(chunk)
+        
+        print(f"[ChunkingService] Saved {len(saved_chunks)} general document chunks for extraction {extraction_id}")
+        return saved_chunks
+
     async def search_similar_chunks(
         self,
         query: str,
