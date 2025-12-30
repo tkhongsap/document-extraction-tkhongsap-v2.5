@@ -681,3 +681,78 @@ export async function ragExamplesApi(): Promise<RAGExamplesResponse> {
   return res.json();
 }
 
+// =============================================================================
+// Chunks Search API (Semantic Chunks for better RAG)
+// =============================================================================
+
+export interface ChunkSearchResult {
+  id: string;
+  userId: string;
+  documentId: string | null;
+  extractionId: string | null;
+  chunkIndex: number;
+  chunkType: string | null;
+  text: string;
+  metadata: {
+    type?: string;
+    title?: string;
+    section?: string;
+    company?: string;
+    position?: string;
+    jobIndex?: number;
+  } | null;
+  createdAt: string | null;
+  similarity: number;
+}
+
+export interface ChunkSearchResponse {
+  success: boolean;
+  query: string;
+  results: ChunkSearchResult[];
+  total_results: number;
+}
+
+export async function searchChunksApi(
+  query: string,
+  limit: number = 10,
+  threshold: number = 0.3,
+  chunkTypes?: string[]
+): Promise<ChunkSearchResponse> {
+  const res = await fetch("/api/chunks/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ 
+      query, 
+      limit, 
+      similarity_threshold: threshold,
+      chunk_types: chunkTypes 
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Chunks search failed");
+  }
+
+  return res.json();
+}
+
+export interface ChunkStats {
+  success: boolean;
+  stats: Record<string, number>;
+}
+
+export async function getChunkStatsApi(): Promise<ChunkStats> {
+  const res = await fetch("/api/chunks/stats", {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to get chunk stats");
+  }
+
+  return res.json();
+}
+

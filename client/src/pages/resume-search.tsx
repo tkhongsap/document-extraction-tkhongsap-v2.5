@@ -40,9 +40,12 @@ import {
   deleteResumeApi,
   regenerateAllEmbeddingsApi,
   ragQueryApi,
+  searchChunksApi,
   type ResumeSearchResult,
   type RAGQueryResponse,
-  type RAGSource
+  type RAGSource,
+  type ChunkSearchResult,
+  type ChunkSearchResponse
 } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -160,7 +163,19 @@ export default function ResumeSearch() {
     "Who has AWS certification?",
   ];
 
-  const isLoading = mode === "chat" ? ragMutation.isPending : searchMutation.isPending;
+  const chunksSuggestions = [
+    "Python experience",
+    "AWS certification",
+    "React frontend",
+    "Data analyst skills",
+    "Machine learning project",
+  ];
+
+  const isLoading = mode === "chat" 
+    ? ragMutation.isPending 
+    : mode === "chunks" 
+      ? chunksMutation.isPending 
+      : searchMutation.isPending;
 
   // Stats
   const totalResumes = allResumes?.total || 0;
@@ -213,7 +228,7 @@ export default function ResumeSearch() {
                   className="h-12 px-6 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <Search className="h-4 w-4 mr-2" />
-                  Search
+                  Resume Search
                 </TabsTrigger>
                 <TabsTrigger 
                   value="chat" 
@@ -260,6 +275,11 @@ export default function ResumeSearch() {
                     <Send className="h-5 w-5 mr-2" />
                     Ask AI
                   </>
+                ) : mode === "chunks" ? (
+                  <>
+                    <Zap className="h-5 w-5 mr-2" />
+                    Search Sections
+                  </>
                 ) : (
                   <>
                     <Search className="h-5 w-5 mr-2" />
@@ -268,8 +288,8 @@ export default function ResumeSearch() {
                 )}
               </Button>
               
-              {/* Options Toggle - Only for Search mode */}
-              {mode === "search" && (
+              {/* Options Toggle - for Search and Chunks mode */}
+              {(mode === "search" || mode === "chunks") && (
                 <Button
                   variant="outline"
                   size="icon"
@@ -285,7 +305,7 @@ export default function ResumeSearch() {
             </div>
 
             {/* Options Row - Collapsible */}
-            {mode === "search" && showOptions && (
+            {(mode === "search" || mode === "chunks") && showOptions && (
               <div className="flex flex-wrap items-center gap-6 p-4 rounded-xl bg-muted/50 animate-in slide-in-from-top-2 duration-200">
                 <div className="flex items-center gap-2">
                   <Label className="text-sm text-muted-foreground">Max results:</Label>
@@ -293,7 +313,7 @@ export default function ResumeSearch() {
                     value={[searchLimit]}
                     onValueChange={([v]) => setSearchLimit(v)}
                     min={1}
-                    max={50}
+                    max={mode === "chunks" ? 20 : 50}
                     step={1}
                     className="w-28"
                   />
@@ -318,7 +338,12 @@ export default function ResumeSearch() {
             {/* Quick Suggestions */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-muted-foreground">Quick search:</span>
-              {(mode === "chat" ? chatSuggestions : suggestions).map((suggestion) => (
+              {(mode === "chat" 
+                ? chatSuggestions 
+                : mode === "chunks" 
+                  ? chunksSuggestions 
+                  : suggestions
+              ).map((suggestion) => (
                 <Button
                   key={suggestion}
                   variant="outline"
@@ -786,5 +811,160 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+// =============================================================================
+// Chunks Results Component
+// =============================================================================
+
+interface ChunksResultsAreaProps {
+  chunksMutation: ReturnType<typeof useMutation<ChunkSearchResponse, Error, void>>;
+  searchQuery: string;
+}
+
+function ChunksResultsArea({ chunksMutation, searchQuery }: ChunksResultsAreaProps) {
+  if (chunksMutation.isPending) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="mt-4 text-lg font-medium">Searching sections...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (chunksMutation.error) {
+    return (
+      <Card className="border-destructive border-2">
+        <CardContent className="flex items-center gap-4 py-6">
+          <div className="p-3 rounded-full bg-destructive/10">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <div>
+            <p className="font-semibold text-destructive">Search Error</p>
+            <p className="text-sm text-muted-foreground">{chunksMutation.error.message}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const results = chunksMutation.data?.results || [];
+
+  if (!chunksMutation.data && !searchQuery) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="p-4 rounded-full bg-orange-100 dark:bg-orange-900/30 mb-4">
+            <Zap className="h-10 w-10 text-orange-500" />
+          </div>
+          <h3 className="text-xl font-semibold">Section Search</h3>
+          <p className="text-muted-foreground mt-2 max-w-md">
+            Search specific resume sections like skills, experience, or education.
+            <br />
+            More precise than full resume search.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <Search className="h-12 w-12 text-muted-foreground/50" />
+          <p className="mt-4 text-lg font-medium">No matching sections found</p>
+          <p className="text-sm text-muted-foreground">Try different keywords</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Group by chunk type
+  const chunkTypeLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+    personal_info: { label: "Personal Info", icon: <User className="h-4 w-4" />, color: "bg-blue-500" },
+    summary: { label: "Summary", icon: <FileText className="h-4 w-4" />, color: "bg-purple-500" },
+    experience: { label: "Experience", icon: <Briefcase className="h-4 w-4" />, color: "bg-green-500" },
+    education: { label: "Education", icon: <TrendingUp className="h-4 w-4" />, color: "bg-yellow-500" },
+    skills: { label: "Skills", icon: <Zap className="h-4 w-4" />, color: "bg-orange-500" },
+    certifications: { label: "Certifications", icon: <Database className="h-4 w-4" />, color: "bg-pink-500" },
+    languages: { label: "Languages", icon: <MessageSquare className="h-4 w-4" />, color: "bg-cyan-500" },
+    full_resume: { label: "Full Resume", icon: <FileText className="h-4 w-4" />, color: "bg-gray-500" },
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">
+          Found {results.length} matching sections
+        </h2>
+        <Badge variant="secondary" className="text-xs">
+          Query: "{chunksMutation.data?.query}"
+        </Badge>
+      </div>
+
+      <div className="grid gap-4">
+        {results.map((chunk) => {
+          const chunkType = chunk.chunkType || chunk.metadata?.type || "unknown";
+          const typeInfo = chunkTypeLabels[chunkType] || { 
+            label: chunkType, 
+            icon: <FileText className="h-4 w-4" />, 
+            color: "bg-gray-500" 
+          };
+          const similarity = Math.round(chunk.similarity * 100);
+
+          return (
+            <Card key={chunk.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardHeader className="py-3 px-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("p-1.5 rounded-md text-white", typeInfo.color)}>
+                      {typeInfo.icon}
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-medium">
+                        {chunk.metadata?.title || typeInfo.label}
+                      </CardTitle>
+                      {chunk.metadata?.company && (
+                        <CardDescription className="text-xs">
+                          {chunk.metadata.position} @ {chunk.metadata.company}
+                        </CardDescription>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={similarity >= 70 ? "default" : similarity >= 50 ? "secondary" : "outline"}
+                      className="text-xs"
+                    >
+                      {similarity}% match
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {typeInfo.label}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {chunk.text}
+                </p>
+                {chunk.extractionId && (
+                  <div className="mt-3 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span>From extraction: {chunk.extractionId.slice(0, 8)}...</span>
+                    <Clock className="h-3 w-3 ml-2" />
+                    <span>{chunk.createdAt ? new Date(chunk.createdAt).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }
