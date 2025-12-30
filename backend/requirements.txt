@@ -31,6 +31,9 @@ itsdangerous==2.2.0
 aiofiles==24.1.0
 aiosmtplib==3.0.2
 
+# Scheduler for background tasks
+apscheduler==3.10.4
+
 # PDF processing
 pypdf==5.1.0
 

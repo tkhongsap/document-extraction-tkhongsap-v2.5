@@ -89,74 +89,53 @@ function getLineItemsConfig(documentType: DocumentType): ArraySectionConfig | nu
 function getResumeArrayConfigs(): ArraySectionConfig[] {
   return [
     {
-      key: "work_experience",
+      key: "experience",
       title: "Work Experience",
       columns: [
-        { key: "company_name", label: "Company" },
-        { key: "job_title", label: "Job Title" },
+        { key: "company", label: "Company" },
+        { key: "title", label: "Job Title" },
         { key: "location", label: "Location", width: "w-28" },
-        { key: "start_date", label: "Start", width: "w-24" },
-        { key: "end_date", label: "End", width: "w-24" },
-        { key: "employment_type", label: "Type", width: "w-24" },
+        { key: "startDate", label: "Start", width: "w-24" },
+        { key: "endDate", label: "End", width: "w-24" },
       ],
     },
     {
       key: "education",
       title: "Education",
       columns: [
-        { key: "institution_name", label: "Institution" },
+        { key: "institution", label: "Institution" },
         { key: "degree", label: "Degree" },
-        { key: "field_of_study", label: "Field", width: "w-32" },
-        { key: "graduation_date", label: "Graduation", width: "w-28" },
-        { key: "gpa", label: "GPA", width: "w-16" },
+        { key: "field", label: "Field", width: "w-32" },
+        { key: "year", label: "Year", width: "w-24" },
       ],
     },
     {
       key: "skills",
       title: "Skills",
       columns: [
-        { key: "skill_name", label: "Skill" },
-        { key: "category", label: "Category", width: "w-28" },
-        { key: "proficiency_level", label: "Proficiency", width: "w-28" },
+        { key: "value", label: "Skill" },
       ],
     },
     {
       key: "certifications",
       title: "Certifications",
       columns: [
-        { key: "certification_name", label: "Certification" },
-        { key: "issuing_organization", label: "Issuer", width: "w-32" },
-        { key: "issue_date", label: "Issued", width: "w-24" },
-        { key: "expiration_date", label: "Expires", width: "w-24" },
-        { key: "credential_id", label: "Credential ID", width: "w-28" },
+        { key: "value", label: "Certification" },
       ],
     },
     {
       key: "languages",
       title: "Languages",
       columns: [
+        { key: "value", label: "Language" },
+      ],
+    },
+    {
+      key: "languagesWithProficiency",
+      title: "Languages (Detailed)",
+      columns: [
         { key: "language", label: "Language" },
-        { key: "proficiency", label: "Proficiency", width: "w-32" },
-      ],
-    },
-    {
-      key: "projects",
-      title: "Projects",
-      columns: [
-        { key: "project_name", label: "Project" },
-        { key: "description", label: "Description" },
-        { key: "technologies", label: "Technologies", width: "w-32" },
-        { key: "url", label: "URL", width: "w-28" },
-      ],
-    },
-    {
-      key: "references",
-      title: "References",
-      columns: [
-        { key: "reference_name", label: "Name" },
-        { key: "relationship", label: "Relationship", width: "w-28" },
-        { key: "company", label: "Company", width: "w-32" },
-        { key: "contact", label: "Contact", width: "w-32" },
+        { key: "level", label: "Proficiency", width: "w-32" },
       ],
     },
   ];
@@ -349,7 +328,12 @@ export function StructuredResultsViewer({
 
   const getArrayData = (key: string): Array<Record<string, unknown>> => {
     if (extractedData && Array.isArray(extractedData[key])) {
-      return extractedData[key] as Array<Record<string, unknown>>;
+      const data = extractedData[key];
+      // Handle array of strings (skills, certifications, languages)
+      if (data.length > 0 && typeof data[0] === 'string') {
+        return data.map((item: string) => ({ value: item })) as Array<Record<string, unknown>>;
+      }
+      return data as Array<Record<string, unknown>>;
     }
     return [];
   };
