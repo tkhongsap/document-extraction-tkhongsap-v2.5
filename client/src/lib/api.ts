@@ -756,26 +756,167 @@ export async function getChunkStatsApi(): Promise<ChunkStats> {
   return res.json();
 }
 
-// ============================================================================
-// API Keys Management - Re-export from shared module
-// ============================================================================
 
-export {
-  type ApiKey,
-  type ApiKeyResponse,
-  type ApiKeyCreateRequest,
-  type ApiKeyUpdateRequest,
-  type ApiKeyCreateResponse,
-  type ApiKeyListResponse,
-  type ApiKeyDeleteResponse,
-  type ApiKeyRegenerateResponse,
-  type ApiKeyUsageStats,
-  type ApiKeyUsageStatsResponse,
-  listApiKeys,
-  createApiKey,
-  getApiKey,
-  updateApiKey,
-  deleteApiKey,
-  regenerateApiKey,
-  getApiKeyStats,
-} from "@/lib/api-keys";
+// =============================================================================
+// API KEYS API
+// =============================================================================
+
+export interface ApiKeyResponse {
+  id: string;
+  name: string;
+  prefix: string;
+  monthlyLimit: number;
+  monthlyUsage: number;
+  isActive: boolean;
+  expiresAt: string | null;
+  scopes: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyCreateResponse {
+  apiKey: ApiKeyResponse;
+  plainKey: string; // Only returned on create, never stored
+  warning: string;
+}
+
+export interface ApiKeyStatsResponse {
+  success: boolean;
+  apiKeyId: string;
+  stats: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    totalPagesProcessed: number;
+    averageResponseTimeMs: number;
+    periodDays: number;
+  };
+}
+
+// List all API keys for current user
+export async function listApiKeys(): Promise<{ apiKeys: ApiKeyResponse[] }> {
+  const res = await fetch("/api/keys", {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to list API keys");
+  }
+
+  return res.json();
+}
+
+// Create a new API key
+export async function createApiKey(data: {
+  name: string;
+  monthlyLimit?: number;
+  scopes?: string;
+  expiresAt?: string;
+}): Promise<ApiKeyCreateResponse> {
+  const res = await fetch("/api/keys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: data.name,
+      monthly_limit: data.monthlyLimit,
+      scopes: data.scopes,
+      expires_at: data.expiresAt,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to create API key");
+  }
+
+  return res.json();
+}
+
+// Get a specific API key
+export async function getApiKey(keyId: string): Promise<{ apiKey: ApiKeyResponse }> {
+  const res = await fetch(`/api/keys/${keyId}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to get API key");
+  }
+
+  return res.json();
+}
+
+// Update an API key
+export async function updateApiKey(keyId: string, data: {
+  name?: string;
+  monthlyLimit?: number;
+  scopes?: string;
+  isActive?: boolean;
+  expiresAt?: string | null;
+}): Promise<{ apiKey: ApiKeyResponse }> {
+  const res = await fetch(`/api/keys/${keyId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: data.name,
+      monthly_limit: data.monthlyLimit,
+      scopes: data.scopes,
+      is_active: data.isActive,
+      expires_at: data.expiresAt,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to update API key");
+  }
+
+  return res.json();
+}
+
+// Delete (deactivate) an API key
+export async function deleteApiKey(keyId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`/api/keys/${keyId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to delete API key");
+  }
+
+  return res.json();
+}
+
+// Regenerate an API key (new key, same settings)
+export async function regenerateApiKey(keyId: string): Promise<ApiKeyCreateResponse> {
+  const res = await fetch(`/api/keys/${keyId}/regenerate`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to regenerate API key");
+  }
+
+  return res.json();
+}
+
+// Get API key usage statistics
+export async function getApiKeyStats(keyId: string, days: number = 30): Promise<ApiKeyStatsResponse> {
+  const res = await fetch(`/api/keys/${keyId}/stats?days=${days}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to get API key stats");
+  }
+
+  return res.json();
+}

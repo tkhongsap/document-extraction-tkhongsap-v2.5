@@ -40,5 +40,8 @@ pypdf==5.1.0
 # pgvector for vector similarity search
 pgvector==0.3.6
 
+# Redis for rate limiting and caching (optional but recommended)
+redis==5.0.1
+
 # CORS
 # starlette==0.45.2
