@@ -756,3 +756,26 @@ export async function getChunkStatsApi(): Promise<ChunkStats> {
   return res.json();
 }
 
+// ============================================================================
+// API Keys Management - Re-export from shared module
+// ============================================================================
+
+export {
+  type ApiKey,
+  type ApiKeyResponse,
+  type ApiKeyCreateRequest,
+  type ApiKeyUpdateRequest,
+  type ApiKeyCreateResponse,
+  type ApiKeyListResponse,
+  type ApiKeyDeleteResponse,
+  type ApiKeyRegenerateResponse,
+  type ApiKeyUsageStats,
+  type ApiKeyUsageStatsResponse,
+  listApiKeys,
+  createApiKey,
+  getApiKey,
+  updateApiKey,
+  deleteApiKey,
+  regenerateApiKey,
+  getApiKeyStats,
+} from "@/lib/api-keys";
