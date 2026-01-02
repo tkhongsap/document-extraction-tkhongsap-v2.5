@@ -39,6 +39,7 @@ from app.routes import (
     user_router,
     chunks_router,
     api_keys_router,
+    public_extract_router,
 )
 
 
@@ -117,6 +118,20 @@ app.add_middleware(
 )
 
 
+# Import custom errors for exception handler
+from app.core.errors import ApiError
+
+
+# Global exception handler for custom API errors
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError):
+    """
+    Global handler for custom API errors.
+    Returns standardized JSON error responses with proper status codes.
+    """
+    return exc.to_response()
+
+
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -147,6 +162,7 @@ app.include_router(extract_router)
 app.include_router(user_router)
 app.include_router(chunks_router)
 app.include_router(api_keys_router)
+app.include_router(public_extract_router)
 
 
 

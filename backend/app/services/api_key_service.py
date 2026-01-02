@@ -340,6 +340,21 @@ class ApiKeyService:
         api_key.monthly_usage += pages
         await self.db.commit()
     
+    async def record_usage(self, api_key_id: str) -> None:
+        """
+        Record that an API key was used (updates last_used_at).
+        Called by middleware on each authenticated request.
+        
+        Args:
+            api_key_id: The API key ID
+        """
+        await self.db.execute(
+            update(ApiKey)
+            .where(ApiKey.id == api_key_id)
+            .values(last_used_at=datetime.utcnow())
+        )
+        await self.db.commit()
+    
     async def check_usage_limit(self, api_key: ApiKey) -> bool:
         """
         Check if an API key has remaining usage quota.

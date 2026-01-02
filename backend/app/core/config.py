@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -33,6 +34,13 @@ class Settings(BaseSettings):
     # Environment
     node_env: str = "development"
     port: int = 8000
+    
+    # Redis Configuration (for rate limiting and caching)
+    REDIS_URL: Optional[str] = None  # e.g., redis://localhost:6379/0
+    
+    # Rate Limiting Settings
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 30  # Default for API keys
     
     # SMTP Email Settings
     smtp_server: str = "smtp.gmail.com"
