@@ -39,6 +39,7 @@ from app.routes import (
     user_router,
     search_router,
     chunks_router,
+    api_keys_router,
 )
 from app.routes.rag import router as rag_router
 from app.routes.public_extract import router as public_extract_router
@@ -167,6 +168,7 @@ app.include_router(public_extract_router)  # Public API endpoints
 app.include_router(search_router)
 app.include_router(rag_router)
 app.include_router(chunks_router)
+app.include_router(api_keys_router)
 
 
 # Object storage routes for serving files
