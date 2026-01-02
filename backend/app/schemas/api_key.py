@@ -50,6 +50,7 @@ class ApiKeyResponse(BaseModel):
     class Config:
         populate_by_name = True
         from_attributes = True
+        by_alias = True
     
     @classmethod
     def from_model(cls, api_key) -> "ApiKeyResponse":
@@ -79,6 +80,7 @@ class ApiKeyCreateResponse(BaseModel):
     
     class Config:
         populate_by_name = True
+        by_alias = True
 
 
 class ApiKeyListResponse(BaseModel):
@@ -89,6 +91,7 @@ class ApiKeyListResponse(BaseModel):
     
     class Config:
         populate_by_name = True
+        by_alias = True
 
 
 class ApiKeyDeleteResponse(BaseModel):
@@ -106,6 +109,7 @@ class ApiKeyRegenerateResponse(BaseModel):
     
     class Config:
         populate_by_name = True
+        by_alias = True
 
 
 class ApiKeyUsageStatsResponse(BaseModel):

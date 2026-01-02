@@ -11,7 +11,9 @@ import io
 from pypdf import PdfReader
 
 from app.core.database import get_db
-from app.middlewares.api_auth import verify_api_key, check_api_key_quota, ApiKeyPlaceholder
+from app.middlewares.api_auth import verify_api_key, check_api_key_quota
+from app.models.api_key import ApiKey
+from app.services.api_key_service import ApiKeyService
 from app.services.storage import StorageService
 from app.services.object_storage import ObjectStorageService, ObjectAclPolicy
 from app.services.llama_parse import create_llama_parse_service, LlamaParseError
@@ -104,7 +106,7 @@ async def upload_document_and_create_record(
 async def public_template_extraction(
     file: UploadFile = File(...),
     documentType: str = Form(...),
-    api_key: ApiKeyPlaceholder = Depends(verify_api_key),
+    api_key: ApiKey = Depends(verify_api_key),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -166,8 +168,19 @@ async def public_template_extraction(
             documentType  # type: ignore
         )
         
-        # Update API key usage (will be implemented when API Key service is ready)
-        # TODO: await api_key_service.update_usage(api_key.id, result.pages_processed)
+        # Update API key usage
+        api_key_service = ApiKeyService(db)
+        await api_key_service.increment_usage(api_key, result.pages_processed)
+        
+        # Log the API usage
+        await api_key_service.log_api_usage(
+            api_key_id=api_key.id,
+            endpoint="/api/v1/public/extract/process",
+            status_code=200,
+            method="POST",
+            pages_processed=result.pages_processed,
+            request_metadata={"documentType": documentType, "fileName": file.filename},
+        )
         
         # Save extraction to database
         storage = StorageService(db)
@@ -216,7 +229,7 @@ async def public_template_extraction(
 @router.post("/general")
 async def public_general_extraction(
     file: UploadFile = File(...),
-    api_key: ApiKeyPlaceholder = Depends(verify_api_key),
+    api_key: ApiKey = Depends(verify_api_key),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -269,8 +282,19 @@ async def public_general_extraction(
             file.filename or "document"
         )
         
-        # Update API key usage (will be implemented when API Key service is ready)
-        # TODO: await api_key_service.update_usage(api_key.id, result.page_count)
+        # Update API key usage
+        api_key_service = ApiKeyService(db)
+        await api_key_service.increment_usage(api_key, result.page_count)
+        
+        # Log the API usage
+        await api_key_service.log_api_usage(
+            api_key_id=api_key.id,
+            endpoint="/api/v1/public/extract/general",
+            status_code=200,
+            method="POST",
+            pages_processed=result.page_count,
+            request_metadata={"fileName": file.filename, "mimeType": file.content_type},
+        )
         
         # Save extraction to database
         storage = StorageService(db)
