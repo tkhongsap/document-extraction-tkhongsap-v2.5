@@ -63,10 +63,12 @@ async def create_api_key(
             plainKey=plain_key,
         )
     except Exception as e:
+        import traceback
         print(f"[API Keys] Error creating key: {e}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create API key"
+            detail=f"Failed to create API key: {str(e)}"
         )
 
 

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Globe, User, Crown, Zap, Rocket } from "lucide-react";
+import { Globe, User, Crown, Zap, Rocket, Key, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Lock } from "lucide-react";
+import { Link } from "wouter";
 
 export default function SettingsPage() {
   const { t } = useLanguage();
@@ -211,6 +212,26 @@ export default function SettingsPage() {
             </div>
           </div>
         </CardContent>
+      </Card>
+
+      {/* API Keys */}
+      <Card className="group hover:border-primary/50 transition-colors cursor-pointer">
+        <Link href="/settings/api-keys">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Key className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>API Keys</CardTitle>
+                  <CardDescription>Manage your API keys for programmatic access</CardDescription>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+          </CardHeader>
+        </Link>
       </Card>
 
       {/* Subscription Plans */}

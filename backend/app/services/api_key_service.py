@@ -109,6 +109,10 @@ class ApiKeyService:
         # Generate key
         plain_key, hashed_key, prefix = self.generate_api_key()
         
+        # Convert timezone-aware datetime to naive UTC if needed
+        if expires_at is not None and expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
+        
         # Create database record
         api_key = ApiKey(
             user_id=user_id,
