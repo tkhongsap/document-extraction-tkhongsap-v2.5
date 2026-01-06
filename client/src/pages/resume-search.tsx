@@ -183,7 +183,7 @@ export default function ResumeSearch() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="container max-w-7xl px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="w-full px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
         
         {/* ===== COMPACT HEADER ===== */}
         <div className="flex flex-col gap-4">
