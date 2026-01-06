@@ -183,31 +183,31 @@ export default function ResumeSearch() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="container max-w-7xl py-8 space-y-6">
+      <div className="w-full px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
         
         {/* ===== COMPACT HEADER ===== */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg">
-              <Users className="h-6 w-6" />
+            <div className="p-2 sm:p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Talent Search</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Talent Search</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 AI-powered candidate search & assistant
               </p>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="flex gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border text-sm">
-              <Users className="h-4 w-4 text-primary" />
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-muted/50 border text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
               <span className="font-semibold">{totalResumes}</span>
               <span className="text-muted-foreground">candidates</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border text-sm">
-              <Database className="h-4 w-4 text-green-500" />
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-muted/50 border text-xs sm:text-sm">
+              <Database className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
               <span className="font-semibold">{withEmbeddings}</span>
               <span className="text-muted-foreground">indexed</span>
             </div>
@@ -217,33 +217,33 @@ export default function ResumeSearch() {
         {/* ===== SEARCH BOX ===== */}
         <Card className="shadow-lg border-2 overflow-hidden">
           {/* Mode Tabs in Card Header */}
-          <div className="border-b bg-muted/30">
+          <div className="border-b bg-muted/30 overflow-x-auto">
             <Tabs 
               value={mode} 
               onValueChange={(v) => setMode(v as "search" | "chat")}
             >
-              <TabsList className="bg-transparent h-12 p-0 w-full justify-start rounded-none">
+              <TabsList className="bg-transparent h-10 sm:h-12 p-0 w-full justify-start rounded-none">
                 <TabsTrigger 
                   value="search" 
-                  className="h-12 px-6 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="h-10 sm:h-12 px-3 sm:px-6 text-xs sm:text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
-                  <Search className="h-4 w-4 mr-2" />
-                  Resume Search
+                  <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  Search
                 </TabsTrigger>
                 <TabsTrigger 
                   value="chat" 
-                  className="h-12 px-6 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="h-10 sm:h-12 px-3 sm:px-6 text-xs sm:text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   AI Chat
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           
-          <CardContent className="p-6 space-y-5">
+          <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-5">
             {/* Main Search Input */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
                   {mode === "chat" ? (
@@ -254,19 +254,20 @@ export default function ResumeSearch() {
                 </div>
                 <Input
                   placeholder={mode === "chat" 
-                    ? "Ask anything about your candidates... (Thai or English)"
-                    : "Search by skills, experience, location, or any criteria..."}
+                    ? "Ask about candidates..."
+                    : "Search skills, experience, location..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="h-14 pl-12 pr-4 text-lg rounded-xl border-2 focus:border-primary transition-colors"
+                  className="h-12 sm:h-14 pl-12 pr-4 text-base sm:text-lg rounded-xl border-2 focus:border-primary transition-colors"
                 />
               </div>
+              <div className="flex gap-2 sm:gap-3">
               <Button 
                 onClick={handleSearch} 
                 disabled={isLoading}
                 size="lg"
-                className="h-14 px-8 rounded-xl text-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                className="flex-1 sm:flex-none h-12 sm:h-14 px-4 sm:px-8 rounded-xl text-base sm:text-lg font-semibold shadow-md hover:shadow-lg transition-all"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -294,7 +295,7 @@ export default function ResumeSearch() {
                   variant="outline"
                   size="icon"
                   className={cn(
-                    "h-14 w-14 rounded-xl border-2 transition-colors",
+                    "h-12 w-12 sm:h-14 sm:w-14 rounded-xl border-2 transition-colors",
                     showOptions && "bg-primary/10 border-primary"
                   )}
                   onClick={() => setShowOptions(!showOptions)}
@@ -302,6 +303,7 @@ export default function ResumeSearch() {
                   <SlidersHorizontal className="h-5 w-5" />
                 </Button>
               )}
+              </div>
             </div>
 
             {/* Options Row - Collapsible */}
@@ -336,8 +338,8 @@ export default function ResumeSearch() {
             )}
 
             {/* Quick Suggestions */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Quick search:</span>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground w-full sm:w-auto mb-1 sm:mb-0">Quick search:</span>
               {(mode === "chat" 
                 ? chatSuggestions 
                 : mode === "chunks" 
@@ -348,11 +350,11 @@ export default function ResumeSearch() {
                   key={suggestion}
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs rounded-full hover:bg-primary/10 hover:border-primary transition-colors"
+                  className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3 rounded-full hover:bg-primary/10 hover:border-primary transition-colors"
                   onClick={() => setSearchQuery(suggestion)}
                 >
                   {suggestion}
-                  <ArrowRight className="h-3 w-3 ml-1 opacity-50" />
+                  <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 ml-1 opacity-50" />
                 </Button>
               ))}
             </div>
