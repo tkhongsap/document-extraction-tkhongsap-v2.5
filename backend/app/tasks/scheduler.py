@@ -62,17 +62,16 @@ class MonthlyResetScheduler:
                 
                 # Reset API keys monthly_usage
                 # This will be uncommented when API Key table is created
-                # api_key_result = await db.execute(
-                #     text("""
-                #         UPDATE api_keys 
-                #         SET monthly_usage = 0, 
-                #             last_reset_at = :reset_time
-                #         WHERE monthly_usage > 0
-                #     """),
-                #     {"reset_time": datetime.utcnow()}
-                # )
-                # api_keys_reset = api_key_result.rowcount
-                api_keys_reset = 0  # Placeholder until API keys table exists
+                api_key_result = await db.execute(
+                    text("""
+                        UPDATE api_keys 
+                        SET monthly_usage = 0, 
+                            last_reset_at = :reset_time
+                        WHERE monthly_usage > 0
+                    """),
+                    {"reset_time": datetime.utcnow()}
+                )
+                api_keys_reset = api_key_result.rowcount
                 
                 await db.commit()
                 
