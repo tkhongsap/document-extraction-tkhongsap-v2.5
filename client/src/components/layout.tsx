@@ -450,8 +450,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { href: '/extraction/general', icon: Plus, label: t('nav.general'), isPrimary: true },
-    { href: '/templates', icon: Files, label: t('nav.templates') },
     { href: '/resume-search', icon: Search, label: 'Resume Search' },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
@@ -461,7 +459,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
   const mobileNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { href: '/extraction/general', icon: Plus, label: t('nav.general') },
+    { href: '/resume-search', icon: Search, label: 'Resume Search' },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];
