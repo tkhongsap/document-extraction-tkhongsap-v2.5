@@ -1140,75 +1140,86 @@ async def extract_single_resume(
     # Calculate tokens for embedding text
     embedding_tokens = estimate_tokens(embedding_text) if embedding_text else 0
     
-    # Generate embedding if enabled
-    if generate_embedding and embedding_text:
-        try:
-            safe_print(f"   🔄 Generating embedding ({embedding_tokens} tokens)...")
-            embedding_start = time.time()
-            embedding_service = get_embedding_service()
-            embedding_vector = await embedding_service.create_embedding(embedding_text)
-            embedding_duration = time.time() - embedding_start
-            
-            output_data["embedding"] = embedding_vector  # Store as JSON array
-            output_data["embedding_model"] = embedding_service.model
-            
-            # Calculate cost (for reporting only, not saved to DB)
-            embedding_cost_usd = calculate_embedding_cost(embedding_tokens, embedding_service.model)
-            
-            cost_str = format_cost(embedding_cost_usd)
-            safe_print(f"   ✅ Embedding: {len(embedding_vector)} dims | {embedding_tokens} tokens | {cost_str} | {embedding_duration:.2f}s")
-        except Exception as e:
-            safe_print(f"   ⚠️ Failed to generate embedding: {e}")
-            # Continue without embedding
-    
     # ========================================
-    # CHUNKING: Create semantic chunks for RAG
+    # OPTIMIZED: Generate resume embedding + chunk embeddings in ONE batch request
     # ========================================
     chunks: List[ResumeChunk] = []
     chunk_tokens = 0
     chunk_cost_usd = 0.0
     
-    if generate_chunks:
+    # Create tasks for parallel execution
+    tasks = []
+    
+    # Task 1: Create chunks (CPU-bound, run in executor)
+    async def create_resume_chunks():
+        if not generate_chunks:
+            return []
         try:
-            # Create chunks from the output_data (which has parsed fields)
-            chunking_result = chunk_resume(output_data)
-            chunks = chunking_result.chunks
-            
-            if chunks:
-                safe_print(f"   🧩 Created {len(chunks)} chunks: {chunking_result.chunk_types_count}")
-                
-                # Generate embeddings for each chunk if enabled
-                if generate_embedding:
-                    safe_print(f"   🔄 Generating chunk embeddings...")
-                    chunk_start = time.time()
-                    
-                    try:
-                        embedding_service = get_embedding_service()
-                        chunk_texts = [chunk.text for chunk in chunks]
-                        chunk_embeddings = await embedding_service.create_embeddings_batch(chunk_texts)
-                        
-                        # Assign embeddings to chunks
-                        for i, chunk in enumerate(chunks):
-                            if i < len(chunk_embeddings):
-                                chunk.embedding = chunk_embeddings[i]
-                                chunk.embedding_model = embedding_service.model
-                        
-                        # Calculate tokens and cost for chunks
-                        for chunk in chunks:
-                            tokens = estimate_tokens(chunk.text)
-                            chunk_tokens += tokens
-                        
-                        chunk_cost_usd = calculate_embedding_cost(chunk_tokens, embedding_service.model)
-                        chunk_duration = time.time() - chunk_start
-                        
-                        cost_str = format_cost(chunk_cost_usd)
-                        safe_print(f"   ✅ Chunk embeddings: {len(chunks)} chunks | {chunk_tokens} tokens | {cost_str} | {chunk_duration:.2f}s")
-                        
-                    except Exception as e:
-                        safe_print(f"   ⚠️ Failed to generate chunk embeddings: {e}")
-                        # Continue with chunks but no embeddings
+            loop = asyncio.get_event_loop()
+            chunking_result = await loop.run_in_executor(None, chunk_resume, output_data)
+            return chunking_result.chunks
         except Exception as e:
             safe_print(f"   ⚠️ Failed to create chunks: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    # Run chunking while we wait
+    if generate_chunks:
+        safe_print(f"   🔄 Creating chunks...")
+        chunks = await create_resume_chunks()
+        if chunks:
+            chunk_types_count = {}
+            for chunk in chunks:
+                chunk_types_count[chunk.chunk_type] = chunk_types_count.get(chunk.chunk_type, 0) + 1
+            safe_print(f"   ✅ Created {len(chunks)} chunks: {chunk_types_count}")
+    
+    # OPTIMIZE: Generate ALL embeddings in ONE batch API call
+    if generate_embedding and (embedding_text or chunks):
+        try:
+            safe_print(f"   🔄 Generating embeddings for resume + {len(chunks)} chunks in single batch...")
+            batch_start = time.time()
+            embedding_service = get_embedding_service()
+            
+            # Combine resume text + chunk texts into one batch
+            all_texts = []
+            if embedding_text:
+                all_texts.append(embedding_text)  # Resume text is index 0
+            
+            for chunk in chunks:
+                all_texts.append(chunk.text)
+            
+            # Single batch API call for all embeddings
+            all_embeddings = await embedding_service.create_embeddings_batch(all_texts)
+            
+            # Distribute embeddings
+            if embedding_text and len(all_embeddings) > 0:
+                output_data["embedding"] = all_embeddings[0]
+                output_data["embedding_model"] = embedding_service.model
+                embedding_cost_usd = calculate_embedding_cost(embedding_tokens, embedding_service.model)
+            
+            # Assign chunk embeddings (starting from index 1 if resume embedding was included)
+            chunk_start_idx = 1 if embedding_text else 0
+            for i, chunk in enumerate(chunks):
+                embedding_idx = chunk_start_idx + i
+                if embedding_idx < len(all_embeddings):
+                    chunk.embedding = all_embeddings[embedding_idx]
+                    chunk.embedding_model = embedding_service.model
+                    tokens = estimate_tokens(chunk.text)
+                    chunk_tokens += tokens
+            
+            chunk_cost_usd = calculate_embedding_cost(chunk_tokens, embedding_service.model)
+            batch_duration = time.time() - batch_start
+            
+            total_embeddings = len(all_embeddings)
+            total_embed_tokens = embedding_tokens + chunk_tokens
+            total_embed_cost = embedding_cost_usd + chunk_cost_usd
+            cost_str = format_cost(total_embed_cost)
+            
+            safe_print(f"   ✅ Batch embeddings: {total_embeddings} texts | {total_embed_tokens} tokens | {cost_str} | {batch_duration:.2f}s")
+            
+        except Exception as e:
+            safe_print(f"   ⚠️ Failed to generate embeddings: {e}")
             import traceback
             traceback.print_exc()
     
