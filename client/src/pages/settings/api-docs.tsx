@@ -393,7 +393,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
 export default function ApiDocsPage() {
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-8 pb-12">
       {/* Back link */}
       <div>
         <Link href="/settings/api-keys">
