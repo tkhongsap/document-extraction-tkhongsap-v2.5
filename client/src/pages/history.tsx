@@ -1,5 +1,6 @@
 import { useLanguage } from "@/lib/i18n";
 import { useDateFormatter } from "@/lib/date-utils";
+import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getExtractions } from "@/lib/api";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebounce";
@@ -148,6 +149,7 @@ function searchInExtractedData(data: any, query: string, depth: number = 0, visi
 export default function History() {
   const { t } = useLanguage();
   const { formatDate, formatRelativeTime } = useDateFormatter();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -315,9 +317,18 @@ export default function History() {
             const TypeIcon = getDocumentTypeIcon(extraction.documentType);
             
             return (
-              <Link key={extraction.id} href={`/history/${extraction.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50">
-                  <CardContent className="p-6">
+              <Card 
+                key={extraction.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+                onClick={(e) => {
+                  // Only navigate if the click wasn't on a button or link
+                  const target = e.target as HTMLElement;
+                  if (!target.closest('button') && !target.closest('a')) {
+                    setLocation(`/history/${extraction.id}`);
+                  }
+                }}
+              >
+                <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       {/* Left: Extraction Info */}
                       <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -399,7 +410,6 @@ export default function History() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
             );
           })}
         </div>
