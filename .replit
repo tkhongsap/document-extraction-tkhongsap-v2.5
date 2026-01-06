@@ -1,14 +1,15 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["nodejs-20", "web", "python-3.11"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
+packages = ["libxcrypt", "postgresql"]
 
 [deployment]
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+run = ["node", "./dist/index.cjs"]
 
 [[ports]]
 localPort = 5000
@@ -96,3 +97,5 @@ integrations = ["javascript_database:1.0.0"]
 [userenv.shared]
 PRIVATE_OBJECT_DIR = "/docextract-storage/private"
 PUBLIC_OBJECT_SEARCH_PATHS = "/docextract-storage/public"
+NODE_ENV = "development"
+PORT = "5000"
