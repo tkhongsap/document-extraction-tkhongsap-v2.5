@@ -467,10 +467,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg text-sidebar-foreground">
-            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
-              <FileText className="h-4 w-4" />
+        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center justify-center">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-xl text-sidebar-foreground">
+            <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
+              <FileText className="h-5 w-5" />
             </div>
             <span className="group-data-[collapsible=icon]:hidden">DocExtract</span>
           </Link>
@@ -487,12 +487,13 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                     isActive={isActive}
                     tooltip={item.label}
                     className={cn(
+                      "h-11 text-base py-3",
                       item.isPrimary && !isActive && "font-semibold",
                       isActive && item.isPrimary && "font-semibold"
                     )}
                   >
                     <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-5 w-5" />
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
