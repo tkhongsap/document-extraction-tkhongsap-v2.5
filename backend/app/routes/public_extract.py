@@ -358,10 +358,16 @@ async def public_health():
     Public health check endpoint
     
     No authentication required
+    
+    Returns service status and available features
     """
     return {
         "status": "healthy",
         "service": "public-extract-api",
         "version": "1.0.0",
-        "note": "API Key authentication pending schema implementation"
+        "features": {
+            "apiKeyAuth": True,
+            "rateLimiting": True,
+            "usageTracking": True,
+        },
     }
