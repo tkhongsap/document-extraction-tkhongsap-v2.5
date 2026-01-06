@@ -7,6 +7,7 @@ import httpx
 import asyncio
 import re
 import os
+import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
@@ -17,6 +18,9 @@ from app.utils.extraction_schemas import (
     get_line_items_key,
     RESUME_ARRAY_KEYS,
 )
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 def safe_print(message: str) -> None:
@@ -265,7 +269,9 @@ class LlamaExtractService:
                     error_message = f"{error_message}: {error_json['message']}"
                 else:
                     error_message = f"{error_message}: {error_text}"
-            except:
+            except (ValueError, KeyError, TypeError) as e:
+                # JSON parsing failed or unexpected structure
+                logger.warning(f"Failed to parse error response JSON: {e}")
                 error_message = f"{error_message}: {error_text}"
             
             raise LlamaExtractError(error_message, response.status_code)
