@@ -50,6 +50,7 @@ class ResumeSearchResult(BaseModel):
     source_file_name: Optional[str] = None
     created_at: Optional[str] = None
     similarity_score: Optional[float] = None
+    has_embedding: bool = False
 
 
 class SearchResponse(BaseModel):
@@ -203,6 +204,7 @@ async def list_resumes(
                 summary=r.summary,
                 source_file_name=r.source_file_name,
                 created_at=r.created_at.isoformat() if r.created_at else None,
+                has_embedding=r.embedding_model is not None,  # Use embedding_model as indicator
             )
             for r in resumes
         ]
