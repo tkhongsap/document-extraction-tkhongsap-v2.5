@@ -21,6 +21,8 @@ from app.services.llama_extract import create_llama_extract_service, LlamaExtrac
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate
 from app.utils.extraction_schemas import DocumentType
+from app.utils.file_validator import validate_uploaded_file
+from app.core.security_errors import FileSecurityError
 
 router = APIRouter(prefix="/api/v1/public/extract", tags=["public-extract"])
 
@@ -143,6 +145,38 @@ async def public_template_extraction(
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 50MB)")
     
+    # Security validation
+    try:
+        validation_result = await validate_uploaded_file(
+            file=file,
+            buffer=buffer,
+            max_size=MAX_FILE_SIZE,
+            allowed_mimes=ALLOWED_MIMES,
+            strict_mode=False,
+        )
+        
+        if not validation_result.is_valid:
+            error_details = {
+                "message": "File validation failed",
+                "errors": validation_result.errors,
+                "warnings": validation_result.warnings,
+            }
+            raise HTTPException(status_code=400, detail=error_details)
+        
+        # Log warnings if any
+        if validation_result.warnings:
+            print(f"[Security] File validation warnings for {file.filename}: {validation_result.warnings}")
+            
+    except FileSecurityError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Security validation failed",
+                "error": str(e),
+                "details": e.details,
+            }
+        )
+    
     # Get page count for quota check
     page_count = get_pdf_page_count(buffer) if file.content_type == "application/pdf" else 1
     
@@ -257,6 +291,68 @@ async def public_general_extraction(
     
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+        # Security validation
+    try:
+        validation_result = await validate_uploaded_file(
+            file=file,
+            buffer=buffer,
+            max_size=MAX_FILE_SIZE,
+            allowed_mimes=ALLOWED_MIMES,
+            strict_mode=False,
+        )
+        
+        if not validation_result.is_valid:
+            error_details = {
+                "message": "File validation failed",
+                "errors": validation_result.errors,
+                "warnings": validation_result.warnings,
+            }
+            raise HTTPException(status_code=400, detail=error_details)
+        
+        # Log warnings if any
+        if validation_result.warnings:
+            print(f"[Security] File validation warnings for {file.filename}: {validation_result.warnings}")
+            
+    except FileSecurityError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Security validation failed",
+                "error": str(e),
+                "details": e.details,
+            }
+        )
+        # Security validation
+    try:
+        validation_result = await validate_uploaded_file(
+            file=file,
+            buffer=buffer,
+            max_size=MAX_FILE_SIZE,
+            allowed_mimes=ALLOWED_MIMES,
+            strict_mode=False,
+        )
+        
+        if not validation_result.is_valid:
+            error_details = {
+                "message": "File validation failed",
+                "errors": validation_result.errors,
+                "warnings": validation_result.warnings,
+            }
+            raise HTTPException(status_code=400, detail=error_details)
+        
+        # Log warnings if any
+        if validation_result.warnings:
+            print(f"[Security] File validation warnings for {file.filename}: {validation_result.warnings}")
+            
+    except FileSecurityError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Security validation failed",
+                "error": str(e),
+                "details": e.details,
+            }
+        )
     
     # Get page count before calling LlamaParse API
     page_count = get_pdf_page_count(buffer) if file.content_type == "application/pdf" else 1
