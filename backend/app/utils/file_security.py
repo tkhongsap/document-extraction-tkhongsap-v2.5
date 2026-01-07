@@ -136,6 +136,13 @@ def validate_magic_bytes(buffer: bytes, claimed_mime_type: str) -> Tuple[bool, O
                 if detected_normalized in ['application/x-ole-storage', 'application/msword']:
                     return True, None
             
+            # Special case: PNG images
+            if claimed_normalized == 'image/png':
+                if detected_normalized in ['image/png', 'application/octet-stream']:
+                    # Verify PNG signature manually
+                    if buffer.startswith(b'\x89PNG\r\n\x1a\n'):
+                        return True, None
+            
             if claimed_normalized == detected_normalized:
                 return True, None
             
