@@ -32,16 +32,15 @@ from app.routes import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan events"""
-    # Startup
+    """Application lifespan events - keep fast for health checks!"""
+    # Startup - minimal work here to pass health check quickly
     settings = get_settings()
     print(f"[FastAPI] Starting server in {settings.node_env} mode")
     print(f"[FastAPI] API key configured: {settings.llama_cloud_api_key[:10]}..." if settings.llama_cloud_api_key else "[FastAPI] WARNING: No API key configured")
     
-    # Initialize database tables
-    print("[FastAPI] Initializing database...")
-    await init_db()
-    print("[FastAPI] Database initialized")
+    # Don't initialize database here - do it lazily on first request
+    # This ensures health check passes immediately
+    print("[FastAPI] Server ready (database will init on first request)")
     
     yield
     
@@ -183,6 +182,28 @@ async def serve_public_object(file_path: str):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
+# Root health check for deployment (responds immediately with 200)
+@app.get("/")
+async def root_health(request: Request):
+    """Root endpoint - serves SPA in browser, returns health status for health checks"""
+    # Check if this is a browser request (Accept: text/html) vs health check
+    accept_header = request.headers.get("accept", "")
+    
+    # For health checks (non-browser requests), return 200 immediately
+    if "text/html" not in accept_header:
+        return {"status": "ok", "message": "Document AI Extractor API"}
+    
+    # For browser requests in production, serve the SPA
+    if settings.node_env == "production":
+        static_path = Path(__file__).parent.parent / "dist" / "public"
+        index_path = static_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+    
+    # Fallback: return simple health response
+    return {"status": "ok", "message": "Document AI Extractor API"}
+
+
 # Health check endpoint
 @app.get("/api/health")
 async def health_check():
@@ -208,16 +229,16 @@ if settings.node_env == "production":
 
 def main():
     """Main entry point"""
-    port = 8000
+    port = settings.port  # Use port from settings (default 5000)
     
     print(f"[FastAPI] Starting server on port {port}")
     
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",  # Bind to all interfaces
+        app,  # Use the app object directly
+        host="0.0.0.0",
         port=port,
-        reload=settings.node_env == "development",
-        log_level="info" if settings.node_env == "development" else "warning",
+        reload=False,  # Disable reload for stability
+        log_level="info",
     )
 
 

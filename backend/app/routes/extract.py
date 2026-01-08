@@ -122,9 +122,13 @@ async def template_extraction(
     Template-based extraction using LlamaExtract.
     Used for Bank Statement, Invoice, Purchase Order, Contract, and Resume templates.
     """
+    safe_print(f"[Template Extraction] Received request: documentType={documentType}, filename={file.filename if file else 'None'}")
+    
     # Validate file
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    safe_print(f"[Template Extraction] File content_type={file.content_type}, size={file.size}")
     
     # Validate document type
     valid_types: List[DocumentType] = ["bank", "invoice", "po", "contract", "resume"]

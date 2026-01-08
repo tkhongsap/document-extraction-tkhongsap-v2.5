@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     issuer_url: str = "https://replit.com/oidc"
     repl_id: str = ""
     
-    # Environment
-    node_env: str = "development"
-    port: int = 8000
+    # Environment - read from NODE_ENV or default to development
+    node_env: str = os.environ.get("NODE_ENV", "development")
+    port: int = int(os.environ.get("PORT", "5000"))  # Default to 5000 for Replit deployment
     
     # SMTP Email Settings
     smtp_server: str = "smtp.gmail.com"
