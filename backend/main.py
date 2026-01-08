@@ -208,13 +208,13 @@ if settings.node_env == "production":
 
 def main():
     """Main entry point"""
-    port = settings.port
+    port = 8000
     
     print(f"[FastAPI] Starting server on port {port}")
     
     uvicorn.run(
         "main:app",
-        host="::",  # Bind to IPv6 (also accepts IPv4)
+        host="0.0.0.0",  # Bind to all interfaces
         port=port,
         reload=settings.node_env == "development",
         log_level="info" if settings.node_env == "development" else "warning",
