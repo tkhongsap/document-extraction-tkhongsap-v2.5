@@ -394,11 +394,12 @@ export const contractSchema = {
 
 /**
  * Resume/CV Schema
- * Aligned with database: resumes table
+ * Focused on essential fields for candidate analysis
  */
 export const resumeSchema = {
   type: "object",
   properties: {
+    // === Personal Information ===
     name: {
       type: "string",
       description: "Candidate's full name (required)",
@@ -415,6 +416,7 @@ export const resumeSchema = {
       type: "string",
       description: "Current or preferred location (city, country)",
     },
+    // === Professional Profile ===
     currentRole: {
       type: "string",
       description: "Current job title or most recent position",
@@ -423,6 +425,11 @@ export const resumeSchema = {
       type: "integer",
       description: "Total years of professional experience",
     },
+    summary: {
+      type: "string",
+      description: "Professional summary or objective statement",
+    },
+    // === Skills ===
     skills: {
       type: "array",
       description: "Array of skill names",
@@ -431,6 +438,7 @@ export const resumeSchema = {
         description: "Skill name (e.g., Python, React, Project Management)",
       },
     },
+    // === Education ===
     education: {
       type: "array",
       description: "Array of education entries",
@@ -456,6 +464,7 @@ export const resumeSchema = {
         },
       },
     },
+    // === Work Experience ===
     experience: {
       type: "array",
       description: "Array of work experience entries",
@@ -470,48 +479,25 @@ export const resumeSchema = {
             type: "string",
             description: "Company name",
           },
-          location: {
-            type: "string",
-            description: "Work location",
-          },
           startDate: {
             type: "string",
-            description: "Start date in ISO 8601 format (YYYY-MM-DD)",
+            description: "Start date (YYYY-MM or YYYY)",
           },
           endDate: {
             type: "string",
-            description: "End date in ISO 8601 format or null if current",
+            description: "End date (YYYY-MM or YYYY), or 'Present' if current",
           },
           description: {
             type: "string",
-            description: "Job description and responsibilities",
-          },
-          isCurrent: {
-            type: "boolean",
-            description: "Whether this is the current position",
+            description: "Job description and key responsibilities/achievements",
           },
         },
       },
     },
-    certifications: {
-      type: "array",
-      description: "Array of certification names",
-      items: {
-        type: "string",
-        description: "Certification name",
-      },
-    },
+    // === Languages ===
     languages: {
       type: "array",
-      description: "Simple array of language names",
-      items: {
-        type: "string",
-        description: "Language name",
-      },
-    },
-    languagesWithProficiency: {
-      type: "array",
-      description: "Detailed language proficiency data",
+      description: "Languages with proficiency level",
       items: {
         type: "object",
         properties: {
@@ -521,46 +507,19 @@ export const resumeSchema = {
           },
           level: {
             type: "string",
-            description: "Proficiency level (native, fluent, business, conversational, basic, N1-N5)",
+            description: "Proficiency level (Native, Fluent, Business, Conversational, Basic)",
           },
         },
       },
     },
-    summary: {
-      type: "string",
-      description: "Professional summary or objective statement",
-    },
-    salaryExpectation: {
-      type: "integer",
-      description: "Expected salary in base currency units",
-    },
-    availabilityDate: {
-      type: "string",
-      description: "When candidate is available to start (ISO 8601 date)",
-    },
-    gender: {
-      type: "string",
-      description: "Gender (male, female, other)",
-    },
-    nationality: {
-      type: "string",
-      description: "Candidate nationality",
-    },
-    birthYear: {
-      type: "integer",
-      description: "Birth year for age calculation",
-    },
-    hasCar: {
-      type: "boolean",
-      description: "Whether candidate owns a car",
-    },
-    hasLicense: {
-      type: "boolean",
-      description: "Whether candidate has a driver's license",
-    },
-    willingToTravel: {
-      type: "boolean",
-      description: "Travel willingness indicator",
+    // === Certifications ===
+    certifications: {
+      type: "array",
+      description: "Array of certification names",
+      items: {
+        type: "string",
+        description: "Certification name",
+      },
     },
   },
 };

@@ -184,7 +184,8 @@ class LlamaExtractService:
             safe_print(f"[LlamaExtract] Using cached agent for {document_type}: {agent_id}")
             return agent_id
         
-        agent_name = f"docai-{document_type}-v1"
+        # Version number: increment when schema changes to force new agent creation
+        agent_name = f"docai-{document_type}-v2"
         
         # Try to find existing agent
         try:
@@ -437,6 +438,15 @@ class LlamaExtractService:
         safe_print(f"[LlamaExtract] Raw result data keys: {list(data.keys())}")
         safe_print(f"[LlamaExtract] Raw confidence scores: {confidence_scores}")
         
+        # Debug: Log array data for resume
+        if document_type == "resume":
+            for key in ["skills", "education", "experience", "languages", "certifications"]:
+                if key in data:
+                    arr_data = data[key]
+                    safe_print(f"[LlamaExtract] Resume {key}: {type(arr_data).__name__} with {len(arr_data) if isinstance(arr_data, list) else 'N/A'} items")
+                    if isinstance(arr_data, list) and len(arr_data) > 0:
+                        safe_print(f"[LlamaExtract] Resume {key}[0] sample: {arr_data[0]}")
+        
         # Separate header fields from line items
         line_items_key = get_line_items_key(document_type)
         line_items = data.get(line_items_key) if line_items_key else None
@@ -488,11 +498,16 @@ class LlamaExtractService:
             
             full_key = f"{prefix}.{key}" if prefix else key
             
+            # Skip null/None values
             if value is None:
                 continue
             
+            # Skip empty strings
+            if isinstance(value, str) and not value.strip():
+                continue
+            
             if isinstance(value, list):
-                # Skip arrays (handled separately as line items)
+                # Skip empty arrays or arrays (handled separately)
                 continue
             
             if isinstance(value, dict):
@@ -501,13 +516,15 @@ class LlamaExtractService:
                     value, full_key, result, confidence_scores, skip_key, document_type
                 )
             else:
-                # Add primitive value as header field
-                confidence = confidence_scores.get(full_key, 0.95)
-                result.append(ExtractedField(
-                    key=full_key,
-                    value=str(value),
-                    confidence=normalize_confidence(confidence),
-                ))
+                # Add primitive value as header field (only if has value)
+                str_value = str(value).strip()
+                if str_value:  # Only add if value is not empty
+                    confidence = confidence_scores.get(full_key, 0.95)
+                    result.append(ExtractedField(
+                        key=full_key,
+                        value=str_value,
+                        confidence=normalize_confidence(confidence),
+                    ))
 
 
 def create_llama_extract_service() -> LlamaExtractService:

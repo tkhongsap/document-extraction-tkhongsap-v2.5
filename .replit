@@ -8,8 +8,8 @@ packages = ["libxcrypt", "postgresql"]
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["node", "./dist/index.cjs"]
+build = ["sh", "-c", "pip install -r backend/requirements.txt && npm install --include=dev && npm run build"]
+run = ["sh", "-c", "cd backend && python main.py"]
 
 [[ports]]
 localPort = 5000
@@ -70,6 +70,7 @@ exposeLocalhost = true
 
 [env]
 PORT = "5000"
+NODE_ENV = "production"
 
 [workflows]
 runButton = "Project"
@@ -86,6 +87,7 @@ args = "Start application"
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

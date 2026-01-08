@@ -48,12 +48,44 @@ if database_url.startswith("sqlite"):
     )
 else:
     # PostgreSQL with asyncpg
-    # Always require SSL for external connections (non-localhost)
-    if "sslmode=" not in database_url and "localhost" not in database_url and "helium" not in database_url:
-        if "?" in database_url:
-            database_url += "&sslmode=require"
-        else:
-            database_url += "?sslmode=require"
+    # asyncpg doesn't support sslmode in URL - need to handle it separately
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    
+    parsed = urlparse(database_url)
+    query_params = parse_qs(parsed.query)
+    
+    # Extract sslmode and remove it from URL (asyncpg doesn't support it as URL param)
+    ssl_mode = query_params.pop('sslmode', ['disable'])[0] if 'sslmode' in query_params else None
+    
+    # Rebuild URL without sslmode
+    new_query = urlencode(query_params, doseq=True)
+    database_url = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
+    
+    # Determine SSL configuration for asyncpg
+    connect_args = {}
+    if ssl_mode == 'disable':
+        connect_args['ssl'] = False
+    elif ssl_mode in ('require', 'prefer', 'verify-ca', 'verify-full'):
+        import ssl
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        connect_args['ssl'] = ssl_context
+    elif ssl_mode is None:
+        # Default: require SSL for external connections (non-localhost)
+        if "localhost" not in database_url and "helium" not in database_url:
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            connect_args['ssl'] = ssl_context
     
     sanitized_url = database_url.split('@')[-1] if '@' in database_url else database_url
     print(f"[Database] Connecting to: {sanitized_url}")
@@ -64,6 +96,7 @@ else:
         pool_size=5,
         max_overflow=10,
         pool_pre_ping=True,
+        connect_args=connect_args,
     )
 
 # Create async session factory
