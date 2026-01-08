@@ -14,27 +14,28 @@ settings = get_settings()
 # Disable SQL echo in production for performance
 _enable_echo = settings.node_env == "development"
 
-# Get database URL and ensure async driver is used
-# ALWAYS prioritize os.environ.get("DATABASE_URL")
-database_url = os.environ.get("DATABASE_URL")
+# Get database URL - try multiple approaches
+database_url = os.environ.get("DATABASE_URL", "")
 
-# Check if it's the default local one and try to find a better one if available
-if not database_url or "localhost:5433" in database_url:
-    # Look for other PG environment variables that might contain the real URL
-    replit_db_url = os.environ.get("DATABASE_URL")
-    if replit_db_url and "localhost:5433" not in replit_db_url:
-         database_url = replit_db_url
+# If DATABASE_URL is empty or just whitespace, construct from PG* variables
+if not database_url or not database_url.strip():
+    pg_host = os.environ.get("PGHOST")
+    pg_port = os.environ.get("PGPORT", "5432")
+    pg_user = os.environ.get("PGUSER")
+    pg_password = os.environ.get("PGPASSWORD")
+    pg_database = os.environ.get("PGDATABASE")
+    
+    if pg_host and pg_user and pg_password and pg_database:
+        database_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_database}"
+        print(f"[Database] Constructed URL from PG* variables")
     else:
-         database_url = settings.database_url
-
-if not database_url:
-    # Fallback to a last resort if everything else fails
-    database_url = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+        # Fallback to settings
+        database_url = settings.database_url
 
 # Ensure async driver is used
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
-elif database_url.startswith("postgresql://"):
+elif database_url.startswith("postgresql://") and "+asyncpg" not in database_url:
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Handle different database types
@@ -48,7 +49,7 @@ if database_url.startswith("sqlite"):
 else:
     # PostgreSQL with asyncpg
     # Always require SSL for external connections (non-localhost)
-    if "sslmode=" not in database_url and "localhost" not in database_url:
+    if "sslmode=" not in database_url and "localhost" not in database_url and "helium" not in database_url:
         if "?" in database_url:
             database_url += "&sslmode=require"
         else:
@@ -89,10 +90,13 @@ async def init_db():
     """Initialize database tables"""
     # Import all models to register them with Base
     from app.models import User, Document, Extraction
+    from sqlalchemy import text
     
     async with engine.begin() as conn:
-        # Check if pgvector extension is needed and available
-        # This app uses vector search based on LLamaCloud
+        # Enable pgvector extension for vector embeddings
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        print("[Database] pgvector extension enabled")
+        
         await conn.run_sync(Base.metadata.create_all)
     
     print(f"[Database] Tables created: {list(Base.metadata.tables.keys())}")
