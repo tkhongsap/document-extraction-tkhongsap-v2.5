@@ -104,5 +104,4 @@ expertMode = true
 [userenv.shared]
 PRIVATE_OBJECT_DIR = "/docextract-storage/private"
 PUBLIC_OBJECT_SEARCH_PATHS = "/docextract-storage/public"
-NODE_ENV = "development"
 PORT = "5000"
