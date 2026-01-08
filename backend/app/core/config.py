@@ -11,27 +11,27 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # Database
-    database_url: str
+    database_url: str = os.getenv("DATABASE_URL", "")
     
     # Session
-    session_secret: str
+    session_secret: str = os.getenv("SESSION_SECRET", "default-secret-change-me")
     
     # Llama Cloud API
-    llama_cloud_api_key: str
+    llama_cloud_api_key: str = os.getenv("LLAMA_CLOUD_API_KEY", "")
     
     # OpenAI API (for embeddings)
-    openai_api_key: str = ""
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     
     # Object Storage
-    private_object_dir: str = ""
-    public_object_search_paths: str = ""
+    private_object_dir: str = os.getenv("PRIVATE_OBJECT_DIR", "")
+    public_object_search_paths: str = os.getenv("PUBLIC_OBJECT_SEARCH_PATHS", "")
     
     # Replit Auth (optional)
     issuer_url: str = "https://replit.com/oidc"
-    repl_id: str = ""
+    repl_id: str = os.getenv("REPL_ID", "")
     
     # Environment
-    node_env: str = "development"
+    node_env: str = os.getenv("NODE_ENV", "development")
     port: int = 8000
     
     # SMTP Email Settings
