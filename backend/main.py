@@ -182,35 +182,7 @@ async def serve_public_object(file_path: str):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
-# Root health check for deployment (responds immediately with 200)
-@app.get("/")
-async def root_health(request: Request):
-    """Root endpoint - serves SPA in browser, returns health status for health checks"""
-    # Check if this is a browser request (Accept: text/html) vs health check
-    accept_header = request.headers.get("accept", "")
-    
-    # For health checks (non-browser requests), return 200 immediately
-    if "text/html" not in accept_header:
-        return {"status": "ok", "message": "Document AI Extractor API"}
-    
-    # For browser requests in production, serve the SPA
-    if settings.node_env == "production":
-        possible_paths = [
-            Path(__file__).parent.parent / "dist" / "public",
-            Path(__file__).parent / "dist" / "public",
-            Path("/home/runner/workspace/dist/public"),
-        ]
-        
-        for sp in possible_paths:
-            index_path = sp / "index.html"
-            if index_path.exists():
-                return FileResponse(str(index_path))
-    
-    # Fallback: return simple health response
-    return {"status": "ok", "message": "Document AI Extractor API"}
-
-
-# Health check endpoint
+# Health check endpoint (must be before catch-all route)
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
@@ -246,6 +218,15 @@ if settings.node_env == "production":
             app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
             print(f"[FastAPI] Mounted /assets from {assets_path}")
         
+        # Root route - serve SPA
+        @app.get("/")
+        async def serve_root():
+            """Serve SPA index.html at root"""
+            index_path = static_path / "index.html"
+            if index_path.exists():
+                return FileResponse(str(index_path), media_type="text/html")
+            return JSONResponse(status_code=404, content={"error": "index.html not found"})
+        
         # Serve static files (favicon, opengraph, etc.)
         @app.get("/favicon.png")
         async def serve_favicon():
@@ -276,10 +257,20 @@ if settings.node_env == "production":
             # Fallback to index.html for SPA routing
             index_path = static_path / "index.html"
             if index_path.exists():
-                return FileResponse(str(index_path))
+                return FileResponse(str(index_path), media_type="text/html")
             return JSONResponse(status_code=404, content={"error": "Not found"})
     else:
         print(f"[FastAPI] WARNING: Static files not found for production mode.")
+        
+        # Fallback root route when no static files
+        @app.get("/")
+        async def root_fallback():
+            return {"status": "ok", "message": "Document AI Extractor API - Static files not found"}
+else:
+    # Development mode - just return API status
+    @app.get("/")
+    async def root_dev():
+        return {"status": "ok", "message": "Document AI Extractor API (dev mode)"}
 
 
 def main():
