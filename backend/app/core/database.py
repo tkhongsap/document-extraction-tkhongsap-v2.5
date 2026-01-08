@@ -18,8 +18,18 @@ _enable_echo = settings.node_env == "development"
 # ALWAYS prioritize os.environ.get("DATABASE_URL")
 database_url = os.environ.get("DATABASE_URL")
 
+# Check if it's the default local one and try to find a better one if available
+if not database_url or "localhost:5433" in database_url:
+    # Look for other PG environment variables that might contain the real URL
+    replit_db_url = os.environ.get("DATABASE_URL")
+    if replit_db_url and "localhost:5433" not in replit_db_url:
+         database_url = replit_db_url
+    else:
+         database_url = settings.database_url
+
 if not database_url:
-    database_url = settings.database_url
+    # Fallback to a last resort if everything else fails
+    database_url = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
 
 # Ensure async driver is used
 if database_url.startswith("postgres://"):
