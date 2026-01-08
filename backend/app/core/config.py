@@ -11,27 +11,27 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # Database
-    database_url: str = os.getenv("DATABASE_URL", "")
+    database_url: str = os.environ.get("DATABASE_URL", "")
     
     # Session
-    session_secret: str = os.getenv("SESSION_SECRET", "default-secret-change-me")
+    session_secret: str = os.environ.get("SESSION_SECRET", "default-secret-change-me")
     
     # Llama Cloud API
-    llama_cloud_api_key: str = os.getenv("LLAMA_CLOUD_API_KEY", "")
+    llama_cloud_api_key: str = os.environ.get("LLAMA_CLOUD_API_KEY", "")
     
     # OpenAI API (for embeddings)
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    openai_api_key: str = os.environ.get("OPENAI_API_KEY", "")
     
     # Object Storage
-    private_object_dir: str = os.getenv("PRIVATE_OBJECT_DIR", "")
-    public_object_search_paths: str = os.getenv("PUBLIC_OBJECT_SEARCH_PATHS", "")
+    private_object_dir: str = os.environ.get("PRIVATE_OBJECT_DIR", "")
+    public_object_search_paths: str = os.environ.get("PUBLIC_OBJECT_SEARCH_PATHS", "")
     
     # Replit Auth (optional)
     issuer_url: str = "https://replit.com/oidc"
-    repl_id: str = os.getenv("REPL_ID", "")
+    repl_id: str = os.environ.get("REPL_ID", "")
     
     # Environment
-    node_env: str = os.getenv("NODE_ENV", "development")
+    node_env: str = os.environ.get("NODE_ENV", "development")
     port: int = 8000
     
     # SMTP Email Settings

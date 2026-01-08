@@ -26,21 +26,36 @@ if database_url.startswith("sqlite"):
     )
 elif database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if "sslmode=require" not in database_url and "amazonaws.com" in database_url:
+        database_url += "?sslmode=require"
     engine = create_async_engine(
         database_url,
         echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
-        pool_pre_ping=True,  # Check connection health
+        pool_pre_ping=True,
     )
 elif database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    # The database URL seems to be hardcoded or loaded incorrectly from somewhere else
+    # Let's try to use the environment variable directly if it looks like a Replit one
+    import os
+    env_db_url = os.environ.get("DATABASE_URL")
+    if env_db_url:
+        database_url = env_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    if "sslmode=require" not in database_url and "localhost" not in database_url:
+        if "?" in database_url:
+            database_url += "&sslmode=require"
+        else:
+            database_url += "?sslmode=require"
+    
     engine = create_async_engine(
         database_url,
         echo=_enable_echo,
         pool_size=5,
         max_overflow=10,
-        pool_pre_ping=True,  # Check connection health
+        pool_pre_ping=True,
     )
 else:
     # Default - assume PostgreSQL with asyncpg

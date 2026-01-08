@@ -143,7 +143,7 @@ async def serve_private_object(object_path: str, request: Request):
         content = object_storage.download_object(blob)
         
         return FileResponse(
-            content,
+            str(content),
             media_type=metadata.get("content_type", "application/octet-stream"),
             headers={
                 "Cache-Control": "private, max-age=3600",
@@ -172,7 +172,7 @@ async def serve_public_object(file_path: str):
         content = object_storage.download_object(blob)
         
         return FileResponse(
-            content,
+            str(content),
             media_type=metadata.get("content_type", "application/octet-stream"),
             headers={
                 "Cache-Control": "public, max-age=3600",
