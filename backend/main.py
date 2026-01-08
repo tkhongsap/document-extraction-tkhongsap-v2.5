@@ -195,10 +195,16 @@ async def root_health(request: Request):
     
     # For browser requests in production, serve the SPA
     if settings.node_env == "production":
-        static_path = Path(__file__).parent.parent / "dist" / "public"
-        index_path = static_path / "index.html"
-        if index_path.exists():
-            return FileResponse(str(index_path))
+        possible_paths = [
+            Path(__file__).parent.parent / "dist" / "public",
+            Path(__file__).parent / "dist" / "public",
+            Path("/home/runner/workspace/dist/public"),
+        ]
+        
+        for sp in possible_paths:
+            index_path = sp / "index.html"
+            if index_path.exists():
+                return FileResponse(str(index_path))
     
     # Fallback: return simple health response
     return {"status": "ok", "message": "Document AI Extractor API"}
@@ -211,20 +217,69 @@ async def health_check():
     return {"status": "ok", "service": "document-ai-extractor"}
 
 
-# Serve static files in production
+# Helper function to find static directory
+def get_static_path():
+    """Find the static files directory"""
+    possible_paths = [
+        Path(__file__).parent.parent / "dist" / "public",  # /workspace/dist/public
+        Path(__file__).parent / "dist" / "public",  # /workspace/backend/dist/public
+        Path("/home/runner/workspace/dist/public"),  # Absolute path for Replit
+    ]
+    
+    for path in possible_paths:
+        if path.exists() and (path / "index.html").exists():
+            print(f"[FastAPI] Found static files at: {path}")
+            return path
+    
+    print(f"[FastAPI] Static files not found. Tried: {possible_paths}")
+    return None
+
+
+# Serve static files in production mode only
 if settings.node_env == "production":
-    # Serve frontend static files
-    static_path = Path(__file__).parent.parent / "dist" / "public"
-    if static_path.exists():
-        app.mount("/assets", StaticFiles(directory=str(static_path / "assets")), name="assets")
+    static_path = get_static_path()
+    
+    if static_path and static_path.exists():
+        # Mount assets directory
+        assets_path = static_path / "assets"
+        if assets_path.exists():
+            app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
+            print(f"[FastAPI] Mounted /assets from {assets_path}")
+        
+        # Serve static files (favicon, opengraph, etc.)
+        @app.get("/favicon.png")
+        async def serve_favicon():
+            favicon_path = static_path / "favicon.png"
+            if favicon_path.exists():
+                return FileResponse(str(favicon_path))
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+        
+        @app.get("/opengraph.jpg")
+        async def serve_opengraph():
+            og_path = static_path / "opengraph.jpg"
+            if og_path.exists():
+                return FileResponse(str(og_path), media_type="image/jpeg")
+            return JSONResponse(status_code=404, content={"error": "Not found"})
         
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
             """Serve SPA for all non-API routes"""
+            # Skip API routes and object routes
+            if full_path.startswith("api/") or full_path.startswith("objects/") or full_path.startswith("public-objects/"):
+                return JSONResponse(status_code=404, content={"error": "Not found"})
+            
+            # Try to serve the exact file first
+            file_path = static_path / full_path
+            if file_path.exists() and file_path.is_file():
+                return FileResponse(str(file_path))
+            
+            # Fallback to index.html for SPA routing
             index_path = static_path / "index.html"
             if index_path.exists():
                 return FileResponse(str(index_path))
             return JSONResponse(status_code=404, content={"error": "Not found"})
+    else:
+        print(f"[FastAPI] WARNING: Static files not found for production mode.")
 
 
 def main():
