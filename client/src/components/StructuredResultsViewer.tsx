@@ -28,7 +28,7 @@ interface StructuredResultsViewerProps {
 interface ArraySectionConfig {
   key: string;
   title: string;
-  columns: { key: string; label: string; width?: string }[];
+  columns: { key: string; altKeys?: string[]; label: string; width?: string }[];
 }
 
 /**
@@ -92,21 +92,21 @@ function getResumeArrayConfigs(): ArraySectionConfig[] {
       key: "experience",
       title: "Work Experience",
       columns: [
-        { key: "company", label: "Company" },
-        { key: "title", label: "Job Title" },
+        { key: "company", altKeys: ["company_name"], label: "Company" },
+        { key: "title", altKeys: ["job_title", "position"], label: "Job Title" },
         { key: "location", label: "Location", width: "w-28" },
-        { key: "startDate", label: "Start", width: "w-24" },
-        { key: "endDate", label: "End", width: "w-24" },
+        { key: "startDate", altKeys: ["start_date"], label: "Start", width: "w-24" },
+        { key: "endDate", altKeys: ["end_date"], label: "End", width: "w-24" },
       ],
     },
     {
       key: "education",
       title: "Education",
       columns: [
-        { key: "institution", label: "Institution" },
+        { key: "institution", altKeys: ["institution_name"], label: "Institution" },
         { key: "degree", label: "Degree" },
-        { key: "field", label: "Field", width: "w-32" },
-        { key: "year", label: "Year", width: "w-24" },
+        { key: "field", altKeys: ["field_of_study", "major"], label: "Field", width: "w-32" },
+        { key: "year", altKeys: ["graduation_date", "graduation_year", "end_date"], label: "Year", width: "w-24" },
       ],
     },
     {
@@ -270,13 +270,23 @@ function ArraySection({
                 <TableRow key={rowIndex} data-testid={`row-${config.key}-${rowIndex}`}>
                   {config.columns.map((col) => {
                     const confidence = getCellConfidence(rowIndex, col.key);
+                    // Try primary key first, then altKeys
+                    let cellValue = item[col.key];
+                    if ((cellValue === undefined || cellValue === null || cellValue === "") && col.altKeys) {
+                      for (const altKey of col.altKeys) {
+                        if (item[altKey] !== undefined && item[altKey] !== null && item[altKey] !== "") {
+                          cellValue = item[altKey];
+                          break;
+                        }
+                      }
+                    }
                     return (
                       <TableCell
                         key={col.key}
                         className={cn("text-sm py-2", col.width)}
                       >
                         <span className="inline-flex items-center">
-                          {formatValue(item[col.key])}
+                          {formatValue(cellValue)}
                           {confidence !== undefined && (
                             <ConfidenceIndicator confidence={confidence} />
                           )}
