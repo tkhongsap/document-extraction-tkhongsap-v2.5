@@ -188,7 +188,8 @@ class LlamaExtractService:
             safe_print(f"[LlamaExtract] Using cached agent for {document_type}: {agent_id}")
             return agent_id
         
-        agent_name = f"docai-{document_type}-v1"
+        # v2: Simplified schema for resume (2026-01)
+        agent_name = f"docai-{document_type}-v2"
         
         # Try to find existing agent
         try:

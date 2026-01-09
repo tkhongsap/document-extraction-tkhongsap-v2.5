@@ -226,7 +226,7 @@ async def template_extraction(
                     generate_embedding=can_generate_embedding,
                 )
                 resume_id = resume.id
-                embedding_status = "with embedding" if resume.embedding else "without embedding"
+                embedding_status = "with embedding" if resume.embedding is not None else "without embedding"
                 safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
             except Exception as e:
                 safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
@@ -235,6 +235,7 @@ async def template_extraction(
                 # Continue without resume save - extraction is still saved
 
             # 2. Try to create chunks (Independent of Resume table success)
+            # Note: document_id must reference documents table, not resumes table
             try:
                 safe_print(f"[Template Extraction] Attempting to create chunks...")
                 chunking_service = ChunkingService(db)
@@ -242,7 +243,7 @@ async def template_extraction(
                     user_id=user.id,
                     extraction_id=extraction.id,
                     extracted_data=result.extracted_data,
-                    document_id=resume_id if resume_id else document_id,
+                    document_id=document_id,  # Use actual document_id (can be None if upload failed)
                     generate_embeddings=can_generate_embedding
                 )
                 safe_print(f"[Template Extraction] Created {len(chunks)} chunks for resume")
