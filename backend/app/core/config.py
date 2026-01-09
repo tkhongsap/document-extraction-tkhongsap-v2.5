@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 30  # Default for API keys
     
+    # API Key Security (2-Tier Hashing)
+    API_KEY_SECRET_TIER_1: Optional[str] = None  # Most secure, for private_key_1
+    API_KEY_SECRET_TIER_2: Optional[str] = None  # For verification, private_key_2
+    
     # SMTP Email Settings
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
