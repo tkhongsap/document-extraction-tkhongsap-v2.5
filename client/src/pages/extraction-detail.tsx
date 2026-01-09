@@ -9,7 +9,7 @@ import { getExtraction } from "@/lib/api";
 import { Link, useParams } from "wouter";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
-import type { DocumentType } from "@/lib/api";
+import type { DocumentType, ExtractedField } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,57 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
+
+// Keys that should be treated as arrays and not converted to header fields
+const RESUME_ARRAY_KEYS = [
+  "experience", "education", "skills", "certifications", 
+  "languages", "languagesWithProficiency", "projects"
+];
+
+/**
+ * Convert raw extractedData to headerFields format
+ * This is needed when loading from history where we only have raw data
+ */
+function convertToHeaderFields(
+  data: Record<string, unknown>,
+  documentType: DocumentType,
+  confidenceScores?: Record<string, number>
+): ExtractedField[] {
+  const headerFields: ExtractedField[] = [];
+  const arrayKeysToSkip = documentType === "resume" ? RESUME_ARRAY_KEYS : [];
+  
+  function flattenObject(
+    obj: Record<string, unknown>,
+    prefix: string = ""
+  ): void {
+    for (const [key, value] of Object.entries(obj)) {
+      // Skip array keys for resumes
+      if (arrayKeysToSkip.includes(key)) continue;
+      // Skip null/undefined values
+      if (value === null || value === undefined) continue;
+      // Skip arrays
+      if (Array.isArray(value)) continue;
+      
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      
+      if (typeof value === "object" && value !== null) {
+        // Recursively flatten nested objects
+        flattenObject(value as Record<string, unknown>, fullKey);
+      } else {
+        // Get confidence score if available
+        const confidence = confidenceScores?.[fullKey] ?? confidenceScores?.[key] ?? 0.9;
+        headerFields.push({
+          key: fullKey,
+          value: String(value),
+          confidence: confidence
+        });
+      }
+    }
+  }
+  
+  flattenObject(data);
+  return headerFields;
+}
 
 export default function ExtractionDetail() {
   const { t } = useLanguage();
@@ -58,7 +109,16 @@ export default function ExtractionDetail() {
     );
   }
 
-  const extractedData = extraction.extractedData as any;
+  const extractedData = extraction.extractedData as Record<string, unknown>;
+  
+  // Convert raw extractedData to headerFields if not already present
+  // This happens when loading from history where we only have raw data
+  const headerFields = extractedData?.headerFields as ExtractedField[] | undefined
+    ?? convertToHeaderFields(
+        extractedData || {},
+        extraction.documentType as DocumentType,
+        extractedData?.confidenceScores as Record<string, number> | undefined
+      );
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
@@ -138,10 +198,10 @@ export default function ExtractionDetail() {
             />
           ) : (
             <StructuredResultsViewer
-              headerFields={extractedData?.headerFields || []}
-              lineItems={extractedData?.lineItems || []}
+              headerFields={headerFields}
+              lineItems={(extractedData?.lineItems as Array<Record<string, unknown>>) || []}
               extractedData={extractedData}
-              confidenceScores={extractedData?.confidenceScores}
+              confidenceScores={extractedData?.confidenceScores as Record<string, number> | undefined}
               documentType={extraction.documentType as DocumentType}
               className="h-full"
               fileName={extraction.fileName}
