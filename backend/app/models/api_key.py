@@ -11,7 +11,7 @@ from .base import generate_uuid
 
 
 class ApiKey(Base):
-    """API Keys table - stores hashed API keys for programmatic access"""
+    """API Keys table - stores hashed API keys with 2-tier security"""
     __tablename__ = "api_keys"
     
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -19,8 +19,16 @@ class ApiKey(Base):
     
     # Key identification
     name = Column(String(255), nullable=False)  # User-friendly name for the key
-    prefix = Column(String(8), nullable=False)  # First 8 chars of key for identification (e.g., "dae_abc1")
-    hashed_key = Column(String(255), nullable=False, unique=True)  # SHA-256 hash of the full key
+    prefix = Column(String(8), nullable=False)  # First 8 chars (dk_xxxx)
+    
+    # 2-Tier Security Keys
+    private_key_1 = Column(Text, nullable=True)  # HMAC-SHA256 with SECRET_1 (เก็บลับที่สุด - encrypted)
+    public_key_1 = Column(String(64), nullable=True)  # SHA256 of plain key
+    private_key_2 = Column(String(64), nullable=False, unique=True)  # HMAC-SHA256 with SECRET_2 (for verification)
+    public_key_2 = Column(String(64), nullable=True)  # SHA256 of public_key_1 (แสดงให้ user)
+    
+    # Legacy support (for old keys that use simple SHA-256)
+    hashed_key = Column(String(255), nullable=True, unique=True)  # SHA-256 hash (legacy)
     
     # Usage limits
     monthly_limit = Column(Integer, nullable=False, default=1000)  # Pages per month
@@ -47,10 +55,12 @@ class ApiKey(Base):
     
     # Indexes for performance
     __table_args__ = (
-        Index("idx_api_keys_hashed_key", "hashed_key"),
+        Index("idx_api_keys_private_key_2", "private_key_2"),  # Main verification index
+        Index("idx_api_keys_hashed_key", "hashed_key"),  # Legacy support
         Index("idx_api_keys_user_id", "user_id"),
         Index("idx_api_keys_prefix", "prefix"),
         Index("idx_api_keys_is_active", "is_active"),
+        Index("idx_api_keys_public_key_2", "public_key_2"),  # For user lookup
     )
     
     def to_dict(self, include_prefix: bool = True):
