@@ -33,6 +33,8 @@ export interface IStorage {
   getExtractionsByUserId(userId: string, limit?: number): Promise<Extraction[]>;
   getExtraction(id: string): Promise<Extraction | undefined>;
   getExtractionsGroupedByDocument(userId: string, limit?: number): Promise<DocumentWithExtractions[]>;
+  updateExtractionReviewStatus(id: string, reviewStatus: string, reviewedBy: string): Promise<Extraction | undefined>;
+  updateExtractionData(id: string, extractedData: unknown, reviewedBy: string): Promise<Extraction | undefined>;
   
   // User preferences
   updateUserLanguage(userId: string, language: string): Promise<void>;
@@ -221,6 +223,33 @@ export class DatabaseStorage implements IStorage {
 
     // Apply limit
     return sorted.slice(0, limit);
+  }
+
+  async updateExtractionReviewStatus(id: string, reviewStatus: string, reviewedBy: string): Promise<Extraction | undefined> {
+    const [updated] = await db
+      .update(extractions)
+      .set({ 
+        reviewStatus,
+        reviewedBy,
+        reviewedAt: new Date(),
+      })
+      .where(eq(extractions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateExtractionData(id: string, extractedData: unknown, reviewedBy: string): Promise<Extraction | undefined> {
+    const [updated] = await db
+      .update(extractions)
+      .set({ 
+        extractedData,
+        reviewStatus: 'edited',
+        reviewedBy,
+        reviewedAt: new Date(),
+      })
+      .where(eq(extractions.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async updateUserLanguage(userId: string, language: string): Promise<void> {
