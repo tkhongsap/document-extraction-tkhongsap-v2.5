@@ -4,6 +4,9 @@ import { serveStatic } from "./static";
 
 const app = express();
 
+// Security: Disable X-Powered-By header to hide server technology
+app.disable('x-powered-by');
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
