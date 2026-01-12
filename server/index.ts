@@ -63,12 +63,21 @@ app.use((req, res, next) => {
 (async () => {
   const httpServer = await registerRoutes(app);
 
+  // Global error handler with sanitization
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Log full error for debugging (server-side only)
+    console.error('[Error]', err);
+    
+    // In production, hide internal error details from client
+    let message = err.message || "Internal Server Error";
+    if (isProduction && status >= 500) {
+      message = "An error occurred. Please try again later.";
+    }
 
     res.status(status).json({ message });
-    throw err;
   });
 
   if (process.env.NODE_ENV === "production") {
