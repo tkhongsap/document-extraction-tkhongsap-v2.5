@@ -48,6 +48,10 @@ export type BatchJobStatus = typeof batchJobStatuses[number];
 export const batchItemStatuses = ["pending", "processing", "completed", "failed"] as const;
 export type BatchItemStatus = typeof batchItemStatuses[number];
 
+// Extraction review status (for approval workflow)
+export const extractionReviewStatuses = ["pending", "edited", "rejected", "approved"] as const;
+export type ExtractionReviewStatus = typeof extractionReviewStatuses[number];
+
 // Document types for extraction
 export const documentTypes = ["bank", "invoice", "po", "contract", "resume", "general"] as const;
 export type DocumentType = typeof documentTypes[number];
@@ -130,6 +134,10 @@ export const extractions = pgTable("extractions", {
   pagesProcessed: integer("pages_processed").notNull(),
   extractedData: jsonb("extracted_data").notNull(),
   status: text("status").notNull().default('completed'),
+  // Review status for approval workflow (pending, edited, rejected, approved)
+  reviewStatus: text("review_status").notNull().default('pending'),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"),
   // Link to batch item if part of batch processing
   batchItemId: varchar("batch_item_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
