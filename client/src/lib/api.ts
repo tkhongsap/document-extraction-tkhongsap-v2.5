@@ -93,6 +93,10 @@ export async function logout(): Promise<void> {
     method: "POST",
     credentials: "include",
   });
+  
+  // Clear browser storage for security
+  localStorage.clear();
+  sessionStorage.clear();
 }
 
 export async function getCurrentUser(): Promise<User> {
