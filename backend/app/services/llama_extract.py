@@ -7,6 +7,7 @@ import httpx
 import asyncio
 import re
 import os
+import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
@@ -17,6 +18,9 @@ from app.utils.extraction_schemas import (
     get_line_items_key,
     RESUME_ARRAY_KEYS,
 )
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 def safe_print(message: str) -> None:
@@ -184,7 +188,8 @@ class LlamaExtractService:
             safe_print(f"[LlamaExtract] Using cached agent for {document_type}: {agent_id}")
             return agent_id
         
-        agent_name = f"docai-{document_type}-v1"
+        # v2: Simplified schema for resume (2026-01)
+        agent_name = f"docai-{document_type}-v2"
         
         # Try to find existing agent
         try:
@@ -265,7 +270,9 @@ class LlamaExtractService:
                     error_message = f"{error_message}: {error_json['message']}"
                 else:
                     error_message = f"{error_message}: {error_text}"
-            except:
+            except (ValueError, KeyError, TypeError) as e:
+                # JSON parsing failed or unexpected structure
+                logger.warning(f"Failed to parse error response JSON: {e}")
                 error_message = f"{error_message}: {error_text}"
             
             raise LlamaExtractError(error_message, response.status_code)
@@ -359,20 +366,37 @@ class LlamaExtractService:
                     raise LlamaExtractError(f"Failed to create job after {max_retries} attempts: {e}")
     
     async def _wait_for_completion(self, job_id: str) -> None:
-        """Poll for job completion"""
+        """Poll for job completion with retry on connection errors"""
         safe_print(f"[LlamaExtract] Starting to poll for job {job_id} completion...")
         
+        consecutive_errors = 0
+        max_consecutive_errors = 5  # Allow up to 5 consecutive connection errors before failing
+        
         for i in range(self.max_retries):
-            status = await self._get_job_status(job_id)
-            safe_print(f"[LlamaExtract] Poll {i + 1}/{self.max_retries} - Job {job_id} status: {status}")
-            
-            if status == "SUCCESS":
-                safe_print(f"[LlamaExtract] Job {job_id} completed successfully")
-                return
-            
-            if status in ("ERROR", "CANCELLED"):
-                safe_print(f"[LlamaExtract] Job {job_id} failed with status: {status}")
-                raise LlamaExtractError(f"Job {job_id} failed with status: {status}")
+            try:
+                status = await self._get_job_status(job_id)
+                consecutive_errors = 0  # Reset on success
+                safe_print(f"[LlamaExtract] Poll {i + 1}/{self.max_retries} - Job {job_id} status: {status}")
+                
+                if status == "SUCCESS":
+                    safe_print(f"[LlamaExtract] Job {job_id} completed successfully")
+                    return
+                
+                if status in ("ERROR", "CANCELLED"):
+                    safe_print(f"[LlamaExtract] Job {job_id} failed with status: {status}")
+                    raise LlamaExtractError(f"Job {job_id} failed with status: {status}")
+                
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadError, httpx.ReadTimeout) as e:
+                consecutive_errors += 1
+                safe_print(f"[LlamaExtract] Poll {i + 1} - Connection error ({type(e).__name__}), consecutive: {consecutive_errors}/{max_consecutive_errors}")
+                
+                if consecutive_errors >= max_consecutive_errors:
+                    safe_print(f"[LlamaExtract] Too many consecutive connection errors, giving up")
+                    raise LlamaExtractError(f"Failed to poll job status after {max_consecutive_errors} consecutive connection errors: {e}")
+                
+                # Wait a bit longer on connection error before retry
+                await asyncio.sleep((self.poll_interval_ms / 1000) * 2)
+                continue
             
             await asyncio.sleep(self.poll_interval_ms / 1000)
         
@@ -382,6 +406,7 @@ class LlamaExtractService:
         )
     
     async def _get_job_status(self, job_id: str) -> str:
+<<<<<<< HEAD
         """Get job status"""
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.get(
@@ -391,18 +416,43 @@ class LlamaExtractService:
                     "Accept": "application/json",
                 },
             )
+=======
+        """Get job status with retry on connection errors"""
+        max_retries = 3
+        retry_delay = 2.0
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         
-        if response.status_code != 200:
-            error_text = response.text
-            raise LlamaExtractError(
-                f"Failed to get job status: {error_text}",
-                response.status_code
-            )
-        
-        result = response.json()
-        return result["status"]
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.get(
+                        f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs/{job_id}",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Accept": "application/json",
+                        },
+                    )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    raise LlamaExtractError(
+                        f"Failed to get job status: {error_text}",
+                        response.status_code
+                    )
+                
+                result = response.json()
+                return result["status"]
+                
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadError, httpx.ReadTimeout) as e:
+                safe_print(f"[LlamaExtract] _get_job_status attempt {attempt + 1}/{max_retries} failed: {type(e).__name__}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    raise  # Re-raise to be handled by _wait_for_completion
     
     async def _get_result(self, job_id: str) -> Dict[str, Any]:
+<<<<<<< HEAD
         """Get extraction result"""
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.get(
@@ -412,15 +462,39 @@ class LlamaExtractService:
                     "Accept": "application/json",
                 },
             )
+=======
+        """Get extraction result with retry on connection errors"""
+        max_retries = 3
+        retry_delay = 2.0
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         
-        if response.status_code != 200:
-            error_text = response.text
-            raise LlamaExtractError(
-                f"Failed to get job result: {error_text}",
-                response.status_code
-            )
-        
-        return response.json()
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.get(
+                        f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs/{job_id}/result",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Accept": "application/json",
+                        },
+                    )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    raise LlamaExtractError(
+                        f"Failed to get job result: {error_text}",
+                        response.status_code
+                    )
+                
+                return response.json()
+                
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadError, httpx.ReadTimeout) as e:
+                safe_print(f"[LlamaExtract] _get_result attempt {attempt + 1}/{max_retries} failed: {type(e).__name__}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    raise LlamaExtractError(f"Failed to get job result after {max_retries} retries: {e}")
     
     def _format_result(
         self,

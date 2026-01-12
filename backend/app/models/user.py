@@ -33,3 +33,7 @@ class User(Base):
     extractions = relationship("Extraction", back_populates="user")
     usage_history = relationship("UsageHistory", back_populates="user")
     resumes = relationship("Resume", back_populates="user")
+<<<<<<< HEAD
+=======
+    api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd

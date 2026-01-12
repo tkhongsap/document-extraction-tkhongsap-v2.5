@@ -458,6 +458,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             resumeId = resume.id;
             console.log(`[Template Extraction] Resume saved with ID: ${resumeId}, hasEmbedding: ${!!resume.embedding}`);
+<<<<<<< HEAD
+=======
+            
+            // Create semantic chunks for better RAG search
+            if (process.env.OPENAI_API_KEY) {
+              try {
+                console.log(`[Template Extraction] Creating semantic chunks...`);
+                const chunkResult = await chunkAndSaveResume({
+                  userId,
+                  documentId: documentId || undefined,
+                  extractionId: resumeId,
+                  resumeData: extractionResult.extractedData as unknown as ExtractedResumeData,
+                  includeFullResume: true
+                });
+                console.log(`[Template Extraction] Created ${chunkResult.totalChunks} chunks, saved: ${chunkResult.savedToDb}`);
+              } catch (chunkError: any) {
+                console.error("[Template Extraction] Warning: Failed to create chunks:", chunkError);
+                // Continue without chunks - resume already saved
+              }
+            }
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
           } catch (error: any) {
             console.error("[Template Extraction] Warning: Failed to save resume:", error);
             // Continue without resume save - extraction still returned

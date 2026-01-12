@@ -37,7 +37,6 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
-    chunks_router,
 )
 
 
@@ -112,7 +111,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-
 )
 
 
@@ -144,8 +142,6 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
-app.include_router(chunks_router)
-
 
 
 # Object storage routes for serving files

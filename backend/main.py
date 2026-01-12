@@ -6,6 +6,8 @@ import os
 import sys
 import io
 import asyncio
+import io
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -37,26 +39,7 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
-    search_router,
-    chunks_router,
 )
-from app.routes.rag import router as rag_router
-
-
-async def cleanup_old_extractions_task():
-    """Background task to cleanup old extractions every 6 hours"""
-    while True:
-        try:
-            await asyncio.sleep(6 * 60 * 60)  # Run every 6 hours
-            async with async_session_maker() as db:
-                storage = StorageService(db)
-                deleted_count = await storage.cleanup_old_extractions()
-                if deleted_count > 0:
-                    print(f"[Cleanup] Deleted {deleted_count} old extractions (older than 3 days)")
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            print(f"[Cleanup] Error: {e}")
 
 
 @asynccontextmanager
@@ -72,18 +55,9 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("[FastAPI] Database initialized")
     
-    # Start background cleanup task
-    cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
-    print("[FastAPI] Started extraction cleanup background task")
-    
     yield
     
     # Shutdown
-    cleanup_task.cancel()
-    try:
-        await cleanup_task
-    except asyncio.CancelledError:
-        pass
     print("[FastAPI] Shutting down...")
 
 
@@ -111,7 +85,12 @@ app.add_middleware(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.node_env != "production" else [
+    allow_origins=[
+        "http://localhost:5000",
+        "http://localhost:3000",
+        "http://127.0.0.1:5000",
+        "http://127.0.0.1:3000",
+    ] if settings.node_env != "production" else [
         "https://*.replit.app",
         "https://*.replit.dev",
     ],
@@ -119,6 +98,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add usage logging middleware for public API
+app.add_middleware(UsageLoggingMiddleware)
 
 
 # Request logging middleware
@@ -149,9 +131,6 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
-app.include_router(search_router)
-app.include_router(rag_router)
-app.include_router(chunks_router)
 
 
 # Object storage routes for serving files
