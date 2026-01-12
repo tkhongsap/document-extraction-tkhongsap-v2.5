@@ -16,7 +16,7 @@ import {
   type AuditActionType
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, lt, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -39,6 +39,11 @@ export interface IStorage {
   getExtractionsGroupedByDocument(userId: string, limit?: number): Promise<DocumentWithExtractions[]>;
   updateExtractionReviewStatus(id: string, reviewStatus: string, reviewedBy: string): Promise<Extraction | undefined>;
   updateExtractionData(id: string, extractedData: unknown, reviewedBy: string): Promise<Extraction | undefined>;
+  deleteExtraction(id: string): Promise<void>;
+  
+  // Cleanup operations
+  getExpiredRejectedExtractions(daysOld: number): Promise<Extraction[]>;
+  deleteExpiredRejectedExtractions(daysOld: number): Promise<{ deleted: number; documentIds: string[] }>;
   
   // User preferences
   updateUserLanguage(userId: string, language: string): Promise<void>;
@@ -258,6 +263,56 @@ export class DatabaseStorage implements IStorage {
       .where(eq(extractions.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async deleteExtraction(id: string): Promise<void> {
+    await db.delete(extractions).where(eq(extractions.id, id));
+  }
+
+  // ========================================
+  // Cleanup Operations
+  // ========================================
+
+  async getExpiredRejectedExtractions(daysOld: number): Promise<Extraction[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    return db.query.extractions.findMany({
+      where: and(
+        eq(extractions.reviewStatus, 'rejected'),
+        lt(extractions.reviewedAt, cutoffDate)
+      ),
+    });
+  }
+
+  async deleteExpiredRejectedExtractions(daysOld: number): Promise<{ deleted: number; documentIds: string[] }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    // First get the extractions to be deleted (to get documentIds)
+    const toDelete = await db.query.extractions.findMany({
+      where: and(
+        eq(extractions.reviewStatus, 'rejected'),
+        lt(extractions.reviewedAt, cutoffDate)
+      ),
+    });
+    
+    if (toDelete.length === 0) {
+      return { deleted: 0, documentIds: [] };
+    }
+    
+    // Collect document IDs for cleanup
+    const documentIds = toDelete
+      .map(e => e.documentId)
+      .filter((id): id is string => id !== null);
+    
+    // Delete the extractions
+    const extractionIds = toDelete.map(e => e.id);
+    for (const id of extractionIds) {
+      await db.delete(extractions).where(eq(extractions.id, id));
+    }
+    
+    return { deleted: toDelete.length, documentIds };
   }
 
   async updateUserLanguage(userId: string, language: string): Promise<void> {

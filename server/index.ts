@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { startCleanupScheduler } from "./cleanupService";
 
 const app = express();
 
@@ -86,6 +87,9 @@ app.use((req, res, next) => {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
+
+  // Start cleanup scheduler for auto-deleting rejected extractions
+  startCleanupScheduler();
 
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
