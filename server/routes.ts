@@ -340,6 +340,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update extraction review status (approve/reject)
+  app.patch("/api/extractions/:id/review", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const { reviewStatus } = req.body;
+
+    try {
+      // Validate review status
+      const validStatuses = ['pending', 'edited', 'rejected', 'approved'];
+      if (!reviewStatus || !validStatuses.includes(reviewStatus)) {
+        return res.status(400).json({ 
+          message: `Invalid review status. Must be one of: ${validStatuses.join(', ')}` 
+        });
+      }
+
+      const extraction = await storage.getExtraction(req.params.id);
+      
+      if (!extraction) {
+        return res.status(404).json({ message: "Extraction not found" });
+      }
+
+      if (extraction.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.updateExtractionReviewStatus(req.params.id, reviewStatus, userId);
+      res.json({ extraction: updated });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update extraction data (edit mode)
+  app.patch("/api/extractions/:id/data", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const { extractedData } = req.body;
+
+    try {
+      if (!extractedData) {
+        return res.status(400).json({ message: "extractedData is required" });
+      }
+
+      const extraction = await storage.getExtraction(req.params.id);
+      
+      if (!extraction) {
+        return res.status(404).json({ message: "Extraction not found" });
+      }
+
+      if (extraction.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.updateExtractionData(req.params.id, extractedData, userId);
+      res.json({ extraction: updated });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get documents grouped by filename with their extractions
   app.get("/api/documents-with-extractions", isAuthenticated, async (req: any, res: Response) => {
     const userId = req.user?.claims?.sub;
@@ -484,6 +542,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Template Extraction] Skipping resume save`);
         }
 
+        // Save extraction to database
+        let extractionId: string | undefined;
+        try {
+          const extraction = await storage.createExtraction({
+            userId,
+            documentId: documentId || null,
+            fileName: originalname,
+            fileSize: size,
+            documentType,
+            pagesProcessed: extractionResult.pagesProcessed,
+            extractedData: extractionResult.extractedData,
+            status: 'completed',
+          });
+          extractionId = extraction.id;
+          console.log(`[Template Extraction] Saved extraction with ID: ${extractionId}`);
+        } catch (saveError: any) {
+          console.error("[Template Extraction] Warning: Failed to save extraction:", saveError);
+          // Continue - extraction data is still returned
+        }
+
         // Return the extraction result
         const responsePayload = {
           success: extractionResult.success,
@@ -497,6 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mimeType: mimetype,
           documentId, // Include documentId so frontend can link it
           resumeId, // Include resumeId if resume was saved
+          extractionId, // Include extractionId for review workflow
         };
         console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields, ${Object.keys(extractionResult.confidenceScores || {}).length} confidence scores`);
         res.json(responsePayload);
@@ -576,6 +655,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update user's monthly usage after successful parsing
         await storage.updateUserUsage(userId, parsedDocument.pageCount);
 
+        // Save extraction to database
+        let extractionId: string | undefined;
+        try {
+          const extraction = await storage.createExtraction({
+            userId,
+            documentId: documentId || null,
+            fileName: originalname,
+            fileSize: size,
+            documentType: 'general',
+            pagesProcessed: parsedDocument.pageCount,
+            extractedData: {
+              markdown: parsedDocument.markdown,
+              text: parsedDocument.text,
+              pages: parsedDocument.pages,
+              overallConfidence: parsedDocument.overallConfidence,
+              confidenceStats: parsedDocument.confidenceStats,
+            },
+            status: 'completed',
+          });
+          extractionId = extraction.id;
+          console.log(`[General Extraction] Saved extraction with ID: ${extractionId}`);
+        } catch (saveError: any) {
+          console.error("[General Extraction] Warning: Failed to save extraction:", saveError);
+          // Continue - extraction data is still returned
+        }
+
         // Return the parsed document
         res.json({
           success: true,
@@ -589,6 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           overallConfidence: parsedDocument.overallConfidence,
           confidenceStats: parsedDocument.confidenceStats,
           documentId, // Include documentId so frontend can link it
+          extractionId, // Include extractionId for review workflow
         });
       } catch (error: any) {
         console.error("[General Extraction] Error:", error);
