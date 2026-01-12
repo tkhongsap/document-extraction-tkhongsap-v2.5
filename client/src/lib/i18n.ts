@@ -215,9 +215,9 @@ export const translations: Translations = {
 
     // Extraction
     'extract.upload_title': 'Drop your document here',
-    'extract.upload_desc': 'Documents, images, spreadsheets, audio - we parse them all',
-    'extract.upload_formats': 'PDF, DOCX, PPTX, XLSX, CSV, JPG, PNG, GIF, MP3, WAV and more',
-    'extract.upload_size_limit': 'Most files up to 10MB, Audio up to 20MB',
+    'extract.upload_desc': 'PDF documents and images (PNG, JPG)',
+    'extract.upload_formats': 'PDF, PNG, JPG, JPEG',
+    'extract.upload_size_limit': 'Max 10MB per file',
     'extract.processing': 'Extracting...',
     'extract.processing_sub': 'This usually takes just a few seconds',
     'extract.results': "Here's what we found",
@@ -526,9 +526,9 @@ export const translations: Translations = {
 
     // Extraction
     'extract.upload_title': 'วางเอกสารของคุณที่นี่',
-    'extract.upload_desc': 'เอกสาร, รูปภาพ, สเปรดชีต, เสียง - เราแยกวิเคราะห์ได้ทั้งหมด',
-    'extract.upload_formats': 'PDF, DOCX, PPTX, XLSX, CSV, JPG, PNG, GIF, MP3, WAV และอื่นๆ',
-    'extract.upload_size_limit': 'ไฟล์ส่วนใหญ่สูงสุด 10MB, ไฟล์เสียงสูงสุด 20MB',
+    'extract.upload_desc': 'เอกสาร PDF และรูปภาพ (PNG, JPG)',
+    'extract.upload_formats': 'PDF, PNG, JPG, JPEG',
+    'extract.upload_size_limit': 'ไฟล์สูงสุด 10MB ต่อไฟล์',
     'extract.processing': 'กำลังดึงข้อมูล...',
     'extract.processing_sub': 'ปกติใช้เวลาไม่กี่วินาที',
     'extract.results': 'นี่คือข้อมูลที่เราพบ',

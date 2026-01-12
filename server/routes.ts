@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import path from "path";
 import { storage } from "./storage";
 import { insertExtractionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
@@ -20,32 +21,37 @@ import {
 import type { DocumentType } from "./extractionSchemas";
 import { randomUUID } from "crypto";
 
+// File upload security configuration
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+];
+const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
+
 // Configure multer for memory storage (files stored in buffer)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
+    fileSize: MAX_FILE_SIZE,
   },
   fileFilter: (_req, file, cb) => {
-    // Accept common document formats
-    const allowedMimes = [
-      "application/pdf",
-      "image/png",
-      "image/jpeg",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/vnd.ms-powerpoint",
-      "text/plain",
-      "text/html",
-    ];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    // Check MIME type
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(new Error(`ประเภทไฟล์ไม่รองรับ: ${file.mimetype} (รองรับเฉพาะ PDF และรูปภาพ)`));
+      return;
     }
+    
+    // Check file extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      cb(new Error(`นามสกุลไฟล์ไม่รองรับ: ${ext} (รองรับเฉพาะ .pdf, .png, .jpg, .jpeg)`));
+      return;
+    }
+    
+    cb(null, true);
   },
 });
 

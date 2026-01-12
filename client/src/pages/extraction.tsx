@@ -42,8 +42,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PDFDocument } from "pdf-lib";
 
-// Batch processing limit - realistic limit to avoid network issues
+// File upload configuration
 const BATCH_FILE_LIMIT = 100;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+const ALLOWED_FILE_TYPES = {
+  'application/pdf': ['.pdf'],
+  'image/png': ['.png'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+};
+
+// Format file size for display
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // Helper to count PDF pages from a File
 async function countPdfPages(file: File): Promise<number> {
@@ -439,50 +452,34 @@ export default function Extraction() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
     onDropRejected: (fileRejections) => {
-      // Check if files were rejected due to too many files
+      // Check rejection reasons
       const tooManyFiles = fileRejections.some(
         rejection => rejection.errors.some(e => e.code === 'too-many-files')
       );
+      const filesTooLarge = fileRejections.filter(
+        r => r.errors.some(e => e.code === 'file-too-large')
+      );
+      const invalidTypes = fileRejections.filter(
+        r => r.errors.some(e => e.code === 'file-invalid-type')
+      );
       
       if (tooManyFiles) {
-        // Show popup dialog for file limit exceeded
         setFileLimitDialogMessage({
           attempted: fileRejections.length,
           limit: BATCH_FILE_LIMIT,
           current: batchFiles.length
         });
         setShowFileLimitDialog(true);
-      } else {
-        // Other rejection reasons (file type, size, etc.)
-        const invalidTypes = fileRejections.filter(
-          r => r.errors.some(e => e.code === 'file-invalid-type')
-        );
-        if (invalidTypes.length > 0) {
-          toast.error(`${invalidTypes.length} ไฟล์ถูกปฏิเสธเนื่องจากประเภทไฟล์ไม่รองรับ`);
-        }
+      } else if (filesTooLarge.length > 0) {
+        const fileNames = filesTooLarge.map(r => r.file.name).slice(0, 3).join(', ');
+        const moreCount = filesTooLarge.length > 3 ? ` และอีก ${filesTooLarge.length - 3} ไฟล์` : '';
+        toast.error(`ไฟล์ใหญ่เกิน 10MB: ${fileNames}${moreCount}`);
+      } else if (invalidTypes.length > 0) {
+        toast.error(`${invalidTypes.length} ไฟล์ถูกปฏิเสธ - รองรับเฉพาะ PDF และรูปภาพ (PNG, JPG)`);
       }
     },
-    accept: isGeneralExtraction 
-      ? {
-          'application/pdf': ['.pdf'],
-          'image/png': ['.png'],
-          'image/jpeg': ['.jpg', '.jpeg'],
-          'image/gif': ['.gif'],
-          'image/webp': ['.webp'],
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-          'application/msword': ['.doc'],
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-          'application/vnd.ms-excel': ['.xls'],
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-          'application/vnd.ms-powerpoint': ['.ppt'],
-          'text/plain': ['.txt'],
-          'text/csv': ['.csv'],
-        }
-      : {
-          'application/pdf': ['.pdf'],
-          'image/png': ['.png'],
-          'image/jpeg': ['.jpg', '.jpeg']
-        },
+    accept: ALLOWED_FILE_TYPES,
+    maxSize: MAX_FILE_SIZE,
     maxFiles: isBatchMode ? BATCH_FILE_LIMIT : 1,
     multiple: isBatchMode
   });
@@ -642,10 +639,7 @@ export default function Extraction() {
                   }
                 </p>
                 <p className="text-xs text-muted-foreground mt-4 text-center">
-                  {isGeneralExtraction 
-                    ? t('extract.upload_formats')
-                    : 'PDF, JPG, PNG'
-                  } • {t('extract.upload_size_limit')}
+                  {t('extract.upload_formats')} • {t('extract.upload_size_limit')}
                 </p>
               </div>
             ) : isBatchMode ? (
