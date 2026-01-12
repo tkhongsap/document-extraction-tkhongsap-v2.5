@@ -5,7 +5,8 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X, Files, FileCheck, AlertCircle, Edit, XCircle, CheckCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X, Files, FileCheck, AlertCircle, Edit, XCircle, CheckCircle, Clock, Zap } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { getTemplateById } from "@/lib/templates";
@@ -98,6 +99,118 @@ function formatEstimatedTime(totalSeconds: number): string {
     }
     return `~${hours}h ${minutes}m`;
   }
+}
+
+// Processing steps for loading UI
+type ProcessingStep = 'uploading' | 'parsing' | 'extracting' | 'completing';
+
+interface ProcessingLoadingProps {
+  pages: number;
+  elapsedSeconds: number;
+  totalEstimatedSeconds: number;
+  mode: 'template' | 'general' | 'batch';
+  fileCount?: number;
+  t: (key: string) => string;
+}
+
+function ProcessingLoading({ pages, elapsedSeconds, totalEstimatedSeconds, mode, fileCount = 1, t }: ProcessingLoadingProps) {
+  const progress = Math.min(100, Math.round((elapsedSeconds / totalEstimatedSeconds) * 100));
+  const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
+  
+  // Determine current step based on progress
+  const currentStep: ProcessingStep = 
+    progress < 10 ? 'uploading' :
+    progress < 50 ? 'parsing' :
+    progress < 90 ? 'extracting' : 'completing';
+  
+  const steps = [
+    { key: 'uploading', label: t('loading.uploading') || 'Uploading', icon: UploadCloud },
+    { key: 'parsing', label: t('loading.parsing') || 'Parsing document', icon: FileText },
+    { key: 'extracting', label: t('loading.extracting') || 'Extracting data', icon: Zap },
+    { key: 'completing', label: t('loading.completing') || 'Completing', icon: FileCheck },
+  ];
+  
+  const getStepStatus = (stepKey: string) => {
+    const stepOrder = ['uploading', 'parsing', 'extracting', 'completing'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const stepIndex = stepOrder.indexOf(stepKey);
+    if (stepIndex < currentIndex) return 'completed';
+    if (stepIndex === currentIndex) return 'active';
+    return 'pending';
+  };
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-8">
+      <div className="w-full max-w-md space-y-6">
+        {/* Animated spinner */}
+        <div className="flex justify-center">
+          <div className="relative">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-bold text-primary">{progress}%</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-2" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{formatEstimatedTime(elapsedSeconds)} elapsed</span>
+            <span>{remainingSeconds > 0 ? `${formatEstimatedTime(remainingSeconds)} remaining` : 'Finishing up...'}</span>
+          </div>
+        </div>
+        
+        {/* Processing info */}
+        <div className="text-center space-y-1">
+          <p className="font-medium">
+            {mode === 'batch' 
+              ? `${t('loading.processing_batch') || 'Processing'} ${fileCount} ${t('loading.files') || 'files'}`
+              : `${t('loading.processing') || 'Processing'} ${pages} ${pages > 1 ? t('loading.pages') || 'pages' : t('loading.page') || 'page'}`
+            }
+          </p>
+          <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+            <Clock className="h-3 w-3" />
+            {mode === 'template' 
+              ? t('loading.template_hint') || 'Using AI template extraction'
+              : t('loading.general_hint') || 'Parsing with LlamaParse'
+            }
+          </p>
+        </div>
+        
+        {/* Steps indicator */}
+        <div className="flex justify-between items-center px-4">
+          {steps.map((step, index) => {
+            const status = getStepStatus(step.key);
+            const Icon = step.icon;
+            return (
+              <div key={step.key} className="flex flex-col items-center gap-1">
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                  status === 'completed' && "bg-green-500 text-white",
+                  status === 'active' && "bg-primary text-white animate-pulse",
+                  status === 'pending' && "bg-muted text-muted-foreground"
+                )}>
+                  {status === 'completed' ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <Icon className="h-4 w-4" />
+                  )}
+                </div>
+                <span className={cn(
+                  "text-[10px] text-center",
+                  status === 'active' && "text-primary font-medium",
+                  status === 'pending' && "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Extraction() {
@@ -880,86 +993,32 @@ export default function Extraction() {
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isBatchMode ? (
               // Loading state for batch processing
-              (() => {
-                const totalEstimatedSeconds = Math.ceil(batchFiles.length * (isGeneralExtraction ? 20 : 30));
-                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-                return (
-                  <div className="h-full flex flex-col items-center justify-center space-y-4 p-8">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <div className="text-center">
-                      <p className="text-muted-foreground font-medium">
-                        {t('extract.batch_processing') || 'Processing batch...'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Processing {batchFiles.length} files sequentially
-                      </p>
-                      <p className="text-sm text-primary mt-2 font-medium">
-                        {remainingSeconds > 0 
-                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
-                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
+              <ProcessingLoading 
+                pages={batchFiles.length}
+                elapsedSeconds={elapsedSeconds}
+                totalEstimatedSeconds={Math.ceil(batchFiles.length * (isGeneralExtraction ? 20 : 30))}
+                mode="batch"
+                fileCount={batchFiles.length}
+                t={t}
+              />
             ) : isProcessing && isGeneralExtraction && !isBatchMode ? (
               // Loading state for single file general extraction
-              (() => {
-                const totalEstimatedSeconds = Math.ceil(singleFilePages * 20);
-                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-                return (
-                  <div className="h-full flex flex-col items-center justify-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <div className="text-center">
-                      <p className="text-muted-foreground font-medium">
-                        {t('extract.parsing') || 'Parsing document with LlamaParse...'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Processing {singleFilePages} page{singleFilePages > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-sm text-primary mt-2 font-medium">
-                        {remainingSeconds > 0 
-                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
-                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
+              <ProcessingLoading 
+                pages={singleFilePages}
+                elapsedSeconds={elapsedSeconds}
+                totalEstimatedSeconds={Math.ceil(singleFilePages * 20)}
+                mode="general"
+                t={t}
+              />
             ) : isProcessing && !isGeneralExtraction && !isBatchMode ? (
               // Loading state for single file template extraction
-              (() => {
-                const totalEstimatedSeconds = Math.ceil(singleFilePages * 30);
-                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-                return (
-                  <div className="h-full flex flex-col items-center justify-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <div className="text-center">
-                      <p className="text-muted-foreground font-medium">{t('extract.processing')}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Processing {singleFilePages} page{singleFilePages > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-sm text-primary mt-2 font-medium">
-                        {remainingSeconds > 0 
-                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
-                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
+              <ProcessingLoading 
+                pages={singleFilePages}
+                elapsedSeconds={elapsedSeconds}
+                totalEstimatedSeconds={Math.ceil(singleFilePages * 30)}
+                mode="template"
+                t={t}
+              />
             ) : isBatchMode && batchGeneralResults ? (
               // Batch general results
               (() => {

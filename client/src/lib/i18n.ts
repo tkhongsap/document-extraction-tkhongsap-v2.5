@@ -242,6 +242,19 @@ export const translations: Translations = {
     'extract.ready_to_process': 'Ready to process',
     'extract.click_process_all': 'Click "Process All" to extract content from all files',
 
+    // Loading states
+    'loading.uploading': 'Uploading',
+    'loading.parsing': 'Parsing',
+    'loading.extracting': 'Extracting',
+    'loading.completing': 'Completing',
+    'loading.processing': 'Processing',
+    'loading.processing_batch': 'Processing',
+    'loading.files': 'files',
+    'loading.pages': 'pages',
+    'loading.page': 'page',
+    'loading.template_hint': 'Using AI template extraction',
+    'loading.general_hint': 'Parsing with LlamaParse',
+
     // Empty states
     'empty.no_history': 'No documents yet',
     'empty.no_history_desc': "Upload your first document and we'll remember it here",
@@ -552,6 +565,19 @@ export const translations: Translations = {
     'extract.batch_process': 'ประมวลผลทั้งหมด',
     'extract.ready_to_process': 'พร้อมประมวลผล',
     'extract.click_process_all': 'คลิก "ประมวลผลทั้งหมด" เพื่อดึงข้อมูลจากทุกไฟล์',
+
+    // Loading states
+    'loading.uploading': 'กำลังอัปโหลด',
+    'loading.parsing': 'กำลังวิเคราะห์',
+    'loading.extracting': 'กำลังดึงข้อมูล',
+    'loading.completing': 'กำลังเสร็จสิ้น',
+    'loading.processing': 'กำลังประมวลผล',
+    'loading.processing_batch': 'กำลังประมวลผล',
+    'loading.files': 'ไฟล์',
+    'loading.pages': 'หน้า',
+    'loading.page': 'หน้า',
+    'loading.template_hint': 'ใช้ AI Template Extraction',
+    'loading.general_hint': 'กำลังวิเคราะห์ด้วย LlamaParse',
 
     // Empty states
     'empty.no_history': 'ยังไม่มีเอกสาร',
