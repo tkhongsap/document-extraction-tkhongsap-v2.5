@@ -24,6 +24,7 @@ import {
   type BatchGeneralResultData,
   type ExtractionReviewStatus,
 } from "@/lib/api";
+import { formatErrorToast, getErrorTitle } from "@/lib/errorHandler";
 import { toast } from "sonner";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
@@ -384,7 +385,10 @@ export default function Extraction() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Extraction] Error during extraction:', error);
-      toast.error(error.message || 'Extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setTemplateResults(null);
     } finally {
       setIsProcessing(false);
@@ -438,7 +442,10 @@ export default function Extraction() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Batch Extraction] Error:', error);
-      toast.error(error.message || 'Batch extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setBatchTemplateResults(null);
     } finally {
       setIsProcessing(false);
@@ -482,7 +489,10 @@ export default function Extraction() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Batch General Extraction] Error:', error);
-      toast.error(error.message || 'Batch extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setBatchGeneralResults(null);
     } finally {
       setIsProcessing(false);
@@ -525,7 +535,10 @@ export default function Extraction() {
       // Refresh user data to update Monthly Usage display
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
-      toast.error(error.message || 'Extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setGeneralResults(null);
     } finally {
       setIsProcessing(false);
@@ -623,7 +636,10 @@ export default function Extraction() {
       toast.success(message);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update status');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
     },
   });
 
