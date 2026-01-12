@@ -127,6 +127,7 @@ export interface TemplateExtractionResponse {
   fileSize: number;
   mimeType: string;
   documentId?: string; // Optional documentId if document was stored
+  extractionId?: string; // ID of saved extraction for review workflow
 }
 
 /**
@@ -191,6 +192,7 @@ export interface GeneralExtractionResponse {
     average: number;
   };
   documentId?: string; // Optional documentId if document was stored
+  extractionId?: string; // ID of saved extraction for review workflow
 }
 
 /**
@@ -464,6 +466,49 @@ export async function getExtraction(id: string): Promise<{ extraction: Extractio
 
   if (!res.ok) {
     throw new Error("Failed to fetch extraction");
+  }
+
+  return res.json();
+}
+
+// Extraction review status types
+export type ExtractionReviewStatus = 'pending' | 'edited' | 'rejected' | 'approved';
+
+// Update extraction review status (approve/reject)
+export async function updateExtractionReviewStatus(
+  id: string, 
+  reviewStatus: ExtractionReviewStatus
+): Promise<{ extraction: Extraction }> {
+  const res = await fetch(`/api/extractions/${id}/review`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ reviewStatus }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to update review status");
+  }
+
+  return res.json();
+}
+
+// Update extraction data (edit mode)
+export async function updateExtractionData(
+  id: string, 
+  extractedData: Record<string, unknown>
+): Promise<{ extraction: Extraction }> {
+  const res = await fetch(`/api/extractions/${id}/data`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ extractedData }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Failed to update extraction data");
   }
 
   return res.json();
