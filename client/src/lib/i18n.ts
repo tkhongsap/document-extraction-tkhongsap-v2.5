@@ -291,6 +291,21 @@ export const translations: Translations = {
     'common.usage': 'Monthly Usage',
     'common.pages': 'page(s)',
 
+    // Review Actions
+    'review.edit': 'Edit',
+    'review.editing': 'Editing...',
+    'review.reject': 'Reject',
+    'review.approve': 'Approve',
+    'review.status.pending': 'Pending Review',
+    'review.status.edited': 'Edited',
+    'review.status.rejected': 'Rejected',
+    'review.status.approved': 'Approved',
+    'review.confirm_reject': 'Are you sure you want to reject this extraction?',
+    'review.confirm_approve': 'Are you sure you want to approve this extraction?',
+    'review.success_approved': 'Extraction approved successfully',
+    'review.success_rejected': 'Extraction rejected',
+    'review.success_saved': 'Changes saved successfully',
+
     // Footer
     'footer.description': 'Secure document extraction for Thai businesses. Extract structured data in seconds.',
     'footer.product': 'Product',
@@ -582,6 +597,21 @@ export const translations: Translations = {
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
     'common.pages': 'หน้า',
+
+    // Review Actions
+    'review.edit': 'แก้ไข',
+    'review.editing': 'กำลังแก้ไข...',
+    'review.reject': 'ปฏิเสธ',
+    'review.approve': 'อนุมัติ',
+    'review.status.pending': 'รอตรวจสอบ',
+    'review.status.edited': 'แก้ไขแล้ว',
+    'review.status.rejected': 'ปฏิเสธแล้ว',
+    'review.status.approved': 'อนุมัติแล้ว',
+    'review.confirm_reject': 'คุณแน่ใจหรือไม่ว่าต้องการปฏิเสธการดึงข้อมูลนี้?',
+    'review.confirm_approve': 'คุณแน่ใจหรือไม่ว่าต้องการอนุมัติการดึงข้อมูลนี้?',
+    'review.success_approved': 'อนุมัติเรียบร้อยแล้ว',
+    'review.success_rejected': 'ปฏิเสธเรียบร้อยแล้ว',
+    'review.success_saved': 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
 
     // Footer
     'footer.description': 'การดึงข้อมูลเอกสารที่ปลอดภัยสำหรับธุรกิจไทย ดึงข้อมูลที่มีโครงสร้างได้ในไม่กี่วินาที',
