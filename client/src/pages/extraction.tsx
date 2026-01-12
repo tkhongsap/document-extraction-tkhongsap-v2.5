@@ -535,7 +535,15 @@ export default function Extraction() {
 
   const handleEdit = () => {
     setIsEditMode(!isEditMode);
-    toast.info(isEditMode ? 'Edit mode disabled' : 'Edit mode enabled');
+    toast(
+      isEditMode ? (t('review.edit_disabled') || 'Edit mode disabled') : (t('review.edit_enabled') || 'Edit mode enabled'),
+      { 
+        description: isEditMode 
+          ? (t('review.changes_discarded') || 'Changes discarded') 
+          : (t('review.can_edit_now') || 'You can now edit the extracted data'),
+        duration: 3000,
+      }
+    );
   };
 
   const hasResults = isBatchMode 
@@ -844,16 +852,13 @@ export default function Extraction() {
             {!isBatchMode && hasResults && currentExtractionId && (
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant={isEditMode ? "default" : "outline"}
                   size="sm"
                   onClick={handleEdit}
                   disabled={reviewStatus === 'approved' || reviewStatus === 'rejected'}
-                  className={cn(
-                    isEditMode && "bg-blue-500 text-white border-blue-500 hover:bg-blue-600 hover:border-blue-600"
-                  )}
                 >
                   <Edit className="h-4 w-4 mr-1" />
-                  {isEditMode ? (t('review.editing') || 'Editing...') : (t('review.edit') || 'Edit')}
+                  {t('review.edit') || 'Edit'}
                 </Button>
                 <Button
                   variant="outline"

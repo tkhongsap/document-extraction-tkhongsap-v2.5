@@ -294,6 +294,10 @@ export const translations: Translations = {
     // Review Actions
     'review.edit': 'Edit',
     'review.editing': 'Editing...',
+    'review.edit_enabled': 'Edit mode enabled',
+    'review.edit_disabled': 'Edit mode disabled',
+    'review.can_edit_now': 'You can now edit the extracted data',
+    'review.changes_discarded': 'Changes discarded',
     'review.reject': 'Reject',
     'review.approve': 'Approve',
     'review.status.pending': 'Pending Review',
@@ -601,6 +605,10 @@ export const translations: Translations = {
     // Review Actions
     'review.edit': 'แก้ไข',
     'review.editing': 'กำลังแก้ไข...',
+    'review.edit_enabled': 'เปิดโหมดแก้ไข',
+    'review.edit_disabled': 'ปิดโหมดแก้ไข',
+    'review.can_edit_now': 'คุณสามารถแก้ไขข้อมูลที่ดึงออกมาได้แล้ว',
+    'review.changes_discarded': 'ยกเลิกการเปลี่ยนแปลง',
     'review.reject': 'ปฏิเสธ',
     'review.approve': 'อนุมัติ',
     'review.status.pending': 'รอตรวจสอบ',
