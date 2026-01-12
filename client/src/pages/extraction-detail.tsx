@@ -170,41 +170,43 @@ export default function ExtractionDetail() {
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/history">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {t('common.back') || 'Back'}
+        <div className="flex flex-col gap-1">
+          {/* Breadcrumb navigation */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Link href="/history" className="hover:text-foreground transition-colors">
+              {t('nav.history') || 'History'}
             </Link>
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold">{extraction.fileName}</h1>
-            <div className="flex items-center gap-3 mt-1">
-              <Badge variant="secondary" className="capitalize">
-                {extraction.documentType}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {formatDate(new Date(extraction.createdAt))}
-              </span>
+            <span>/</span>
+            <span className="text-foreground font-medium truncate max-w-[300px]">
+              {extraction.fileName}
+            </span>
+          </div>
+          {/* Document info */}
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="capitalize">
+              {extraction.documentType}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {formatDate(new Date(extraction.createdAt))}
+            </span>
+            <Badge 
+              variant={extraction.status === 'completed' ? 'success' : extraction.status === 'processing' ? 'default' : 'warning'}
+            >
+              {extraction.status}
+            </Badge>
+            {/* Review Status Badge */}
+            {reviewStatus && (
               <Badge 
-                variant={extraction.status === 'completed' ? 'success' : extraction.status === 'processing' ? 'default' : 'warning'}
+                variant={
+                  reviewStatus === 'approved' ? 'success' : 
+                  reviewStatus === 'rejected' ? 'destructive' : 
+                  reviewStatus === 'edited' ? 'secondary' : 
+                  'outline'
+                }
               >
-                {extraction.status}
+                {t(`review.status.${reviewStatus}`) || reviewStatus}
               </Badge>
-              {/* Review Status Badge */}
-              {reviewStatus && (
-                <Badge 
-                  variant={
-                    reviewStatus === 'approved' ? 'success' : 
-                    reviewStatus === 'rejected' ? 'destructive' : 
-                    reviewStatus === 'edited' ? 'secondary' : 
-                    'outline'
-                  }
-                >
-                  {t(`review.status.${reviewStatus}`) || reviewStatus}
-                </Badge>
-              )}
-            </div>
+            )}
           </div>
         </div>
         
