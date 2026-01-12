@@ -1,11 +1,11 @@
 import { useLanguage } from "@/lib/i18n";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X, Files, FileCheck, AlertCircle } from "lucide-react";
+import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X, Files, FileCheck, AlertCircle, Edit, XCircle, CheckCircle } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { getTemplateById } from "@/lib/templates";
@@ -14,12 +14,14 @@ import {
   processGeneralExtraction, 
   processBatchTemplateExtraction,
   processBatchGeneralExtraction,
+  updateExtractionReviewStatus,
   type GeneralExtractionResponse,
   type TemplateExtractionResponse,
   type DocumentType,
   type BatchExtractionResponse,
   type BatchTemplateResultData,
   type BatchGeneralResultData,
+  type ExtractionReviewStatus,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { DocumentPreview } from "@/components/DocumentPreview";
@@ -28,6 +30,7 @@ import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -129,6 +132,10 @@ export default function Extraction() {
   const [singleFilePages, setSingleFilePages] = useState<number>(1);
   const [singleFileStartTime, setSingleFileStartTime] = useState<number | null>(null);
 
+  // Review status state
+  const [reviewStatus, setReviewStatus] = useState<ExtractionReviewStatus>('pending');
+  const [isEditMode, setIsEditMode] = useState(false);
+
   // Timer effect for real-time countdown (works for both batch and single file)
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -197,6 +204,9 @@ export default function Extraction() {
     setBatchTemplateResults(null);
     setBatchGeneralResults(null);
     setSelectedBatchIndex(0);
+    // Reset review status for new file
+    setReviewStatus('pending');
+    setIsEditMode(false);
   }, [isBatchMode]);
 
   // Handle template-based extraction with LlamaExtract (on button click)
@@ -483,6 +493,49 @@ export default function Extraction() {
     const newHeaderFields = [...templateResults.headerFields];
     newHeaderFields[index] = { ...newHeaderFields[index], value: newValue };
     setTemplateResults({ ...templateResults, headerFields: newHeaderFields });
+  };
+
+  // Get current extraction ID for review actions
+  const currentExtractionId = isGeneralExtraction 
+    ? generalResults?.extractionId 
+    : templateResults?.extractionId;
+
+  // Review mutation
+  const reviewMutation = useMutation({
+    mutationFn: ({ status }: { status: ExtractionReviewStatus }) => 
+      updateExtractionReviewStatus(currentExtractionId!, status),
+    onSuccess: (data, variables) => {
+      setReviewStatus(variables.status);
+      queryClient.invalidateQueries({ queryKey: ['/api/extractions'] });
+      const message = variables.status === 'approved' 
+        ? (t('review.success_approved') || 'Extraction approved successfully')
+        : (t('review.success_rejected') || 'Extraction rejected');
+      toast.success(message);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update status');
+    },
+  });
+
+  const handleApprove = () => {
+    if (!currentExtractionId) {
+      toast.error('Extraction not saved yet');
+      return;
+    }
+    reviewMutation.mutate({ status: 'approved' });
+  };
+
+  const handleReject = () => {
+    if (!currentExtractionId) {
+      toast.error('Extraction not saved yet');
+      return;
+    }
+    reviewMutation.mutate({ status: 'rejected' });
+  };
+
+  const handleEdit = () => {
+    setIsEditMode(!isEditMode);
+    toast.info(isEditMode ? 'Edit mode disabled' : 'Edit mode enabled');
   };
 
   const hasResults = isBatchMode 
@@ -772,7 +825,58 @@ export default function Extraction() {
                   </span>
                 )
               )}
+              {/* Review Status Badge */}
+              {!isBatchMode && hasResults && currentExtractionId && (
+                <Badge 
+                  variant={
+                    reviewStatus === 'approved' ? 'success' : 
+                    reviewStatus === 'rejected' ? 'destructive' : 
+                    reviewStatus === 'edited' ? 'secondary' : 
+                    'outline'
+                  }
+                  className="text-xs"
+                >
+                  {t(`review.status.${reviewStatus}`) || reviewStatus}
+                </Badge>
+              )}
             </div>
+            {/* Review Action Buttons */}
+            {!isBatchMode && hasResults && currentExtractionId && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEdit}
+                  disabled={reviewStatus === 'approved' || reviewStatus === 'rejected'}
+                  className={cn(
+                    isEditMode && "bg-blue-500 text-white border-blue-500 hover:bg-blue-600 hover:border-blue-600"
+                  )}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  {isEditMode ? (t('review.editing') || 'Editing...') : (t('review.edit') || 'Edit')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReject}
+                  disabled={reviewMutation.isPending || reviewStatus === 'approved' || reviewStatus === 'rejected'}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  {t('review.reject') || 'Reject'}
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleApprove}
+                  disabled={reviewMutation.isPending || reviewStatus === 'approved' || reviewStatus === 'rejected'}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {t('review.approve') || 'Approve'}
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isBatchMode ? (
@@ -930,7 +1034,7 @@ export default function Extraction() {
                 extractedData={templateResults.extractedData}
                 confidenceScores={templateResults.confidenceScores}
                 documentType={type as DocumentType}
-                onFieldChange={handleFieldChange}
+                onFieldChange={isEditMode ? handleFieldChange : undefined}
                 className="h-full"
                 fileName={file?.name || "extraction"}
               />
