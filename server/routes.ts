@@ -101,6 +101,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
 
+  // Security: Add Cache-Control headers to prevent caching of sensitive API responses
+  app.use('/api', (req: Request, res: Response, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+
   // Mock login endpoint for development
   app.post('/api/auth/mock-login', async (req: any, res: Response) => {
     if (process.env.NODE_ENV === 'production') {
