@@ -3,13 +3,17 @@ import {
   documents,
   extractions,
   usageHistory,
+  auditLogs,
   type User, 
   type UpsertUser,
   type Document,
   type InsertDocument,
   type Extraction, 
   type InsertExtraction,
-  type DocumentWithExtractions
+  type DocumentWithExtractions,
+  type InsertAuditLog,
+  type AuditLog,
+  type AuditActionType
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -38,6 +42,10 @@ export interface IStorage {
   
   // User preferences
   updateUserLanguage(userId: string, language: string): Promise<void>;
+  
+  // Audit logging
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(userId?: string, limit?: number): Promise<AuditLog[]>;
 }
 
 /**
@@ -261,6 +269,63 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, userId));
   }
+
+  // ========================================
+  // Audit Logging
+  // ========================================
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db.insert(auditLogs).values(log).returning();
+    return created;
+  }
+
+  async getAuditLogs(userId?: string, limit: number = 100): Promise<AuditLog[]> {
+    if (userId) {
+      return db.query.auditLogs.findMany({
+        where: eq(auditLogs.userId, userId),
+        orderBy: [desc(auditLogs.createdAt)],
+        limit,
+      });
+    }
+    return db.query.auditLogs.findMany({
+      orderBy: [desc(auditLogs.createdAt)],
+      limit,
+    });
+  }
 }
 
 export const storage = new DatabaseStorage();
+
+// ========================================
+// Audit Log Helper Function
+// ========================================
+
+/**
+ * Log an action to the audit log
+ */
+export async function logAudit(
+  action: AuditActionType,
+  options: {
+    userId?: string;
+    resourceType?: string;
+    resourceId?: string;
+    details?: Record<string, unknown>;
+    ipAddress?: string;
+    userAgent?: string;
+  } = {}
+): Promise<void> {
+  try {
+    await storage.createAuditLog({
+      userId: options.userId || null,
+      action,
+      resourceType: options.resourceType || null,
+      resourceId: options.resourceId || null,
+      details: options.details || null,
+      ipAddress: options.ipAddress || null,
+      userAgent: options.userAgent || null,
+    });
+  } catch (error) {
+    // Log error but don't throw - audit logging should never break the main flow
+    console.error('[AuditLog] Failed to create audit log:', error);
+  }
+}

@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
-import { storage } from "./storage";
+import { storage, logAudit } from "./storage";
 import { insertExtractionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated, ensureUsageReset } from "./replitAuth";
@@ -20,6 +20,13 @@ import {
 } from "./resumeChunkingService";
 import type { DocumentType } from "./extractionSchemas";
 import { randomUUID } from "crypto";
+
+// Helper to get IP address from request
+function getClientIp(req: Request): string {
+  return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+    || req.socket.remoteAddress 
+    || 'unknown';
+}
 
 // File upload security configuration
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
@@ -312,6 +319,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extraction = await storage.createExtraction(validatedData);
       await storage.updateUserUsage(userId, validatedData.pagesProcessed);
 
+      // Log extraction creation
+      await logAudit('extraction_create', {
+        userId,
+        resourceType: 'extraction',
+        resourceId: extraction.id,
+        details: {
+          fileName: validatedData.fileName,
+          documentType: validatedData.documentType,
+          pagesProcessed: validatedData.pagesProcessed,
+        },
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
       res.json({ extraction });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -379,6 +400,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updated = await storage.updateExtractionReviewStatus(req.params.id, reviewStatus, userId);
+
+      // Log review action
+      const actionType = reviewStatus === 'approved' ? 'review_approve' : 
+                         reviewStatus === 'rejected' ? 'review_reject' : 'review_edit';
+      await logAudit(actionType as any, {
+        userId,
+        resourceType: 'extraction',
+        resourceId: req.params.id,
+        details: {
+          previousStatus: extraction.reviewStatus,
+          newStatus: reviewStatus,
+          fileName: extraction.fileName,
+        },
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
       res.json({ extraction: updated });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -406,6 +444,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updated = await storage.updateExtractionData(req.params.id, extractedData, userId);
+
+      // Log data edit
+      await logAudit('extraction_edit', {
+        userId,
+        resourceType: 'extraction',
+        resourceId: req.params.id,
+        details: {
+          fileName: extraction.fileName,
+          edited: true,
+        },
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
       res.json({ extraction: updated });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
