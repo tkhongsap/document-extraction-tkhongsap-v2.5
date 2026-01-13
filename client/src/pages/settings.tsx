@@ -3,7 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
+import { Globe, User, Crown, Zap, Rocket } from "lucide-react";
+=======
 import { Globe, User, Crown, Zap, Rocket, Key, ChevronRight } from "lucide-react";
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -214,6 +218,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+<<<<<<< HEAD
+=======
       {/* API Keys */}
       <Card className="group hover:border-primary/50 transition-colors cursor-pointer">
         <Link href="/settings/api-keys">
@@ -234,6 +240,7 @@ export default function SettingsPage() {
         </Link>
       </Card>
 
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
       {/* Subscription Plans */}
       <Card>
         <CardHeader>

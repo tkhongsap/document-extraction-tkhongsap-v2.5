@@ -730,6 +730,8 @@ export async function ragExamplesApi(): Promise<RAGExamplesResponse> {
   return res.json();
 }
 
+<<<<<<< HEAD
+=======
 // =============================================================================
 // Chunks Search API (Semantic Chunks for better RAG)
 // =============================================================================
@@ -969,3 +971,4 @@ export async function getApiKeyStats(keyId: string, days: number = 30): Promise<
 
   return res.json();
 }
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
