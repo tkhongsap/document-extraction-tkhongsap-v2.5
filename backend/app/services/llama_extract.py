@@ -184,7 +184,8 @@ class LlamaExtractService:
             safe_print(f"[LlamaExtract] Using cached agent for {document_type}: {agent_id}")
             return agent_id
         
-        agent_name = f"docai-{document_type}-v1"
+        # Version number: increment when schema changes to force new agent creation
+        agent_name = f"docai-{document_type}-v2"
         
         # Try to find existing agent
         try:
@@ -205,7 +206,7 @@ class LlamaExtractService:
     
     async def _get_agent_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """Get extraction agent by name"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.get(
                 f"{LLAMA_EXTRACT_API_BASE}/extraction/extraction-agents/by-name/{name}",
                 headers={
@@ -232,7 +233,7 @@ class LlamaExtractService:
         schema: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Create a new extraction agent with the given schema"""
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{LLAMA_EXTRACT_API_BASE}/extraction/extraction-agents",
                 headers={
@@ -273,7 +274,7 @@ class LlamaExtractService:
         return response.json()
     
     async def _upload_file(self, file_buffer: bytes, file_name: str) -> str:
-        """Upload a file to LlamaCloud"""
+        """Upload a file to LlamaCloud with retry logic for network errors"""
         # Sanitize filename to avoid encoding issues with non-ASCII characters
         safe_file_name = sanitize_filename(file_name)
         mime_type = get_mime_type(file_name)
@@ -282,53 +283,81 @@ class LlamaExtractService:
             "upload_file": (safe_file_name, file_buffer, mime_type)
         }
         
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{LLAMA_EXTRACT_API_BASE}/files",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Accept": "application/json",
-                },
-                files=files,
-            )
+        max_retries = 3
+        retry_delay = 5  # seconds
         
-        if response.status_code != 200:
-            error_text = response.text
-            safe_print(f"[LlamaExtract] File upload failed: {response.status_code} - {error_text}")
-            raise LlamaExtractError(
-                f"Failed to upload file: {error_text}",
-                response.status_code
-            )
-        
-        result = response.json()
-        return result["id"]
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=180.0) as client:
+                    response = await client.post(
+                        f"{LLAMA_EXTRACT_API_BASE}/files",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Accept": "application/json",
+                        },
+                        files=files,
+                    )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    safe_print(f"[LlamaExtract] File upload failed: {response.status_code} - {error_text}")
+                    raise LlamaExtractError(
+                        f"Failed to upload file: {error_text}",
+                        response.status_code
+                    )
+                
+                result = response.json()
+                return result["id"]
+                
+            except (httpx.ReadError, httpx.ReadTimeout, httpx.ConnectError, httpx.ConnectTimeout) as e:
+                if attempt < max_retries - 1:
+                    safe_print(f"[LlamaExtract] Upload attempt {attempt + 1} failed ({type(e).__name__}), retrying in {retry_delay}s...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    safe_print(f"[LlamaExtract] Upload failed after {max_retries} attempts: {e}")
+                    raise LlamaExtractError(f"Failed to upload file after {max_retries} attempts: {e}")
     
     async def _create_job(self, agent_id: str, file_id: str) -> str:
-        """Create an extraction job"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                json={
-                    "extraction_agent_id": agent_id,
-                    "file_id": file_id,
-                },
-            )
+        """Create an extraction job with retry logic for network errors"""
+        max_retries = 3
+        retry_delay = 5  # seconds
         
-        if response.status_code != 200:
-            error_text = response.text
-            print(f"[LlamaExtract] Job creation failed: {response.status_code} - {error_text}")
-            raise LlamaExtractError(
-                f"Failed to create extraction job: {error_text}",
-                response.status_code
-            )
-        
-        result = response.json()
-        return result["id"]
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.post(
+                        f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs",
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                        },
+                        json={
+                            "extraction_agent_id": agent_id,
+                            "file_id": file_id,
+                        },
+                    )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    safe_print(f"[LlamaExtract] Job creation failed: {response.status_code} - {error_text}")
+                    raise LlamaExtractError(
+                        f"Failed to create extraction job: {error_text}",
+                        response.status_code
+                    )
+                
+                result = response.json()
+                return result["id"]
+                
+            except (httpx.ReadError, httpx.ReadTimeout, httpx.ConnectError, httpx.ConnectTimeout) as e:
+                if attempt < max_retries - 1:
+                    safe_print(f"[LlamaExtract] Create job attempt {attempt + 1} failed ({type(e).__name__}), retrying in {retry_delay}s...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    safe_print(f"[LlamaExtract] Create job failed after {max_retries} attempts: {e}")
+                    raise LlamaExtractError(f"Failed to create job after {max_retries} attempts: {e}")
     
     async def _wait_for_completion(self, job_id: str) -> None:
         """Poll for job completion"""
@@ -355,7 +384,7 @@ class LlamaExtractService:
     
     async def _get_job_status(self, job_id: str) -> str:
         """Get job status"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.get(
                 f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs/{job_id}",
                 headers={
@@ -376,7 +405,7 @@ class LlamaExtractService:
     
     async def _get_result(self, job_id: str) -> Dict[str, Any]:
         """Get extraction result"""
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.get(
                 f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs/{job_id}/result",
                 headers={
@@ -408,6 +437,15 @@ class LlamaExtractService:
         # Use repr() for safe logging of Unicode characters on Windows
         safe_print(f"[LlamaExtract] Raw result data keys: {list(data.keys())}")
         safe_print(f"[LlamaExtract] Raw confidence scores: {confidence_scores}")
+        
+        # Debug: Log array data for resume
+        if document_type == "resume":
+            for key in ["skills", "education", "experience", "languages", "certifications"]:
+                if key in data:
+                    arr_data = data[key]
+                    safe_print(f"[LlamaExtract] Resume {key}: {type(arr_data).__name__} with {len(arr_data) if isinstance(arr_data, list) else 'N/A'} items")
+                    if isinstance(arr_data, list) and len(arr_data) > 0:
+                        safe_print(f"[LlamaExtract] Resume {key}[0] sample: {arr_data[0]}")
         
         # Separate header fields from line items
         line_items_key = get_line_items_key(document_type)
@@ -460,11 +498,16 @@ class LlamaExtractService:
             
             full_key = f"{prefix}.{key}" if prefix else key
             
+            # Skip null/None values
             if value is None:
                 continue
             
+            # Skip empty strings
+            if isinstance(value, str) and not value.strip():
+                continue
+            
             if isinstance(value, list):
-                # Skip arrays (handled separately as line items)
+                # Skip empty arrays or arrays (handled separately)
                 continue
             
             if isinstance(value, dict):
@@ -473,13 +516,15 @@ class LlamaExtractService:
                     value, full_key, result, confidence_scores, skip_key, document_type
                 )
             else:
-                # Add primitive value as header field
-                confidence = confidence_scores.get(full_key, 0.95)
-                result.append(ExtractedField(
-                    key=full_key,
-                    value=str(value),
-                    confidence=normalize_confidence(confidence),
-                ))
+                # Add primitive value as header field (only if has value)
+                str_value = str(value).strip()
+                if str_value:  # Only add if value is not empty
+                    confidence = confidence_scores.get(full_key, 0.95)
+                    result.append(ExtractedField(
+                        key=full_key,
+                        value=str_value,
+                        confidence=normalize_confidence(confidence),
+                    ))
 
 
 def create_llama_extract_service() -> LlamaExtractService:

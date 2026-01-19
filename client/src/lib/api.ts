@@ -217,6 +217,105 @@ export async function processGeneralExtraction(file: File): Promise<GeneralExtra
   return res.json();
 }
 
+// =============================================================================
+// Batch Extraction APIs
+// =============================================================================
+
+export interface BatchResultItem<T> {
+  fileName: string;
+  success: boolean;
+  error: string | null;
+  data: T | null;
+}
+
+export interface BatchExtractionResponse<T> {
+  success: boolean;
+  totalFiles: number;
+  successCount: number;
+  failureCount: number;
+  results: BatchResultItem<T>[];
+}
+
+export type BatchTemplateResultData = {
+  headerFields: ExtractedField[];
+  lineItems?: Array<Record<string, unknown>>;
+  extractedData: Record<string, unknown>;
+  confidenceScores?: Record<string, number>;
+  pagesProcessed: number;
+  fileSize: number;
+  mimeType: string;
+  documentId?: string;
+};
+
+export type BatchGeneralResultData = {
+  markdown: string;
+  text: string;
+  pageCount: number;
+  pages: GeneralExtractionPage[];
+  fileSize: number;
+  mimeType: string;
+  overallConfidence?: number;
+  confidenceStats?: { min: number; max: number; average: number };
+  documentId?: string;
+};
+
+/**
+ * Batch process multiple documents using LlamaExtract templates.
+ * @param files - Array of files to process
+ * @param documentType - The type of document (bank, invoice, po, contract, resume)
+ * @returns Batch results with individual file statuses
+ */
+export async function processBatchTemplateExtraction(
+  files: File[],
+  documentType: DocumentType
+): Promise<BatchExtractionResponse<BatchTemplateResultData>> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  formData.append("documentType", documentType);
+
+  const res = await fetch("/api/extract/batch/process", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Batch template extraction failed");
+  }
+
+  return res.json();
+}
+
+/**
+ * Batch process multiple documents using LlamaParse for general extraction.
+ * @param files - Array of files to process
+ * @returns Batch results with individual file statuses
+ */
+export async function processBatchGeneralExtraction(
+  files: File[]
+): Promise<BatchExtractionResponse<BatchGeneralResultData>> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const res = await fetch("/api/extract/batch/general", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Batch general extraction failed");
+  }
+
+  return res.json();
+}
+
 export interface SaveExtractionRequest {
   fileName: string;
   fileSize: number;
@@ -299,6 +398,109 @@ export async function changeTier(tier: 'free' | 'pro' | 'enterprise'): Promise<{
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.detail || "Failed to change tier");
+  }
+
+  return res.json();
+}
+
+// Resume Search API
+export interface ResumeSearchResult {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  current_role?: string;
+  years_experience?: number;
+  skills?: string[];
+  education?: any[];
+  experience?: any[];
+  certifications?: string[];
+  languages?: string[];
+  summary?: string;
+  source_file_name?: string;
+  similarity_score?: number;
+  created_at?: string;
+}
+
+export interface ResumeSearchResponse {
+  results: ResumeSearchResult[];
+  total: number;
+  query: string;
+}
+
+export interface ResumeListResponse {
+  resumes: ResumeSearchResult[];
+  total: number;
+}
+
+export async function searchResumesSemanticApi(
+  query: string,
+  limit: number = 10,
+  threshold: number = 0.5
+): Promise<ResumeSearchResponse> {
+  const res = await fetch("/api/search/resumes/semantic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ query, limit, threshold }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Search failed");
+  }
+
+  return res.json();
+}
+
+export async function listResumesApi(
+  limit: number = 100,
+  offset: number = 0
+): Promise<ResumeListResponse> {
+  const res = await fetch(`/api/search/resumes?limit=${limit}&offset=${offset}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to fetch resumes");
+  }
+
+  return res.json();
+}
+
+export async function deleteResumeApi(id: string): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/search/resumes/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to delete resume");
+  }
+
+  return res.json();
+}
+
+export interface RegenerateEmbeddingsResponse {
+  message: string;
+  success_count: number;
+  failed_count: number;
+  total: number;
+  errors: string[];
+}
+
+export async function regenerateAllEmbeddingsApi(): Promise<RegenerateEmbeddingsResponse> {
+  const res = await fetch("/api/search/resumes/regenerate-all-embeddings", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to regenerate embeddings");
   }
 
   return res.json();

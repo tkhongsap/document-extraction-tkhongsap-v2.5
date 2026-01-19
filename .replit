@@ -1,14 +1,15 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["nodejs-20", "web", "python-3.11", "postgresql-16"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
+packages = ["libxcrypt", "postgresql"]
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+build = ["sh", "-c", "npm install --include=dev && npm run build:client && pip install -r backend/requirements.txt"]
+run = ["sh", "-c", "cd backend && python main.py"]
 
 [[ports]]
 localPort = 5000
@@ -17,6 +18,10 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3001
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 10441
@@ -65,6 +70,7 @@ exposeLocalhost = true
 
 [env]
 PORT = "5000"
+NODE_ENV = "production"
 
 [workflows]
 runButton = "Project"
@@ -81,6 +87,7 @@ args = "Start application"
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -90,9 +97,11 @@ waitForPort = 5000
 [agent]
 mockupState = "FULLSTACK"
 integrations = ["javascript_database:1.0.0"]
+expertMode = true
 
 [userenv]
 
 [userenv.shared]
 PRIVATE_OBJECT_DIR = "/docextract-storage/private"
 PUBLIC_OBJECT_SEARCH_PATHS = "/docextract-storage/public"
+PORT = "5000"

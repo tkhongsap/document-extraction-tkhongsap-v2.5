@@ -26,21 +26,21 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
+    search_router,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan events"""
-    # Startup
+    """Application lifespan events - keep fast for health checks!"""
+    # Startup - minimal work here to pass health check quickly
     settings = get_settings()
     print(f"[FastAPI] Starting server in {settings.node_env} mode")
     print(f"[FastAPI] API key configured: {settings.llama_cloud_api_key[:10]}..." if settings.llama_cloud_api_key else "[FastAPI] WARNING: No API key configured")
     
-    # Initialize database tables
-    print("[FastAPI] Initializing database...")
-    await init_db()
-    print("[FastAPI] Database initialized")
+    # Don't initialize database here - do it lazily on first request
+    # This ensures health check passes immediately
+    print("[FastAPI] Server ready (database will init on first request)")
     
     yield
     
@@ -109,6 +109,7 @@ app.include_router(extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
+app.include_router(search_router)
 
 
 # Object storage routes for serving files
@@ -141,7 +142,7 @@ async def serve_private_object(object_path: str, request: Request):
         content = object_storage.download_object(blob)
         
         return FileResponse(
-            content,
+            str(content),
             media_type=metadata.get("content_type", "application/octet-stream"),
             headers={
                 "Cache-Control": "private, max-age=3600",
@@ -170,7 +171,7 @@ async def serve_public_object(file_path: str):
         content = object_storage.download_object(blob)
         
         return FileResponse(
-            content,
+            str(content),
             media_type=metadata.get("content_type", "application/octet-stream"),
             headers={
                 "Cache-Control": "public, max-age=3600",
@@ -181,41 +182,105 @@ async def serve_public_object(file_path: str):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
-# Health check endpoint
+# Health check endpoint (must be before catch-all route)
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "service": "document-ai-extractor"}
 
 
-# Serve static files in production
-if settings.node_env == "production":
-    # Serve frontend static files
-    static_path = Path(__file__).parent.parent / "dist" / "public"
-    if static_path.exists():
-        app.mount("/assets", StaticFiles(directory=str(static_path / "assets")), name="assets")
-        
-        @app.get("/{full_path:path}")
-        async def serve_spa(full_path: str):
-            """Serve SPA for all non-API routes"""
-            index_path = static_path / "index.html"
-            if index_path.exists():
-                return FileResponse(str(index_path))
+# Helper function to find static directory
+def get_static_path():
+    """Find the static files directory"""
+    possible_paths = [
+        Path(__file__).parent.parent / "dist" / "public",  # /workspace/dist/public
+        Path(__file__).parent / "dist" / "public",  # /workspace/backend/dist/public
+        Path("/home/runner/workspace/dist/public"),  # Absolute path for Replit
+    ]
+    
+    for path in possible_paths:
+        if path.exists() and (path / "index.html").exists():
+            print(f"[FastAPI] Found static files at: {path}")
+            return path
+    
+    print(f"[FastAPI] Static files not found. Tried: {possible_paths}")
+    return None
+
+
+# Try to find and serve static files (auto-detect, works regardless of NODE_ENV)
+static_path = get_static_path()
+
+if static_path and static_path.exists():
+    print(f"[FastAPI] Serving frontend from: {static_path}")
+    
+    # Mount assets directory
+    assets_path = static_path / "assets"
+    if assets_path.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
+        print(f"[FastAPI] Mounted /assets from {assets_path}")
+    
+    # Root route - serve SPA
+    @app.get("/")
+    async def serve_root():
+        """Serve SPA index.html at root"""
+        index_path = static_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path), media_type="text/html")
+        return JSONResponse(status_code=404, content={"error": "index.html not found"})
+    
+    # Serve static files (favicon, opengraph, etc.)
+    @app.get("/favicon.png")
+    async def serve_favicon():
+        favicon_path = static_path / "favicon.png"
+        if favicon_path.exists():
+            return FileResponse(str(favicon_path))
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+    
+    @app.get("/opengraph.jpg")
+    async def serve_opengraph():
+        og_path = static_path / "opengraph.jpg"
+        if og_path.exists():
+            return FileResponse(str(og_path), media_type="image/jpeg")
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve SPA for all non-API routes"""
+        # Skip API routes and object routes
+        if full_path.startswith("api/") or full_path.startswith("objects/") or full_path.startswith("public-objects/"):
             return JSONResponse(status_code=404, content={"error": "Not found"})
+        
+        # Try to serve the exact file first
+        file_path = static_path / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        
+        # Fallback to index.html for SPA routing
+        index_path = static_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path), media_type="text/html")
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+else:
+    print(f"[FastAPI] No static files found - API only mode")
+    
+    # Fallback root route when no static files
+    @app.get("/")
+    async def root_api_only():
+        return {"status": "ok", "message": "Document AI Extractor API"}
 
 
 def main():
     """Main entry point"""
-    port = settings.port
+    port = settings.port  # Use port from settings (default 5000)
     
     print(f"[FastAPI] Starting server on port {port}")
     
     uvicorn.run(
-        "main:app",
-        host="::",  # Bind to IPv6 (also accepts IPv4)
+        app,  # Use the app object directly
+        host="0.0.0.0",
         port=port,
-        reload=settings.node_env == "development",
-        log_level="info" if settings.node_env == "development" else "warning",
+        reload=False,  # Disable reload for stability
+        log_level="info",
     )
 
 

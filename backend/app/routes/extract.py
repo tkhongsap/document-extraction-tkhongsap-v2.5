@@ -15,6 +15,7 @@ from app.services.storage import StorageService
 from app.services.object_storage import ObjectStorageService, ObjectAclPolicy
 from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
+from app.services.resume_service import ResumeService
 from app.models.user import User
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate
@@ -121,9 +122,13 @@ async def template_extraction(
     Template-based extraction using LlamaExtract.
     Used for Bank Statement, Invoice, Purchase Order, Contract, and Resume templates.
     """
+    safe_print(f"[Template Extraction] Received request: documentType={documentType}, filename={file.filename if file else 'None'}")
+    
     # Validate file
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    safe_print(f"[Template Extraction] File content_type={file.content_type}, size={file.size}")
     
     # Validate document type
     valid_types: List[DocumentType] = ["bank", "invoice", "po", "contract", "resume"]
@@ -187,6 +192,39 @@ async def template_extraction(
             status="completed",
         ))
         
+        # If document type is resume, also save to resumes table with embedding
+        resume_id = None
+        safe_print(f"[Template Extraction] Checking resume save: documentType={documentType}, has_data={bool(result.extracted_data)}")
+        if documentType == "resume" and result.extracted_data:
+            try:
+                safe_print(f"[Template Extraction] Attempting to save resume...")
+                resume_service = ResumeService(db)
+                # Check if OpenAI API key exists for embedding generation
+                from app.core.config import get_settings
+                settings = get_settings()
+                
+                # Always generate embedding if OpenAI API key is configured
+                can_generate_embedding = bool(settings.openai_api_key)
+                safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
+                
+                resume = await resume_service.create_from_extraction(
+                    user_id=user.id,
+                    extraction_id=extraction.id,
+                    extracted_data=result.extracted_data,
+                    source_file_name=file.filename or "document",
+                    generate_embedding=can_generate_embedding,
+                )
+                resume_id = resume.id
+                embedding_status = "with embedding" if resume.embedding else "without embedding"
+                safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
+            except Exception as e:
+                safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
+                import traceback
+                traceback.print_exc()
+                # Continue without resume save - extraction is still saved
+        else:
+            safe_print(f"[Template Extraction] Skipping resume save")
+        
         # Return result
         return {
             "success": result.success,
@@ -203,6 +241,7 @@ async def template_extraction(
             "mimeType": file.content_type,
             "documentId": document_id,
             "extractionId": extraction.id,
+            "resumeId": resume_id,
         }
     except LlamaExtractError as e:
         safe_print(f"[Template Extraction] Error: {e}")
@@ -324,3 +363,337 @@ async def general_extraction(
     except Exception as e:
         safe_print(f"[General Extraction] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Batch Extraction Endpoints
+# =============================================================================
+
+@router.post("/batch/process")
+async def batch_template_extraction(
+    files: List[UploadFile] = File(...),
+    documentType: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(ensure_usage_reset),
+):
+    """
+    Batch process multiple documents using LlamaExtract templates.
+    Processes files sequentially to avoid rate limiting.
+    """
+    safe_print(f"[Batch Template Extraction] Processing {len(files)} files with template: {documentType}")
+    
+    # Validate document type
+    valid_types = ["bank", "invoice", "po", "contract", "resume"]
+    if documentType not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid document type. Must be one of: {', '.join(valid_types)}"
+        )
+    
+    results = []
+    
+    for file in files:
+        result_item = {
+            "fileName": file.filename,
+            "success": False,
+            "error": None,
+            "data": None,
+        }
+        
+        try:
+            # Debug: log file info
+            safe_print(f"[Batch Template] File: {file.filename}, content_type: {file.content_type}, size: {file.size}")
+            
+            # Validate file type - handle None content_type by inferring from filename
+            content_type = file.content_type
+            if not content_type or content_type == "application/octet-stream":
+                if file.filename:
+                    fname = file.filename.lower()
+                    if fname.endswith('.pdf'):
+                        content_type = "application/pdf"
+                    elif fname.endswith(('.jpg', '.jpeg')):
+                        content_type = "image/jpeg"
+                    elif fname.endswith('.png'):
+                        content_type = "image/png"
+            
+            if content_type not in ALLOWED_MIMES:
+                result_item["error"] = f"Unsupported file type: {content_type}"
+                results.append(result_item)
+                continue
+            
+            # Read file content
+            content = await file.read()
+            file_size = len(content)
+            
+            # Check file size
+            if file_size > MAX_FILE_SIZE:
+                result_item["error"] = f"File too large: {file_size / (1024*1024):.1f}MB (max 50MB)"
+                results.append(result_item)
+                continue
+            
+            # Reset file position
+            await file.seek(0)
+            
+            # Get page count for PDFs
+            page_count = get_pdf_page_count(content)
+            
+            # Check usage limit
+            pages_remaining = current_user.monthly_limit - current_user.monthly_usage
+            if pages_remaining < page_count:
+                result_item["error"] = f"Insufficient pages remaining ({pages_remaining} < {page_count})"
+                results.append(result_item)
+                continue
+            
+            # Upload document and create record
+            document_id = await upload_document_and_create_record(
+                buffer=content,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                mime_type=content_type,
+                user_id=current_user.id,
+                db=db,
+            )
+            
+            # Process with LlamaExtract
+            extract_service = create_llama_extract_service()
+            
+            extraction_result = await extract_service.extract_document(
+                file_buffer=content,
+                file_name=file.filename or "document",
+                document_type=documentType,  # Pass string directly, already validated
+            )
+            
+            # Update usage
+            current_user.monthly_usage += page_count
+            db.add(current_user)
+            await db.commit()
+            
+            # Save extraction to database for history
+            storage = StorageService(db)
+            extraction = await storage.create_extraction(ExtractionCreate(
+                user_id=current_user.id,
+                document_id=document_id,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                document_type=documentType,
+                pages_processed=page_count,
+                extracted_data=extraction_result.extracted_data,
+                status="completed",
+            ))
+            
+            # If document type is resume, also save to resumes table with embedding
+            resume_id = None
+            if documentType == "resume" and extraction_result.extracted_data:
+                try:
+                    resume_service = ResumeService(db)
+                    # Check if OpenAI API key exists for embedding generation
+                    from app.core.config import get_settings
+                    settings = get_settings()
+                    
+                    # Always generate embedding if OpenAI API key is configured
+                    can_generate_embedding = bool(settings.openai_api_key)
+                    
+                    resume = await resume_service.create_from_extraction(
+                        user_id=current_user.id,
+                        extraction_id=extraction.id,
+                        extracted_data=extraction_result.extracted_data,
+                        source_file_name=file.filename or "document",
+                        generate_embedding=can_generate_embedding,
+                    )
+                    resume_id = resume.id
+                except Exception as e:
+                    safe_print(f"[Batch Template] Warning: Failed to save resume: {e}")
+            
+            result_item["success"] = True
+            result_item["data"] = {
+                "headerFields": [
+                    {"key": f.key, "value": str(f.value) if f.value is not None else "", "confidence": f.confidence}
+                    for f in extraction_result.header_fields
+                ],
+                "lineItems": extraction_result.line_items,
+                "extractedData": extraction_result.extracted_data,
+                "confidenceScores": extraction_result.confidence_scores,
+                "pagesProcessed": page_count,
+                "fileSize": file_size,
+                "mimeType": content_type,
+                "documentId": document_id,
+                "extractionId": extraction.id,
+                "resumeId": resume_id,
+            }
+            
+        except LlamaExtractError as e:
+            result_item["error"] = str(e)
+        except Exception as e:
+            result_item["error"] = str(e)
+        
+        results.append(result_item)
+    
+    # Count successes and failures
+    success_count = sum(1 for r in results if r["success"])
+    failure_count = len(results) - success_count
+    
+    safe_print(f"[Batch Template Extraction] Complete: {success_count} success, {failure_count} failed")
+    
+    return {
+        "success": True,
+        "totalFiles": len(files),
+        "successCount": success_count,
+        "failureCount": failure_count,
+        "results": results,
+    }
+
+
+@router.post("/batch/general")
+async def batch_general_extraction(
+    files: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(ensure_usage_reset),
+):
+    """
+    Batch process multiple documents using LlamaParse for general extraction.
+    Processes files sequentially to avoid rate limiting.
+    """
+    safe_print(f"[Batch General Extraction] Processing {len(files)} files")
+    
+    results = []
+    
+    for file in files:
+        result_item = {
+            "fileName": file.filename,
+            "success": False,
+            "error": None,
+            "data": None,
+        }
+        
+        try:
+            # Debug: log file info
+            safe_print(f"[Batch General] File: {file.filename}, content_type: {file.content_type}, size: {file.size}")
+            
+            # Validate file type - handle None content_type by inferring from filename
+            content_type = file.content_type
+            if not content_type or content_type == "application/octet-stream":
+                if file.filename:
+                    fname = file.filename.lower()
+                    if fname.endswith('.pdf'):
+                        content_type = "application/pdf"
+                    elif fname.endswith(('.jpg', '.jpeg')):
+                        content_type = "image/jpeg"
+                    elif fname.endswith('.png'):
+                        content_type = "image/png"
+                    elif fname.endswith('.docx'):
+                        content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    elif fname.endswith('.xlsx'):
+                        content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            
+            if content_type not in ALLOWED_MIMES:
+                result_item["error"] = f"Unsupported file type: {content_type}"
+                results.append(result_item)
+                continue
+            
+            # Read file content
+            content = await file.read()
+            file_size = len(content)
+            
+            # Check file size
+            if file_size > MAX_FILE_SIZE:
+                result_item["error"] = f"File too large: {file_size / (1024*1024):.1f}MB (max 50MB)"
+                results.append(result_item)
+                continue
+            
+            # Reset file position
+            await file.seek(0)
+            
+            # Get page count for PDFs
+            page_count = get_pdf_page_count(content)
+            
+            # Check usage limit
+            pages_remaining = current_user.monthly_limit - current_user.monthly_usage
+            if pages_remaining < page_count:
+                result_item["error"] = f"Insufficient pages remaining ({pages_remaining} < {page_count})"
+                results.append(result_item)
+                continue
+            
+            # Upload document and create record
+            document_id = await upload_document_and_create_record(
+                buffer=content,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                mime_type=content_type,
+                user_id=current_user.id,
+                db=db,
+            )
+            
+            # Process with LlamaParse
+            parse_service = create_llama_parse_service()
+            
+            extraction_result = await parse_service.parse_document(
+                file_buffer=content,
+                file_name=file.filename or "document",
+            )
+            
+            # Update usage
+            current_user.monthly_usage += page_count
+            db.add(current_user)
+            await db.commit()
+            
+            # Save extraction to database for history
+            storage = StorageService(db)
+            extraction = await storage.create_extraction(ExtractionCreate(
+                user_id=current_user.id,
+                document_id=document_id,
+                file_name=file.filename or "document",
+                file_size=file_size,
+                document_type="general",
+                pages_processed=extraction_result.page_count,
+                extracted_data={
+                    "markdown": extraction_result.markdown,
+                    "text": extraction_result.text,
+                    "pageCount": extraction_result.page_count,
+                    "overallConfidence": extraction_result.overall_confidence,
+                    "confidenceStats": extraction_result.confidence_stats,
+                },
+                status="completed",
+            ))
+            
+            result_item["success"] = True
+            result_item["data"] = {
+                "markdown": extraction_result.markdown,
+                "text": extraction_result.text,
+                "pageCount": extraction_result.page_count,
+                "pages": [
+                    {
+                        "pageNumber": p.page_number,
+                        "markdown": p.markdown,
+                        "text": p.text,
+                        "confidence": p.confidence,
+                    }
+                    for p in extraction_result.pages
+                ],
+                "fileSize": file_size,
+                "mimeType": content_type,
+                "overallConfidence": extraction_result.overall_confidence,
+                "confidenceStats": extraction_result.confidence_stats,
+                "documentId": document_id,
+                "extractionId": extraction.id,
+            }
+            
+        except LlamaParseError as e:
+            result_item["error"] = str(e)
+        except Exception as e:
+            result_item["error"] = str(e)
+        
+        results.append(result_item)
+    
+    # Count successes and failures
+    success_count = sum(1 for r in results if r["success"])
+    failure_count = len(results) - success_count
+    
+    safe_print(f"[Batch General Extraction] Complete: {success_count} success, {failure_count} failed")
+    
+    return {
+        "success": True,
+        "totalFiles": len(files),
+        "successCount": success_count,
+        "failureCount": failure_count,
+        "results": results,
+    }
