@@ -1,15 +1,8 @@
 """
-<<<<<<< HEAD
-Chunking Service for Resume Documents
-Implements Semantic Chunking - splits resume by logical sections for better RAG retrieval
-"""
-from typing import List, Dict, Any, Optional, Literal
-=======
 Chunking Service for Resume and General Documents
 Implements Semantic Chunking - splits documents by logical sections for better RAG retrieval
 """
 from typing import List, Dict, Any, Optional, Literal, Union
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 from dataclasses import dataclass, field
 from datetime import datetime
 from sqlalchemy import select, func, delete, text
@@ -17,10 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import DocumentChunk
 from app.services.embedding_service import get_embedding_service
-<<<<<<< HEAD
-=======
 from app.utils.text_splitter import get_document_splitter, get_large_document_splitter
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 
 # Chunk types for resume sections
@@ -35,8 +25,6 @@ ResumeChunkType = Literal[
     'full_resume'        # Complete resume text for broad matching
 ]
 
-<<<<<<< HEAD
-=======
 # Chunk types for general documents
 GeneralChunkType = Literal[
     'content',           # Main content chunk
@@ -46,7 +34,6 @@ GeneralChunkType = Literal[
     'full_document'      # Complete document summary
 ]
 
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 @dataclass
 class ResumeChunk:
@@ -59,11 +46,6 @@ class ResumeChunk:
 
 
 @dataclass
-<<<<<<< HEAD
-class ChunkingResult:
-    """Result of chunking operation"""
-    chunks: List[ResumeChunk]
-=======
 class GeneralChunk:
     """Represents a single chunk of general document data"""
     chunk_type: GeneralChunkType
@@ -77,22 +59,12 @@ class GeneralChunk:
 class ChunkingResult:
     """Result of chunking operation"""
     chunks: List[Union[ResumeChunk, GeneralChunk]]
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     total_chunks: int
     chunk_types_count: Dict[str, int]
 
 
 class ChunkingService:
     """
-<<<<<<< HEAD
-    Service for chunking resume documents into semantic sections.
-    
-    Chunking Strategy:
-    - Section-based (Semantic) Chunking
-    - Each logical section becomes one or more chunks
-    - Experience entries are split per job for better matching
-    - Full resume chunk for broad queries
-=======
     Service for chunking resume and general documents into semantic sections.
     
     Chunking Strategy:
@@ -101,17 +73,13 @@ class ChunkingService:
     - Each logical section becomes one or more chunks
     - Experience entries are split per job for better matching
     - Full resume/document chunk for broad queries
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     """
     
     def __init__(self, db: AsyncSession):
         self.db = db
         self.embedding_service = get_embedding_service()
-<<<<<<< HEAD
-=======
         self.text_splitter = get_document_splitter()
         self.large_text_splitter = get_large_document_splitter()
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     
     def chunk_resume(self, extracted_data: Dict[str, Any]) -> ChunkingResult:
         """
@@ -126,12 +94,9 @@ class ChunkingService:
         chunks: List[ResumeChunk] = []
         chunk_index = 0
         
-<<<<<<< HEAD
-=======
         # Extract candidate name for metadata grouping
         candidate_name = extracted_data.get("name") or extracted_data.get("full_name")
         
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         # 1. Personal Info Chunk
         personal_chunk = self._create_personal_info_chunk(extracted_data, chunk_index)
         if personal_chunk:
@@ -178,14 +143,11 @@ class ChunkingService:
         if full_chunk:
             chunks.append(full_chunk)
         
-<<<<<<< HEAD
-=======
         # Add candidate name to all chunks metadata for grouping
         if candidate_name:
             for chunk in chunks:
                 chunk.metadata["candidate_name"] = candidate_name
         
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         # Count chunk types
         type_counts: Dict[str, int] = {}
         for chunk in chunks:
@@ -580,9 +542,6 @@ class ChunkingService:
         
         print(f"[ChunkingService] Saved {len(saved_chunks)} chunks for extraction {extraction_id}")
         return saved_chunks
-<<<<<<< HEAD
-    
-=======
 
     # =========================================================================
     # GENERAL DOCUMENT CHUNKING
@@ -743,7 +702,6 @@ class ChunkingService:
         print(f"[ChunkingService] Saved {len(saved_chunks)} general document chunks for extraction {extraction_id}")
         return saved_chunks
 
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     async def search_similar_chunks(
         self,
         query: str,
@@ -776,19 +734,11 @@ class ChunkingService:
             SELECT 
                 id, user_id, document_id, extraction_id,
                 chunk_index, chunk_type, text, metadata, created_at,
-<<<<<<< HEAD
-                1 - (embedding <=> :embedding::vector) as similarity
-            FROM document_chunks
-            WHERE user_id = :user_id
-                AND embedding IS NOT NULL
-                AND 1 - (embedding <=> :embedding::vector) >= :threshold
-=======
                 1 - (embedding <=> CAST(:embedding AS vector)) as similarity
             FROM document_chunks
             WHERE user_id = :user_id
                 AND embedding IS NOT NULL
                 AND 1 - (embedding <=> CAST(:embedding AS vector)) >= :threshold
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         """
         
         if chunk_types:
