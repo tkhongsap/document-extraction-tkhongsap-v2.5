@@ -6,8 +6,6 @@ import os
 import sys
 import io
 import asyncio
-import io
-import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -39,7 +37,29 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
+    search_router,
+    chunks_router,
+    api_keys_router,
 )
+from app.routes.rag import router as rag_router
+from app.routes.public_extract import router as public_extract_router
+from app.middlewares.usage_logging import UsageLoggingMiddleware
+
+
+async def cleanup_old_extractions_task():
+    """Background task to cleanup old extractions every 6 hours"""
+    while True:
+        try:
+            await asyncio.sleep(6 * 60 * 60)  # Run every 6 hours
+            async with async_session_maker() as db:
+                storage = StorageService(db)
+                deleted_count = await storage.cleanup_old_extractions()
+                if deleted_count > 0:
+                    print(f"[Cleanup] Deleted {deleted_count} old extractions (older than 3 days)")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[Cleanup] Error: {e}")
 
 
 @asynccontextmanager
@@ -55,9 +75,27 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("[FastAPI] Database initialized")
     
+    # Start background cleanup task
+    cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
+    print("[FastAPI] Started extraction cleanup background task")
+    
+    # Start monthly usage reset scheduler
+    from app.tasks.scheduler import get_scheduler
+    scheduler = get_scheduler()
+    scheduler.start()
+    print("[FastAPI] Started monthly usage reset scheduler")
+    
     yield
     
     # Shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+    
+    # Shutdown scheduler
+    scheduler.shutdown()
     print("[FastAPI] Shutting down...")
 
 
@@ -131,6 +169,11 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
+app.include_router(public_extract_router)  # Public API endpoints
+app.include_router(search_router)
+app.include_router(rag_router)
+app.include_router(chunks_router)
+app.include_router(api_keys_router)
 
 
 # Object storage routes for serving files

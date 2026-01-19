@@ -406,21 +406,9 @@ class LlamaExtractService:
         )
     
     async def _get_job_status(self, job_id: str) -> str:
-<<<<<<< HEAD
-        """Get job status"""
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.get(
-                f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs/{job_id}",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Accept": "application/json",
-                },
-            )
-=======
         """Get job status with retry on connection errors"""
         max_retries = 3
         retry_delay = 2.0
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         
         for attempt in range(max_retries):
             try:
@@ -452,21 +440,9 @@ class LlamaExtractService:
                     raise  # Re-raise to be handled by _wait_for_completion
     
     async def _get_result(self, job_id: str) -> Dict[str, Any]:
-<<<<<<< HEAD
-        """Get extraction result"""
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.get(
-                f"{LLAMA_EXTRACT_API_BASE}/extraction/jobs/{job_id}/result",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Accept": "application/json",
-                },
-            )
-=======
         """Get extraction result with retry on connection errors"""
         max_retries = 3
         retry_delay = 2.0
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         
         for attempt in range(max_retries):
             try:

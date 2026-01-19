@@ -20,11 +20,8 @@ import History from "@/pages/history";
 import ExtractionDetail from "@/pages/extraction-detail";
 import Templates from "@/pages/templates";
 import Settings from "@/pages/settings";
-<<<<<<< HEAD
-=======
 import ApiKeysSettings from "@/pages/settings/api-keys";
 import ApiDocsPage from "@/pages/settings/api-docs";
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 import ResumeSearch from "@/pages/resume-search";
 import NotFound from "@/pages/not-found";
 
@@ -93,8 +90,6 @@ function Router() {
           {() => <PrivateRoute component={Settings} />}
         </Route>
 
-<<<<<<< HEAD
-=======
         <Route path="/settings/api-keys">
           {() => <PrivateRoute component={ApiKeysSettings} />}
         </Route>
@@ -108,7 +103,6 @@ function Router() {
           {() => <PrivateRoute component={ApiDocsPage} />}
         </Route>
 
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         <Route path="/resume-search">
           {() => <PrivateRoute component={ResumeSearch} />}
         </Route>

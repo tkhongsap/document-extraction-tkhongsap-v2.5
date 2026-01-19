@@ -23,20 +23,7 @@ class EmbeddingService:
         model: Optional[str] = None,
         api_base: Optional[str] = None
     ):
-<<<<<<< HEAD
-        """
-        Initialize embedding service
-        
-        Args:
-            provider: 'ollama' or 'openai'
-            model: Embedding model to use
-                   - Ollama: bge-m3:latest (1024 dims)
-                   - OpenAI: text-embedding-3-small (1536 dims)
-            api_base: API base URL (for Ollama)
-        """
-=======
         """Initialize embedding service with HTTP client pooling"""
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         self.settings = get_settings()
         # Default to OpenAI for embeddings
         self.provider = provider or os.getenv("EMBEDDING_PROVIDER", "openai")
@@ -53,8 +40,6 @@ class EmbeddingService:
             self.model = model or os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
             self.api_key = self.settings.openai_api_key
             self._dimensions = 1536  # text-embedding-3-small dimensions
-<<<<<<< HEAD
-=======
         
         # Reusable HTTP client for connection pooling
         self._http_client: Optional[httpx.AsyncClient] = None
@@ -77,7 +62,6 @@ class EmbeddingService:
         """Close HTTP client and cleanup resources"""
         if self._http_client and not self._http_client.is_closed:
             await self._http_client.aclose()
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     
     def get_dimensions(self) -> int:
         """Get the embedding dimensions for the current model"""
@@ -221,33 +205,6 @@ class EmbeddingService:
     
     async def _create_ollama_embedding(self, text: str) -> List[float]:
         """Create embedding using Ollama API"""
-<<<<<<< HEAD
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.api_base}/api/embed",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "model": self.model,
-                    "input": text,
-                },
-                timeout=60.0,
-            )
-            
-            if response.status_code != 200:
-                error_detail = response.json().get("error", response.text)
-                raise Exception(f"Ollama API error: {error_detail}")
-            
-            data = response.json()
-            # Ollama returns { embeddings: [[...]] } for single input
-            embeddings = data.get("embeddings", [])
-            if embeddings and len(embeddings) > 0:
-                return embeddings[0]
-            return data.get("embedding", [])
-    
-    async def _create_openai_embedding(self, text: str) -> List[float]:
-        """Create embedding using OpenAI API"""
-        async with httpx.AsyncClient() as client:
-=======
         client = self._get_http_client()
     async def _create_ollama_embedding(self, text: str) -> List[float]:
         """Create embedding using Ollama API"""
@@ -359,7 +316,6 @@ class EmbeddingService:
                     truncated_texts.append(text)
             
             client = self._get_http_client()
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             response = await client.post(
                 f"{self.api_base}/embeddings",
                 headers={
@@ -367,16 +323,9 @@ class EmbeddingService:
                     "Content-Type": "application/json",
                 },
                 json={
-<<<<<<< HEAD
-                    "model": self.model,
-                    "input": text,
-                },
-                timeout=30.0,
-=======
                     "input": truncated_texts,
                     "model": self.model,
                 },
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             )
             
             if response.status_code != 200:
@@ -384,39 +333,9 @@ class EmbeddingService:
                 raise Exception(f"OpenAI API error: {error_detail}")
             
             data = response.json()
-<<<<<<< HEAD
-            return data["data"][0]["embedding"]
-    
-    async def create_embeddings_batch(
-        self, 
-        texts: List[str],
-        batch_size: int = 100,
-        use_chunking: bool = True
-    ) -> List[List[float]]:
-        """
-        Create embeddings for multiple texts
-        Uses recursive text splitting for long texts
-        
-        Args:
-            texts: List of texts to embed
-            batch_size: Number of texts per API call (for OpenAI)
-            use_chunking: Whether to use chunking for long texts
-            
-        Returns:
-            List of embedding vectors
-        """
-        self._check_api_key()
-        
-        all_embeddings = []
-        
-        for text in texts:
-            embedding = await self.create_embedding(text, use_chunking=use_chunking)
-            all_embeddings.append(embedding)
-=======
             # Extract embeddings in order
             batch_embeddings = [item["embedding"] for item in sorted(data["data"], key=lambda x: x["index"])]
             all_embeddings.extend(batch_embeddings)
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         
         return all_embeddings
     

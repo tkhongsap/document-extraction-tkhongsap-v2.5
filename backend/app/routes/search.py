@@ -3,23 +3,16 @@ Search Routes - Semantic search for resumes
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-<<<<<<< HEAD
-=======
 from sqlalchemy import select, func
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.auth import get_current_user
 from app.services.resume_service import ResumeService
-<<<<<<< HEAD
-from app.models.user import User
-=======
 from app.services.chunking_service import ChunkingService
 from app.models.user import User
 from app.models.document_chunk import DocumentChunk
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -57,10 +50,7 @@ class ResumeSearchResult(BaseModel):
     source_file_name: Optional[str] = None
     created_at: Optional[str] = None
     similarity_score: Optional[float] = None
-<<<<<<< HEAD
-=======
     has_embedding: bool = False
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 
 class SearchResponse(BaseModel):
@@ -214,10 +204,7 @@ async def list_resumes(
                 summary=r.summary,
                 source_file_name=r.source_file_name,
                 created_at=r.created_at.isoformat() if r.created_at else None,
-<<<<<<< HEAD
-=======
                 has_embedding=r.embedding_model is not None,  # Use embedding_model as indicator
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             )
             for r in resumes
         ]
@@ -386,8 +373,6 @@ async def regenerate_all_embeddings(
     except Exception as e:
         print(f"[Search] Error in bulk regenerate: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to regenerate embeddings: {str(e)}")
-<<<<<<< HEAD
-=======
 
 
 @router.post("/resumes/generate-all-chunks")
@@ -549,4 +534,3 @@ async def get_chunks_stats(
         print(f"[Search] Error getting chunk stats: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get chunk stats: {str(e)}")
 
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd

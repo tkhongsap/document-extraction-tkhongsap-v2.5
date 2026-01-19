@@ -380,7 +380,7 @@ CONTRACT_SCHEMA = {
 }
 
 # ============ Resume/CV Schema ============
-# Schema aligned with database: resumes table
+# Simplified schema - only essential fields for recruitment
 RESUME_SCHEMA = {
     "type": "object",
     "properties": {
@@ -398,7 +398,7 @@ RESUME_SCHEMA = {
         },
         "location": {
             "type": "string",
-            "description": "Current or preferred location (city, country)",
+            "description": "Current location as single string (e.g., 'Bangkok, Thailand')",
         },
         "currentRole": {
             "type": "string",
@@ -438,12 +438,8 @@ RESUME_SCHEMA = {
                         "type": "string",
                         "description": "Field of study or major",
                     },
-                    "institution": {
-                        "type": "string",
-                        "description": "School or university name",
-                    },
                     "year": {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Graduation year",
                     },
                 },
@@ -455,40 +451,32 @@ RESUME_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Job title",
-                    },
                     "company": {
                         "type": "string",
                         "description": "Company name",
                     },
-                    "location": {
+                    "title": {
                         "type": "string",
-                        "description": "Work location",
+                        "description": "Job title",
                     },
                     "startDate": {
                         "type": "string",
-                        "description": "Start date in ISO 8601 format (YYYY-MM-DD)",
+                        "description": "Start date (e.g., 'Jan 2020' or '2020')",
                     },
                     "endDate": {
                         "type": "string",
-                        "description": "End date in ISO 8601 format or null if current",
+                        "description": "End date or 'Present' if current",
                     },
                     "description": {
                         "type": "string",
-                        "description": "Job description and responsibilities",
-                    },
-                    "isCurrent": {
-                        "type": "boolean",
-                        "description": "Whether this is the current position",
+                        "description": "Job responsibilities (brief)",
                     },
                 },
             },
         },
         "certifications": {
             "type": "array",
-            "description": "Array of certification names",
+            "description": "List of certification names",
             "items": {
                 "type": "string",
                 "description": "Certification name",
@@ -496,64 +484,33 @@ RESUME_SCHEMA = {
         },
         "languages": {
             "type": "array",
-            "description": "Simple array of language names",
+            "description": "List of languages spoken",
             "items": {
                 "type": "string",
                 "description": "Language name",
             },
         },
-        "languagesWithProficiency": {
+        "projects": {
             "type": "array",
-            "description": "Detailed language proficiency data",
+            "description": "List of personal or professional projects",
             "items": {
                 "type": "object",
                 "properties": {
-                    "language": {
+                    "name": {
                         "type": "string",
-                        "description": "Language name",
+                        "description": "Project name",
                     },
-                    "level": {
+                    "description": {
                         "type": "string",
-                        "description": "Proficiency level (native, fluent, business, conversational, basic, N1-N5)",
+                        "description": "Brief project description",
+                    },
+                    "technologies": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Technologies used",
                     },
                 },
             },
-        },
-        "summary": {
-            "type": "string",
-            "description": "Professional summary or objective statement",
-        },
-        "salaryExpectation": {
-            "type": "integer",
-            "description": "Expected salary in base currency units",
-        },
-        "availabilityDate": {
-            "type": "string",
-            "description": "When candidate is available to start (ISO 8601 date)",
-        },
-        "gender": {
-            "type": "string",
-            "description": "Gender (male, female, other)",
-        },
-        "nationality": {
-            "type": "string",
-            "description": "Candidate nationality",
-        },
-        "birthYear": {
-            "type": "integer",
-            "description": "Birth year for age calculation",
-        },
-        "hasCar": {
-            "type": "boolean",
-            "description": "Whether candidate owns a car",
-        },
-        "hasLicense": {
-            "type": "boolean",
-            "description": "Whether candidate has a driver's license",
-        },
-        "willingToTravel": {
-            "type": "boolean",
-            "description": "Travel willingness indicator",
         },
     },
 }

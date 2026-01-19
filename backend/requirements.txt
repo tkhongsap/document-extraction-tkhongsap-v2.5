@@ -48,8 +48,5 @@ pgvector==0.3.6
 # Redis for rate limiting and caching (optional but recommended)
 redis==5.0.1
 
-# pgvector for vector similarity search
-pgvector==0.3.6
-
 # CORS
 # starlette==0.45.2

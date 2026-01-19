@@ -458,8 +458,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             resumeId = resume.id;
             console.log(`[Template Extraction] Resume saved with ID: ${resumeId}, hasEmbedding: ${!!resume.embedding}`);
-<<<<<<< HEAD
-=======
             
             // Create semantic chunks for better RAG search
             if (process.env.OPENAI_API_KEY) {
@@ -478,7 +476,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Continue without chunks - resume already saved
               }
             }
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
           } catch (error: any) {
             console.error("[Template Extraction] Warning: Failed to save resume:", error);
             // Continue without resume save - extraction still returned

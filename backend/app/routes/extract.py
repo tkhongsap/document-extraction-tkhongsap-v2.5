@@ -18,10 +18,6 @@ from app.services.llama_parse import create_llama_parse_service, LlamaParseError
 from app.services.llama_extract import create_llama_extract_service, LlamaExtractError
 from app.services.resume_service import ResumeService
 from app.services.chunking_service import ChunkingService
-<<<<<<< HEAD
-from app.services.chunking_service import ChunkingService
-=======
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 from app.models.user import User
 from app.schemas.document import DocumentCreate
 from app.schemas.extraction import ExtractionCreate
@@ -235,19 +231,6 @@ async def template_extraction(
         # If document type is resume, also save to resumes table with embedding
         resume_id = None
         safe_print(f"[Template Extraction] Checking resume save: documentType={documentType}, has_data={bool(result.extracted_data)}")
-<<<<<<< HEAD
-        if documentType == "resume" and result.extracted_data:
-            try:
-                safe_print(f"[Template Extraction] Attempting to save resume...")
-                resume_service = ResumeService(db)
-                # Check if OpenAI API key exists for embedding generation
-                from app.core.config import get_settings
-                settings = get_settings()
-                
-                # Always generate embedding if OpenAI API key is configured
-                can_generate_embedding = bool(settings.openai_api_key)
-                safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
-=======
         
         if documentType == "resume" and result.extracted_data:
             # Check if OpenAI API key exists for embedding generation
@@ -268,7 +251,6 @@ async def template_extraction(
                 # # Always generate embedding if OpenAI API key is configured
                 # can_generate_embedding = bool(settings.openai_api_key)
                 # safe_print(f"[Template Extraction] OpenAI API key configured: {can_generate_embedding}")
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                 
                 resume = await resume_service.create_from_extraction(
                     user_id=user.id,
@@ -278,35 +260,13 @@ async def template_extraction(
                     generate_embedding=can_generate_embedding,
                 )
                 resume_id = resume.id
-<<<<<<< HEAD
-                embedding_status = "with embedding" if resume.embedding else "without embedding"
-                safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
-             
-                # Auto-create chunks for RAG
-                try:
-                    chunking_service = ChunkingService(db)
-                    chunks = await chunking_service.chunk_and_save_resume(
-                        user_id=user.id,
-                        extraction_id=extraction.id,
-                        extracted_data=result.extracted_data,
-                        document_id=document_id,
-                        generate_embeddings=can_generate_embedding
-                    )
-                    safe_print(f"[Template Extraction] Created {len(chunks)} chunks for resume")
-                except Exception as chunk_error:
-                    safe_print(f"[Template Extraction] Warning: Failed to create chunks: {chunk_error}")
-                    # Continue without chunks - resume is still saved
-=======
                 embedding_status = "with embedding" if resume.embedding is not None else "without embedding"
                 safe_print(f"[Template Extraction] Resume saved ({embedding_status}) ID: {resume_id}")
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             except Exception as e:
                 safe_print(f"[Template Extraction] Warning: Failed to save resume: {e}")
                 import traceback
                 traceback.print_exc()
                 # Continue without resume save - extraction is still saved
-<<<<<<< HEAD
-=======
 
             # 2. Try to create chunks (Independent of Resume table success)
             # Note: document_id must reference documents table, not resumes table
@@ -325,7 +285,6 @@ async def template_extraction(
                 safe_print(f"[Template Extraction] Warning: Failed to create chunks: {chunk_error}")
                 import traceback
                 traceback.print_exc()
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         else:
             safe_print(f"[Template Extraction] Skipping resume save")
         
@@ -662,17 +621,6 @@ async def batch_template_extraction(
             
             # If document type is resume, also save to resumes table with embedding
             resume_id = None
-<<<<<<< HEAD
-            if documentType == "resume" and extraction_result.extracted_data:
-                try:
-                    resume_service = ResumeService(db)
-                    # Check if OpenAI API key exists for embedding generation
-                    from app.core.config import get_settings
-                    settings = get_settings()
-                    
-                    # Always generate embedding if OpenAI API key is configured
-                    can_generate_embedding = bool(settings.openai_api_key)
-=======
             chunks_created = 0
             if documentType == "resume" and extraction_result.extracted_data:
                 # Check if OpenAI API key exists for embedding generation
@@ -685,7 +633,6 @@ async def batch_template_extraction(
                 # 1. Try to save to Resumes table
                 try:
                     resume_service = ResumeService(db)
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     
                     resume = await resume_service.create_from_extraction(
                         user_id=current_user.id,
@@ -695,10 +642,6 @@ async def batch_template_extraction(
                         generate_embedding=can_generate_embedding,
                     )
                     resume_id = resume.id
-<<<<<<< HEAD
-                except Exception as e:
-                    safe_print(f"[Batch Template] Warning: Failed to save resume: {e}")
-=======
                     
                     # Auto-create chunks for RAG
                     try:
@@ -734,7 +677,6 @@ async def batch_template_extraction(
                     safe_print(f"[Batch Template] Warning: Failed to create chunks: {chunk_error}")
                     import traceback
                     traceback.print_exc()
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             
             result_item["success"] = True
             result_item["data"] = {
@@ -751,10 +693,7 @@ async def batch_template_extraction(
                 "documentId": document_id,
                 "extractionId": extraction.id,
                 "resumeId": resume_id,
-<<<<<<< HEAD
-=======
                 "chunksCreated": chunks_created,
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             }
             
         except LlamaExtractError as e:
@@ -917,8 +856,6 @@ async def batch_general_extraction(
                 status="completed",
             ))
             
-<<<<<<< HEAD
-=======
             # Auto-create chunks for RAG
             chunks_created = 0
             try:
@@ -943,7 +880,6 @@ async def batch_general_extraction(
             except Exception as chunk_error:
                 safe_print(f"[Batch General] Warning: Failed to create chunks: {chunk_error}")
             
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             result_item["success"] = True
             result_item["data"] = {
                 "markdown": extraction_result.markdown,
@@ -964,10 +900,7 @@ async def batch_general_extraction(
                 "confidenceStats": extraction_result.confidence_stats,
                 "documentId": document_id,
                 "extractionId": extraction.id,
-<<<<<<< HEAD
-=======
                 "chunksCreated": chunks_created,
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             }
             
         except LlamaParseError as e:

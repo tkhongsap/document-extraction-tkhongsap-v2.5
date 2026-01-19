@@ -1,9 +1,6 @@
 import { useLanguage } from "@/lib/i18n";
 import { useDateFormatter } from "@/lib/date-utils";
-<<<<<<< HEAD
-=======
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
