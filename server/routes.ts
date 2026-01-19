@@ -10,6 +10,13 @@ import { ObjectPermission } from "./objectAcl";
 import { createLlamaParseService, LlamaParseError } from "./llamaParse";
 import { createLlamaExtractService, LlamaExtractError } from "./llamaExtract";
 import { createResumeService, type ResumeData } from "./resumeService";
+import { 
+  chunkAndSaveResume, 
+  searchSimilarChunks, 
+  deleteChunksForExtraction,
+  countUserChunks,
+  type ExtractedResumeData 
+} from "./resumeChunkingService";
 import type { DocumentType } from "./extractionSchemas";
 import { randomUUID } from "crypto";
 
@@ -58,7 +65,7 @@ async function uploadDocumentAndCreateRecord(
   // Upload file buffer to GCS
   const uploadResponse = await fetch(uploadURL, {
     method: "PUT",
-    body: buffer,
+    body: new Uint8Array(buffer),
     headers: {
       "Content-Type": mimeType,
       "Content-Length": fileSize.toString(),
@@ -440,17 +447,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (documentType === "resume" && extractionResult.extractedData) {
           try {
             console.log(`[Template Extraction] Creating resume service...`);
-            const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+            const resumeService = createResumeService();
             console.log(`[Template Extraction] Calling createFromExtraction...`);
             const resume = await resumeService.createFromExtraction(
               userId,
               documentId || randomUUID(), // Use extraction ID as fallback
-              extractionResult.extractedData as ResumeData,
+              extractionResult.extractedData as unknown as ResumeData,
               originalname,
               !!process.env.OPENAI_API_KEY // Only generate embedding if API key exists
             );
             resumeId = resume.id;
             console.log(`[Template Extraction] Resume saved with ID: ${resumeId}, hasEmbedding: ${!!resume.embedding}`);
+<<<<<<< HEAD
+=======
+            
+            // Create semantic chunks for better RAG search
+            if (process.env.OPENAI_API_KEY) {
+              try {
+                console.log(`[Template Extraction] Creating semantic chunks...`);
+                const chunkResult = await chunkAndSaveResume({
+                  userId,
+                  documentId: documentId || undefined,
+                  extractionId: resumeId,
+                  resumeData: extractionResult.extractedData as unknown as ExtractedResumeData,
+                  includeFullResume: true
+                });
+                console.log(`[Template Extraction] Created ${chunkResult.totalChunks} chunks, saved: ${chunkResult.savedToDb}`);
+              } catch (chunkError: any) {
+                console.error("[Template Extraction] Warning: Failed to create chunks:", chunkError);
+                // Continue without chunks - resume already saved
+              }
+            }
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
           } catch (error: any) {
             console.error("[Template Extraction] Warning: Failed to save resume:", error);
             // Continue without resume save - extraction still returned
@@ -594,7 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Query must be at least 3 characters" });
       }
 
-      const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+      const resumeService = createResumeService();
       const results = await resumeService.searchSemantic(
         query,
         userId,
@@ -708,7 +736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const resumeId = req.params.id;
 
-      const resumeService = createResumeService(process.env.OPENAI_API_KEY);
+      const resumeService = createResumeService();
       const resume = await resumeService.getById(resumeId);
 
       if (!resume) {
@@ -735,6 +763,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[Search] Regenerate embedding error:", error);
       res.status(500).json({ message: "Failed to regenerate embedding" });
+    }
+  });
+ // ==========================================================================
+  // CHUNK ROUTES - Document chunking for RAG
+  // ==========================================================================
+
+  /**
+   * POST /api/chunks/create
+   * สร้าง semantic chunks จาก resume data ที่มีอยู่แล้ว
+   * 
+   * Body: {
+   *   extractionId?: string,     // ID ของ extraction (optional)
+   *   documentId?: string,       // ID ของ document (optional)
+   *   resumeData: object,        // ข้อมูล resume ที่ extracted แล้ว
+   *   includeFullResume?: boolean // รวม full resume chunk (default: true)
+   * }
+   */
+  app.post("/api/chunks/create", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { extractionId, documentId, resumeData, includeFullResume = true } = req.body;
+
+      if (!resumeData || typeof resumeData !== "object") {
+        return res.status(400).json({ 
+          message: "resumeData is required and must be an object" 
+        });
+      }
+
+      const result = await chunkAndSaveResume({
+        userId,
+        documentId,
+        extractionId,
+        resumeData: resumeData as ExtractedResumeData,
+        includeFullResume
+      });
+
+      res.json({
+        success: true,
+        totalChunks: result.totalChunks,
+        chunkIds: result.chunkIds,
+        chunks: result.chunks.map(c => ({
+          type: c.type,
+          title: c.title,
+          textLength: c.text.length,
+          metadata: c.metadata
+        }))
+      });
+    } catch (error: any) {
+      console.error("[Chunks] Create error:", error);
+      res.status(500).json({ message: error.message || "Failed to create chunks" });
+    }
+  });
+
+  /**
+   * POST /api/chunks/search
+   * ค้นหา chunks ที่คล้ายกับ query ด้วย semantic similarity
+   * 
+   * Body: {
+   *   query: string,       // ข้อความที่ต้องการค้นหา
+   *   limit?: number,      // จำนวน chunks สูงสุด (default: 5, max: 20)
+   *   threshold?: number   // similarity threshold (default: 0.5)
+   * }
+   */
+  app.post("/api/chunks/search", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { query, limit = 5, threshold = 0.5 } = req.body;
+
+      if (!query || typeof query !== "string" || query.length < 2) {
+        return res.status(400).json({ 
+          message: "Query must be at least 2 characters" 
+        });
+      }
+
+      const searchLimit = Math.min(Math.max(1, limit), 20);
+      const results = await searchSimilarChunks(query, userId, searchLimit);
+
+      // Filter by threshold
+      const filteredResults = results.filter(r => r.similarity >= threshold);
+
+      res.json({
+        success: true,
+        query,
+        total: filteredResults.length,
+        results: filteredResults.map(r => ({
+          id: r.chunk.id,
+          text: r.chunk.text,
+          similarity: r.similarity,
+          metadata: r.chunk.metadata,
+          chunkIndex: r.chunk.chunk_index,
+          documentId: r.chunk.document_id,
+          extractionId: r.chunk.extraction_id,
+          createdAt: r.chunk.created_at
+        }))
+      });
+    } catch (error: any) {
+      console.error("[Chunks] Search error:", error);
+      res.status(500).json({ message: error.message || "Search failed" });
+    }
+  });
+
+  /**
+   * GET /api/chunks/stats
+   * ดูสถิติ chunks ของ user
+   */
+  app.get("/api/chunks/stats", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const totalChunks = await countUserChunks(userId);
+
+      res.json({
+        success: true,
+        totalChunks,
+        userId
+      });
+    } catch (error: any) {
+      console.error("[Chunks] Stats error:", error);
+      res.status(500).json({ message: error.message || "Failed to get stats" });
+    }
+  });
+
+  /**
+   * DELETE /api/chunks/extraction/:extractionId
+   * ลบ chunks ทั้งหมดของ extraction
+   */
+  app.delete("/api/chunks/extraction/:extractionId", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { extractionId } = req.params;
+
+      // Verify extraction belongs to user
+      const extraction = await storage.getExtraction(extractionId);
+      if (!extraction) {
+        return res.status(404).json({ message: "Extraction not found" });
+      }
+      if (extraction.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const deletedCount = await deleteChunksForExtraction(extractionId);
+
+      res.json({
+        success: true,
+        deletedCount,
+        extractionId
+      });
+    } catch (error: any) {
+      console.error("[Chunks] Delete error:", error);
+      res.status(500).json({ message: error.message || "Failed to delete chunks" });
     }
   });
 

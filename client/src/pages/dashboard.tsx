@@ -32,9 +32,15 @@ export default function Dashboard() {
 
   const recentDocs = recentData?.extractions || [];
 
+<<<<<<< HEAD
   // Get featured templates in specific order: Resume, Contract, Invoice, PO
   const allTemplates = getTemplates(t);
   const featuredIds = ['resume', 'contract', 'invoice', 'po'];
+=======
+  // Get featured templates in specific order: Resume, Bank, Contract, Invoice, PO
+  const allTemplates = getTemplates(t);
+  const featuredIds = ['resume', 'bank', 'contract', 'invoice', 'po'];
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
   const featuredTemplates = featuredIds
     .map(id => allTemplates.find(t => t.id === id))
     .filter((t): t is NonNullable<typeof t> => t !== undefined)
@@ -45,6 +51,7 @@ export default function Dashboard() {
         'bg-orange-100 text-orange-600': 'bg-amber-500/10 text-amber-600',
         'bg-green-100 text-green-600': 'bg-emerald-500/10 text-emerald-600',
         'bg-purple-100 text-purple-600': 'bg-violet-500/10 text-violet-600',
+        'bg-pink-100 text-pink-600': 'bg-pink-500/10 text-pink-600',
       };
       return {
         ...template,
@@ -71,12 +78,18 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold">{t('dash.featured_templates')}</h2>
             <p className="text-sm text-muted-foreground mt-1">{t('dash.templates_subtitle') || 'AI-powered extraction for your documents'}</p>
           </div>
+<<<<<<< HEAD
           <Link href="/templates" className="text-sm text-primary hover:underline flex items-center">
             View all <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </div>
         <motion.div
           className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+=======
+        </div>
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
           variants={staggerContainer}
           initial="initial"
           animate="animate"

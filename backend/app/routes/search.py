@@ -3,13 +3,23 @@ Search Routes - Semantic search for resumes
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+<<<<<<< HEAD
+=======
+from sqlalchemy import select, func
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.core.auth import get_current_user
 from app.services.resume_service import ResumeService
+<<<<<<< HEAD
 from app.models.user import User
+=======
+from app.services.chunking_service import ChunkingService
+from app.models.user import User
+from app.models.document_chunk import DocumentChunk
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -47,6 +57,10 @@ class ResumeSearchResult(BaseModel):
     source_file_name: Optional[str] = None
     created_at: Optional[str] = None
     similarity_score: Optional[float] = None
+<<<<<<< HEAD
+=======
+    has_embedding: bool = False
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 
 class SearchResponse(BaseModel):
@@ -200,6 +214,10 @@ async def list_resumes(
                 summary=r.summary,
                 source_file_name=r.source_file_name,
                 created_at=r.created_at.isoformat() if r.created_at else None,
+<<<<<<< HEAD
+=======
+                has_embedding=r.embedding_model is not None,  # Use embedding_model as indicator
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             )
             for r in resumes
         ]
@@ -368,3 +386,167 @@ async def regenerate_all_embeddings(
     except Exception as e:
         print(f"[Search] Error in bulk regenerate: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to regenerate embeddings: {str(e)}")
+<<<<<<< HEAD
+=======
+
+
+@router.post("/resumes/generate-all-chunks")
+async def generate_all_chunks(
+    regenerate: bool = Query(False, description="Delete existing chunks and regenerate"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generate semantic chunks for all resumes belonging to the current user.
+    Creates DocumentChunk entries with embeddings for RAG search.
+    
+    Args:
+        regenerate: If True, delete existing chunks and regenerate
+    """
+    try:
+        resume_service = ResumeService(db)
+        chunking_service = ChunkingService(db)
+        
+        # Get all resumes for user
+        resumes = await resume_service.get_by_user(
+            user_id=current_user.id,
+            limit=1000,  # Get all
+        )
+        
+        if not resumes:
+            return {
+                "message": "No resumes found",
+                "success_count": 0,
+                "skipped_count": 0,
+                "failed_count": 0,
+                "total": 0,
+                "total_chunks": 0,
+            }
+        
+        success_count = 0
+        skipped_count = 0
+        failed_count = 0
+        total_chunks = 0
+        errors = []
+        
+        for resume in resumes:
+            try:
+                # Check if chunks already exist for this resume
+                if not regenerate:
+                    existing_chunks = await db.execute(
+                        select(func.count(DocumentChunk.id))
+                        .where(DocumentChunk.extraction_id == resume.extraction_id)
+                        .where(DocumentChunk.user_id == current_user.id)
+                    )
+                    chunk_count = existing_chunks.scalar() or 0
+                    
+                    if chunk_count > 0:
+                        print(f"[Search] Skipping {resume.name}: {chunk_count} chunks already exist")
+                        skipped_count += 1
+                        total_chunks += chunk_count
+                        continue
+                else:
+                    # Delete existing chunks if regenerate=True
+                    await db.execute(
+                        DocumentChunk.__table__.delete().where(
+                            DocumentChunk.extraction_id == resume.extraction_id,
+                            DocumentChunk.user_id == current_user.id
+                        )
+                    )
+                    await db.commit()
+                
+                # Get raw extracted data
+                if not resume.raw_extracted_data:
+                    print(f"[Search] Skipping {resume.name}: No raw extracted data")
+                    skipped_count += 1
+                    continue
+                
+                # Generate chunks
+                chunks = await chunking_service.chunk_and_save_resume(
+                    user_id=current_user.id,
+                    extraction_id=resume.extraction_id,
+                    extracted_data=resume.raw_extracted_data,
+                    document_id=None,  # Resume model doesn't have document_id
+                    generate_embeddings=True
+                )
+                
+                if chunks:
+                    success_count += 1
+                    total_chunks += len(chunks)
+                    print(f"[Search] Generated {len(chunks)} chunks for: {resume.name}")
+                else:
+                    skipped_count += 1
+                    print(f"[Search] No chunks generated for: {resume.name}")
+                    
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"{resume.name}: {str(e)}")
+                print(f"[Search] Error generating chunks for {resume.name}: {e}")
+        
+        return {
+            "message": f"Generated chunks for {success_count} resumes, {skipped_count} skipped, {failed_count} failed",
+            "success_count": success_count,
+            "skipped_count": skipped_count,
+            "failed_count": failed_count,
+            "total": len(resumes),
+            "total_chunks": total_chunks,
+            "errors": errors[:10] if errors else [],
+        }
+    
+    except Exception as e:
+        print(f"[Search] Error in bulk chunk generation: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate chunks: {str(e)}")
+
+
+@router.get("/chunks/stats")
+async def get_chunks_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get statistics about document chunks for the current user.
+    """
+    try:
+        # Count total chunks
+        total_result = await db.execute(
+            select(func.count(DocumentChunk.id))
+            .where(DocumentChunk.user_id == current_user.id)
+        )
+        total_chunks = total_result.scalar() or 0
+        
+        # Count chunks with embeddings
+        embedded_result = await db.execute(
+            select(func.count(DocumentChunk.id))
+            .where(DocumentChunk.user_id == current_user.id)
+            .where(DocumentChunk.embedding.isnot(None))
+        )
+        embedded_chunks = embedded_result.scalar() or 0
+        
+        # Count by chunk type
+        type_result = await db.execute(
+            select(DocumentChunk.chunk_type, func.count(DocumentChunk.id))
+            .where(DocumentChunk.user_id == current_user.id)
+            .group_by(DocumentChunk.chunk_type)
+        )
+        chunks_by_type = {row[0]: row[1] for row in type_result.fetchall()}
+        
+        # Count unique resumes with chunks
+        resume_result = await db.execute(
+            select(func.count(func.distinct(DocumentChunk.extraction_id)))
+            .where(DocumentChunk.user_id == current_user.id)
+        )
+        resumes_with_chunks = resume_result.scalar() or 0
+        
+        return {
+            "total_chunks": total_chunks,
+            "embedded_chunks": embedded_chunks,
+            "chunks_without_embedding": total_chunks - embedded_chunks,
+            "resumes_with_chunks": resumes_with_chunks,
+            "chunks_by_type": chunks_by_type,
+        }
+    
+    except Exception as e:
+        print(f"[Search] Error getting chunk stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get chunk stats: {str(e)}")
+
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd

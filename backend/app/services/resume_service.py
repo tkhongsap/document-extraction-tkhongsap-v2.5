@@ -27,7 +27,7 @@ class ResumeService:
         generate_embedding: bool = True,
     ) -> Resume:
         """
-        Create a resume from extraction data
+        Create a resume from extraction data, or update if email already exists
         
         Args:
             user_id: User who owns this resume
@@ -37,7 +37,7 @@ class ResumeService:
             generate_embedding: Whether to generate embedding (requires OpenAI API)
             
         Returns:
-            Created Resume object
+            Created or updated Resume object
         """
         # Parse availability_date if it's a string
         availability_date = None
@@ -184,7 +184,54 @@ class ResumeService:
         else:
             print(f"[ResumeService] Skipping embedding generation (disabled)")
         
-        print(f"[ResumeService] Saving resume to database...")
+        # Check if resume with same email already exists for this user (deduplication)
+        existing_resume = None
+        if email:
+            result = await self.db.execute(
+                select(Resume).where(
+                    Resume.user_id == user_id,
+                    Resume.email == email
+                )
+            )
+            existing_resume = result.scalar_one_or_none()
+        
+        if existing_resume:
+            print(f"[ResumeService] Found existing resume with email {email}, updating...")
+            # Update existing resume with new data
+            existing_resume.extraction_id = extraction_id
+            existing_resume.name = resume.name
+            existing_resume.phone = resume.phone
+            existing_resume.location = resume.location
+            existing_resume.current_role = resume.current_role
+            existing_resume.years_experience = resume.years_experience
+            existing_resume.skills = resume.skills
+            existing_resume.education = resume.education
+            existing_resume.experience = resume.experience
+            existing_resume.certifications = resume.certifications
+            existing_resume.languages = resume.languages
+            existing_resume.languages_with_proficiency = resume.languages_with_proficiency
+            existing_resume.summary = resume.summary
+            existing_resume.salary_expectation = resume.salary_expectation
+            existing_resume.availability_date = resume.availability_date
+            existing_resume.gender = resume.gender
+            existing_resume.nationality = resume.nationality
+            existing_resume.birth_year = resume.birth_year
+            existing_resume.has_car = resume.has_car
+            existing_resume.has_license = resume.has_license
+            existing_resume.willing_to_travel = resume.willing_to_travel
+            existing_resume.source_file_name = resume.source_file_name
+            existing_resume.raw_extracted_data = resume.raw_extracted_data
+            existing_resume.embedding_text = resume.embedding_text
+            existing_resume.embedding = resume.embedding
+            existing_resume.embedding_model = resume.embedding_model
+            existing_resume.updated_at = datetime.utcnow()
+            
+            await self.db.commit()
+            await self.db.refresh(existing_resume)
+            print(f"[ResumeService] Resume updated with ID: {existing_resume.id}")
+            return existing_resume
+        
+        print(f"[ResumeService] Saving new resume to database...")
         self.db.add(resume)
         await self.db.commit()
         await self.db.refresh(resume)
