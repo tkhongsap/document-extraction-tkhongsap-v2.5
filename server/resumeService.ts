@@ -14,7 +14,6 @@ export interface ResumeData {
   location?: string;
   currentRole?: string;
   yearsExperience?: number;
-  summary?: string;
   skills?: string[];
   education?: Array<{
     degree?: string;
@@ -25,15 +24,27 @@ export interface ResumeData {
   experience?: Array<{
     title?: string;
     company?: string;
+    location?: string;
     startDate?: string;
     endDate?: string;
     description?: string;
+    isCurrent?: boolean;
   }>;
-  languages?: Array<{
+  certifications?: string[];
+  languages?: string[];
+  languagesWithProficiency?: Array<{
     language?: string;
     level?: string;
   }>;
-  certifications?: string[];
+  summary?: string;
+  salaryExpectation?: number;
+  availabilityDate?: string;
+  gender?: string;
+  nationality?: string;
+  birthYear?: number;
+  hasCar?: boolean;
+  hasLicense?: boolean;
+  willingToTravel?: boolean;
 }
 
 export interface SemanticSearchResult {
@@ -74,14 +85,7 @@ export class ResumeService {
     if (data.summary) parts.push(`Summary: ${data.summary}`);
     if (data.skills?.length) parts.push(`Skills: ${data.skills.join(", ")}`);
     if (data.certifications?.length) parts.push(`Certifications: ${data.certifications.join(", ")}`);
-    
-    // Handle languages with proficiency
-    if (data.languages?.length) {
-      const langTexts = data.languages.map(
-        (lang) => lang.level ? `${lang.language} (${lang.level})` : lang.language || ""
-      ).filter(Boolean);
-      if (langTexts.length) parts.push(`Languages: ${langTexts.join(", ")}`);
-    }
+    if (data.languages?.length) parts.push(`Languages: ${data.languages.join(", ")}`);
 
     if (data.education?.length) {
       const eduTexts = data.education.map(
@@ -130,12 +134,17 @@ export class ResumeService {
       }
     }
 
+    // Parse availability date
+    let availabilityDate: string | null = null;
+    if (extractedData.availabilityDate) {
+      try {
+        availabilityDate = extractedData.availabilityDate;
+      } catch {
+        // Invalid date format
+      }
+    }
+
     // Insert resume
-    // Convert languages array to string[] for database
-    const languagesArray = extractedData.languages?.map(lang => 
-      typeof lang === 'string' ? lang : (lang.language || '')
-    ).filter(Boolean) || null;
-    
     const [resume] = await db
       .insert(resumes)
       .values({
@@ -151,8 +160,17 @@ export class ResumeService {
         education: extractedData.education,
         experience: extractedData.experience,
         certifications: extractedData.certifications,
-        languages: languagesArray,
+        languages: extractedData.languages,
+        languagesWithProficiency: extractedData.languagesWithProficiency,
         summary: extractedData.summary,
+        salaryExpectation: extractedData.salaryExpectation,
+        availabilityDate,
+        gender: extractedData.gender,
+        nationality: extractedData.nationality,
+        birthYear: extractedData.birthYear,
+        hasCar: extractedData.hasCar,
+        hasLicense: extractedData.hasLicense,
+        willingToTravel: extractedData.willingToTravel,
         embedding,
         embeddingModel,
         embeddingText,
@@ -278,9 +296,6 @@ export class ResumeService {
     if (!resume) return null;
 
     // Generate new embedding text from resume data
-    // Convert string[] back to language objects for embedding generation
-    const languagesForEmbedding = resume.languages?.map(lang => ({ language: lang, level: undefined }));
-    
     const embeddingText = this.generateEmbeddingText({
       name: resume.name,
       email: resume.email || undefined,
@@ -292,7 +307,8 @@ export class ResumeService {
       education: resume.education as ResumeData["education"],
       experience: resume.experience as ResumeData["experience"],
       certifications: resume.certifications || undefined,
-      languages: languagesForEmbedding,
+      languages: resume.languages || undefined,
+      languagesWithProficiency: resume.languagesWithProficiency as ResumeData["languagesWithProficiency"],
       summary: resume.summary || undefined,
     });
 

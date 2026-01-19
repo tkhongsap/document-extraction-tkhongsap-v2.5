@@ -380,12 +380,10 @@ CONTRACT_SCHEMA = {
 }
 
 # ============ Resume/CV Schema ============
-# Schema aligned with database: resumes table
-# Focused on essential fields for candidate analysis
+# Simplified schema - only essential fields for recruitment
 RESUME_SCHEMA = {
     "type": "object",
     "properties": {
-        # === Personal Information ===
         "name": {
             "type": "string",
             "description": "Candidate's full name (required)",
@@ -400,9 +398,8 @@ RESUME_SCHEMA = {
         },
         "location": {
             "type": "string",
-            "description": "Current or preferred location (city, country)",
+            "description": "Current location as single string (e.g., 'Bangkok, Thailand')",
         },
-        # === Professional Profile ===
         "currentRole": {
             "type": "string",
             "description": "Current job title or most recent position",
@@ -415,22 +412,24 @@ RESUME_SCHEMA = {
             "type": "string",
             "description": "Professional summary or objective statement",
         },
-        # === Skills ===
         "skills": {
             "type": "array",
-            "description": "Array of skill names",
+            "description": "List of skill names only (no categories or proficiency)",
             "items": {
                 "type": "string",
                 "description": "Skill name (e.g., Python, React, Project Management)",
             },
         },
-        # === Education ===
         "education": {
             "type": "array",
             "description": "Array of education entries",
             "items": {
                 "type": "object",
                 "properties": {
+                    "institution": {
+                        "type": "string",
+                        "description": "School or university name",
+                    },
                     "degree": {
                         "type": "string",
                         "description": "Degree type (Bachelor, Master, PhD, Associate)",
@@ -439,72 +438,78 @@ RESUME_SCHEMA = {
                         "type": "string",
                         "description": "Field of study or major",
                     },
-                    "institution": {
-                        "type": "string",
-                        "description": "School or university name",
-                    },
                     "year": {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Graduation year",
                     },
                 },
             },
         },
-        # === Work Experience ===
         "experience": {
             "type": "array",
             "description": "Array of work experience entries",
             "items": {
                 "type": "object",
                 "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Job title",
-                    },
                     "company": {
                         "type": "string",
                         "description": "Company name",
                     },
+                    "title": {
+                        "type": "string",
+                        "description": "Job title",
+                    },
                     "startDate": {
                         "type": "string",
-                        "description": "Start date (YYYY-MM or YYYY)",
+                        "description": "Start date (e.g., 'Jan 2020' or '2020')",
                     },
                     "endDate": {
                         "type": "string",
-                        "description": "End date (YYYY-MM or YYYY), or 'Present' if current",
+                        "description": "End date or 'Present' if current",
                     },
                     "description": {
                         "type": "string",
-                        "description": "Job description and key responsibilities/achievements",
+                        "description": "Job responsibilities (brief)",
                     },
                 },
             },
         },
-        # === Languages ===
-        "languages": {
-            "type": "array",
-            "description": "Languages with proficiency level",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "language": {
-                        "type": "string",
-                        "description": "Language name",
-                    },
-                    "level": {
-                        "type": "string",
-                        "description": "Proficiency level (Native, Fluent, Business, Conversational, Basic)",
-                    },
-                },
-            },
-        },
-        # === Certifications ===
         "certifications": {
             "type": "array",
-            "description": "Array of certification names",
+            "description": "List of certification names",
             "items": {
                 "type": "string",
                 "description": "Certification name",
+            },
+        },
+        "languages": {
+            "type": "array",
+            "description": "List of languages spoken",
+            "items": {
+                "type": "string",
+                "description": "Language name",
+            },
+        },
+        "projects": {
+            "type": "array",
+            "description": "List of personal or professional projects",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Project name",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Brief project description",
+                    },
+                    "technologies": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Technologies used",
+                    },
+                },
             },
         },
     },
@@ -525,16 +530,18 @@ LINE_ITEMS_KEYS: Dict[DocumentType, str | None] = {
     "invoice": "line_items",
     "po": "line_items",
     "contract": "parties",
-    "resume": None,  # Resume uses multiple arrays displayed separately
+    "resume": "work_experience",
 }
 
-# Resume array keys to skip (shown in separate sections, not header fields)
+# Resume array keys to skip
 RESUME_ARRAY_KEYS = [
-    "experience",
+    "work_experience",
     "education",
     "skills",
     "certifications",
     "languages",
+    "projects",
+    "references",
 ]
 
 # Document type names

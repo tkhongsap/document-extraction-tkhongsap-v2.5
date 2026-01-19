@@ -261,6 +261,7 @@ export type BatchGeneralResultData = {
 
 /**
  * Batch process multiple documents using LlamaExtract templates.
+ * Processes in chunks of 10 files to avoid timeout issues.
  * @param files - Array of files to process
  * @param documentType - The type of document (bank, invoice, po, contract, resume)
  * @returns Batch results with individual file statuses
@@ -269,51 +270,152 @@ export async function processBatchTemplateExtraction(
   files: File[],
   documentType: DocumentType
 ): Promise<BatchExtractionResponse<BatchTemplateResultData>> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-  formData.append("documentType", documentType);
+  const CHUNK_SIZE = 5; // Process 5 files at a time to avoid rate limiting
+  const CHUNK_DELAY = 2000; // 2 second delay between chunks
+  const allResults: BatchResultItem<BatchTemplateResultData>[] = [];
+  let successCount = 0;
+  let failureCount = 0;
 
-  const res = await fetch("/api/extract/batch/process", {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
+  // Split files into chunks
+  for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+    const chunk = files.slice(i, i + CHUNK_SIZE);
+    
+    // Add delay between chunks (not before the first chunk)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
+    }
+    
+    const formData = new FormData();
+    chunk.forEach((file) => {
+      formData.append("files", file);
+    });
+    formData.append("documentType", documentType);
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || error.message || "Batch template extraction failed");
+    try {
+      const res = await fetch("/api/extract/batch/process", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        // Mark all files in this chunk as failed
+        chunk.forEach((file) => {
+          allResults.push({
+            fileName: file.name,
+            success: false,
+            error: error.detail || error.message || "Batch extraction failed",
+            data: null,
+          });
+          failureCount++;
+        });
+        continue;
+      }
+
+      const chunkResult: BatchExtractionResponse<BatchTemplateResultData> = await res.json();
+      allResults.push(...chunkResult.results);
+      successCount += chunkResult.successCount;
+      failureCount += chunkResult.failureCount;
+    } catch (error: any) {
+      // Network error - mark all files in chunk as failed
+      chunk.forEach((file) => {
+        allResults.push({
+          fileName: file.name,
+          success: false,
+          error: error.message || "Network error",
+          data: null,
+        });
+        failureCount++;
+      });
+    }
   }
 
-  return res.json();
+  return {
+    success: true,
+    totalFiles: files.length,
+    successCount,
+    failureCount,
+    results: allResults,
+  };
 }
 
 /**
  * Batch process multiple documents using LlamaParse for general extraction.
+ * Processes in chunks of 5 files to avoid timeout and rate limiting issues.
  * @param files - Array of files to process
  * @returns Batch results with individual file statuses
  */
 export async function processBatchGeneralExtraction(
   files: File[]
 ): Promise<BatchExtractionResponse<BatchGeneralResultData>> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
+  const CHUNK_SIZE = 5; // Process 5 files at a time to avoid rate limiting
+  const CHUNK_DELAY = 2000; // 2 second delay between chunks
+  const allResults: BatchResultItem<BatchGeneralResultData>[] = [];
+  let successCount = 0;
+  let failureCount = 0;
 
-  const res = await fetch("/api/extract/batch/general", {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
+  // Split files into chunks
+  for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+    const chunk = files.slice(i, i + CHUNK_SIZE);
+    
+    // Add delay between chunks (not before the first chunk)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
+    }
+    
+    const formData = new FormData();
+    chunk.forEach((file) => {
+      formData.append("files", file);
+    });
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.detail || error.message || "Batch general extraction failed");
+    try {
+      const res = await fetch("/api/extract/batch/general", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        // Mark all files in this chunk as failed
+        chunk.forEach((file) => {
+          allResults.push({
+            fileName: file.name,
+            success: false,
+            error: error.detail || error.message || "Batch extraction failed",
+            data: null,
+          });
+          failureCount++;
+        });
+        continue;
+      }
+
+      const chunkResult: BatchExtractionResponse<BatchGeneralResultData> = await res.json();
+      allResults.push(...chunkResult.results);
+      successCount += chunkResult.successCount;
+      failureCount += chunkResult.failureCount;
+    } catch (error: any) {
+      // Network error - mark all files in chunk as failed
+      chunk.forEach((file) => {
+        allResults.push({
+          fileName: file.name,
+          success: false,
+          error: error.message || "Network error",
+          data: null,
+        });
+        failureCount++;
+      });
+    }
   }
 
-  return res.json();
+  return {
+    success: true,
+    totalFiles: files.length,
+    successCount,
+    failureCount,
+    results: allResults,
+  };
 }
 
 export interface SaveExtractionRequest {
@@ -501,6 +603,319 @@ export async function regenerateAllEmbeddingsApi(): Promise<RegenerateEmbeddings
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.detail || "Failed to regenerate embeddings");
+  }
+
+  return res.json();
+}
+
+// =============================================================================
+// RAG (AI Chat) API
+// =============================================================================
+
+export interface RAGSource {
+  resume_id: string;
+  name: string;
+  similarity_score: number;
+  position?: string;
+  email?: string;
+}
+
+export interface RAGQueryRequest {
+  query: string;
+  top_k?: number;
+  similarity_threshold?: number;
+  include_context?: boolean;
+  temperature?: number;
+}
+
+export interface RAGQueryResponse {
+  answer: string;
+  query: string;
+  sources: RAGSource[];
+  context?: string;
+  tokens_used: number;
+  model: string;
+  processing_time_ms: number;
+  timestamp: string;
+}
+
+export async function ragQueryApi(request: RAGQueryRequest): Promise<RAGQueryResponse> {
+  const res = await fetch("/api/rag/query", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      query: request.query,
+      top_k: request.top_k ?? 5,
+      similarity_threshold: request.similarity_threshold ?? 0.2,
+      include_context: request.include_context ?? false,
+      temperature: request.temperature ?? 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "RAG query failed");
+  }
+
+  return res.json();
+}
+
+export interface RAGExamplesResponse {
+  examples: Array<{
+    category: string;
+    queries: string[];
+  }>;
+}
+
+export async function ragExamplesApi(): Promise<RAGExamplesResponse> {
+  const res = await fetch("/api/rag/examples", {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to fetch RAG examples");
+  }
+
+  return res.json();
+}
+
+// =============================================================================
+// Chunks Search API (Semantic Chunks for better RAG)
+// =============================================================================
+
+export interface ChunkSearchResult {
+  id: string;
+  userId: string;
+  documentId: string | null;
+  extractionId: string | null;
+  chunkIndex: number;
+  chunkType: string | null;
+  text: string;
+  metadata: {
+    type?: string;
+    title?: string;
+    section?: string;
+    company?: string;
+    position?: string;
+    jobIndex?: number;
+  } | null;
+  createdAt: string | null;
+  similarity: number;
+}
+
+export interface ChunkSearchResponse {
+  success: boolean;
+  query: string;
+  results: ChunkSearchResult[];
+  total_results: number;
+}
+
+export async function searchChunksApi(
+  query: string,
+  limit: number = 10,
+  threshold: number = 0.3,
+  chunkTypes?: string[]
+): Promise<ChunkSearchResponse> {
+  const res = await fetch("/api/chunks/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ 
+      query, 
+      limit, 
+      similarity_threshold: threshold,
+      chunk_types: chunkTypes 
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Chunks search failed");
+  }
+
+  return res.json();
+}
+
+export interface ChunkStats {
+  success: boolean;
+  stats: Record<string, number>;
+}
+
+export async function getChunkStatsApi(): Promise<ChunkStats> {
+  const res = await fetch("/api/chunks/stats", {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to get chunk stats");
+  }
+
+  return res.json();
+}
+
+
+// =============================================================================
+// API KEYS API
+// =============================================================================
+
+export interface ApiKeyResponse {
+  id: string;
+  name: string;
+  prefix: string;
+  monthlyLimit: number;
+  monthlyUsage: number;
+  isActive: boolean;
+  expiresAt: string | null;
+  scopes: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyCreateResponse {
+  apiKey: ApiKeyResponse;
+  plainKey: string; // Only returned on create, never stored
+  warning: string;
+}
+
+export interface ApiKeyStatsResponse {
+  success: boolean;
+  apiKeyId: string;
+  stats: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    totalPagesProcessed: number;
+    averageResponseTimeMs: number;
+    periodDays: number;
+  };
+}
+
+// List all API keys for current user
+export async function listApiKeys(): Promise<{ apiKeys: ApiKeyResponse[] }> {
+  const res = await fetch("/api/keys", {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to list API keys");
+  }
+
+  return res.json();
+}
+
+// Create a new API key
+export async function createApiKey(data: {
+  name: string;
+  monthlyLimit?: number;
+  scopes?: string;
+  expiresAt?: string;
+}): Promise<ApiKeyCreateResponse> {
+  const res = await fetch("/api/keys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: data.name,
+      monthly_limit: data.monthlyLimit,
+      scopes: data.scopes,
+      expires_at: data.expiresAt,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to create API key");
+  }
+
+  return res.json();
+}
+
+// Get a specific API key
+export async function getApiKey(keyId: string): Promise<{ apiKey: ApiKeyResponse }> {
+  const res = await fetch(`/api/keys/${keyId}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to get API key");
+  }
+
+  return res.json();
+}
+
+// Update an API key
+export async function updateApiKey(keyId: string, data: {
+  name?: string;
+  monthlyLimit?: number;
+  scopes?: string;
+  isActive?: boolean;
+  expiresAt?: string | null;
+}): Promise<{ apiKey: ApiKeyResponse }> {
+  const res = await fetch(`/api/keys/${keyId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: data.name,
+      monthly_limit: data.monthlyLimit,
+      scopes: data.scopes,
+      is_active: data.isActive,
+      expires_at: data.expiresAt,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to update API key");
+  }
+
+  return res.json();
+}
+
+// Delete (deactivate) an API key
+export async function deleteApiKey(keyId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`/api/keys/${keyId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to delete API key");
+  }
+
+  return res.json();
+}
+
+// Regenerate an API key (new key, same settings)
+export async function regenerateApiKey(keyId: string): Promise<ApiKeyCreateResponse> {
+  const res = await fetch(`/api/keys/${keyId}/regenerate`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to regenerate API key");
+  }
+
+  return res.json();
+}
+
+// Get API key usage statistics
+export async function getApiKeyStats(keyId: string, days: number = 30): Promise<ApiKeyStatsResponse> {
+  const res = await fetch(`/api/keys/${keyId}/stats?days=${days}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || error.message || "Failed to get API key stats");
   }
 
   return res.json();

@@ -31,11 +31,22 @@ itsdangerous==2.2.0
 aiofiles==24.1.0
 aiosmtplib==3.0.2
 
+# Scheduler for background tasks
+apscheduler==3.10.4
+
 # PDF processing
 pypdf==5.1.0
+PyPDF2==3.0.1
+
+# File type detection and security
+python-magic-bin==0.4.14  # For Windows
+# python-magic==0.4.27  # For Linux/Mac (uncomment if needed)
 
 # pgvector for vector similarity search
 pgvector==0.3.6
+
+# Redis for rate limiting and caching (optional but recommended)
+redis==5.0.1
 
 # CORS
 # starlette==0.45.2

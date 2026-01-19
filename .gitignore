@@ -13,7 +13,7 @@ build
 *.tar.gz
 
 # IDE / Editor
-.vscode/settings.json
+.vscode/
 .idea
 *.swp
 *.swo
@@ -45,6 +45,9 @@ yarn-error.log*
 coverage
 .nyc_output
 .pytest_cache
+.testkit/
+.cursor/
+tests/
 
 # Temporary files
 tmp

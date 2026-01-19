@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Globe, User, Crown, Zap, Rocket } from "lucide-react";
+import { Globe, User, Crown, Zap, Rocket, Key, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Lock } from "lucide-react";
+import { Link } from "wouter";
 
 export default function SettingsPage() {
   const { t } = useLanguage();
@@ -50,7 +51,8 @@ export default function SettingsPage() {
     
     // If downgrading to free, no payment needed
     if (newTier === 'free') {
-      handleChangeTier(newTier);
+      // Direct tier change without payment
+      handleChangeTierDirect(newTier);
     } else {
       // Show payment dialog for paid tiers
       setShowPaymentDialog(true);
@@ -59,21 +61,39 @@ export default function SettingsPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTier) return;
+    if (!selectedTier) {
+      toast({
+        title: "Error",
+        description: "Please select a tier",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsProcessing(true);
     
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Process tier change
-    await handleChangeTier(selectedTier);
-    
-    setIsProcessing(false);
-    setShowPaymentDialog(false);
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Process tier change after successful payment
+      await handleChangeTierDirect(selectedTier);
+      
+      // Close dialog only on success
+      setShowPaymentDialog(false);
+      setSelectedTier(null);
+    } catch (error: any) {
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to process payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleChangeTier = async (newTier: 'free' | 'pro' | 'enterprise') => {
+  const handleChangeTierDirect = async (newTier: 'free' | 'pro' | 'enterprise') => {
     setIsChangingTier(true);
     try {
       const result = await changeTier(newTier);
@@ -82,15 +102,17 @@ export default function SettingsPage() {
         description: result.message,
       });
       await refetch();
+      // Reset state only on success
+      setSelectedTier(null);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to change tier",
         variant: "destructive",
       });
+      throw error; // Re-throw for handlePayment to catch
     } finally {
       setIsChangingTier(false);
-      setSelectedTier(null);
     }
   };
 
@@ -106,7 +128,7 @@ export default function SettingsPage() {
     .slice(0, 2);
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t('nav.settings')}</h1>
         <p className="text-muted-foreground">Manage your account preferences</p>
@@ -192,6 +214,26 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* API Keys */}
+      <Card className="group hover:border-primary/50 transition-colors cursor-pointer">
+        <Link href="/settings/api-keys">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Key className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>API Keys</CardTitle>
+                  <CardDescription>Manage your API keys for programmatic access</CardDescription>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+          </CardHeader>
+        </Link>
+      </Card>
+
       {/* Subscription Plans */}
       <Card>
         <CardHeader>
@@ -221,7 +263,7 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 variant={user?.tier === 'free' ? 'secondary' : 'outline'}
-                disabled={user?.tier === 'free' || isChangingTier}
+                disabled={user?.tier === 'free' || isChangingTier || isProcessing}
                 onClick={() => handleSelectTier('free')}
               >
                 {user?.tier === 'free' ? 'Current Plan' : 'Switch to Free'}
@@ -244,7 +286,7 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 variant={user?.tier === 'pro' ? 'secondary' : 'default'}
-                disabled={user?.tier === 'pro' || isChangingTier}
+                disabled={user?.tier === 'pro' || isChangingTier || isProcessing}
                 onClick={() => handleSelectTier('pro')}
               >
                 {user?.tier === 'pro' ? 'Current Plan' : 'Upgrade to Pro'}
@@ -267,7 +309,7 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 variant={user?.tier === 'enterprise' ? 'secondary' : 'default'}
-                disabled={user?.tier === 'enterprise' || isChangingTier}
+                disabled={user?.tier === 'enterprise' || isChangingTier || isProcessing}
                 onClick={() => handleSelectTier('enterprise')}
               >
                 {user?.tier === 'enterprise' ? 'Current Plan' : 'Upgrade to Enterprise'}

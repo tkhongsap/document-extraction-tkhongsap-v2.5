@@ -37,6 +37,9 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
+    chunks_router,
+    api_keys_router,
+    public_extract_router,
 )
 
 
@@ -60,19 +63,14 @@ async def cleanup_old_extractions_task():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
-    # Startup - keep this fast for health checks!
+    # Startup
     settings = get_settings()
     print(f"[FastAPI] Starting server in {settings.node_env} mode")
     print(f"[FastAPI] API key configured: {settings.llama_cloud_api_key[:10]}..." if settings.llama_cloud_api_key else "[FastAPI] WARNING: No API key configured")
     
-    # Start background cleanup task (delayed to not block startup)
-    async def delayed_cleanup_start():
-        # Wait 30 seconds before starting cleanup task to not interfere with startup
-        await asyncio.sleep(30)
-        await cleanup_old_extractions_task()
-    
-    cleanup_task = asyncio.create_task(delayed_cleanup_start())
-    print("[FastAPI] Scheduled extraction cleanup background task (starts in 30s, runs every 6 hours)")
+    # Start background cleanup task
+    cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
+    print("[FastAPI] Started extraction cleanup background task (runs every 6 hours)")
     
     yield
     
@@ -116,7 +114,22 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+
 )
+
+
+# Import custom errors for exception handler
+from app.core.errors import ApiError
+
+
+# Global exception handler for custom API errors
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError):
+    """
+    Global handler for custom API errors.
+    Returns standardized JSON error responses with proper status codes.
+    """
+    return exc.to_response()
 
 
 # Request logging middleware
@@ -127,14 +140,6 @@ async def log_requests(request: Request, call_next):
     from datetime import datetime
     
     start_time = time.time()
-    
-    # Log incoming request for debugging
-    if request.url.path.startswith("/api/extract"):
-        content_type = request.headers.get("content-type", "")
-        content_length = request.headers.get("content-length", "0")
-        print(f"[DEBUG] Incoming request to {request.url.path}")
-        print(f"[DEBUG] Content-Type: {content_type}")
-        print(f"[DEBUG] Content-Length: {content_length}")
     
     response = await call_next(request)
     
@@ -155,6 +160,10 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
+app.include_router(chunks_router)
+app.include_router(api_keys_router)
+app.include_router(public_extract_router)
+
 
 
 # Object storage routes for serving files
@@ -227,61 +236,27 @@ async def serve_public_object(file_path: str):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
-# Health check endpoint - MUST respond quickly with 200 for deployment
+# Health check endpoint
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "service": "document-ai-extractor"}
 
 
-# Root health check for deployment (responds immediately with 200)
-@app.get("/")
-async def root_health(request: Request):
-    """Root endpoint - serves SPA in browser, returns health status for health checks"""
-    # Check if this is a browser request (Accept: text/html) vs health check
-    accept_header = request.headers.get("accept", "")
-    
-    # For health checks (non-browser requests), return 200 immediately
-    if "text/html" not in accept_header:
-        return {"status": "ok", "message": "Document AI Extractor API"}
-    
-    # For browser requests in production, serve the SPA
-    if settings.node_env == "production":
-        static_path = Path(__file__).parent.parent.parent / "dist" / "public"
-        index_path = static_path / "index.html"
-        if index_path.exists():
-            return FileResponse(str(index_path))
-    
-    # Fallback: return simple health response
-    return {"status": "ok", "message": "Document AI Extractor API"}
-
-
 # Serve static files in production
 if settings.node_env == "production":
-    # Static path is relative to workspace root: /workspace/dist/public
-    static_path = Path(__file__).parent.parent.parent / "dist" / "public"
-    print(f"[FastAPI] Production mode - looking for static files at: {static_path}")
-    
+    # Serve frontend static files
+    static_path = Path(__file__).parent.parent / "dist" / "public"
     if static_path.exists():
-        print(f"[FastAPI] Serving static assets from {static_path}")
-        # Mount assets directory
-        assets_path = static_path / "assets"
-        if assets_path.exists():
-            app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
+        app.mount("/assets", StaticFiles(directory=str(static_path / "assets")), name="assets")
         
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
             """Serve SPA for all non-API routes"""
-            # Don't intercept API routes
-            if full_path.startswith("api/") or full_path.startswith("objects/"):
-                return JSONResponse(status_code=404, content={"error": "Not found"})
-            
             index_path = static_path / "index.html"
             if index_path.exists():
                 return FileResponse(str(index_path))
             return JSONResponse(status_code=404, content={"error": "Not found"})
-    else:
-        print(f"[FastAPI] WARNING: Static path not found at {static_path}")
 
 
 def main():
@@ -291,11 +266,11 @@ def main():
     print(f"[FastAPI] Starting server on port {port}")
     
     uvicorn.run(
-        app,  # Use the app object directly, not string import
+        "main:app",
         host="0.0.0.0",
         port=port,
-        reload=False,  # Disable reload in all environments for stability
-        log_level="info",
+        reload=settings.node_env == "development",
+        log_level="info" if settings.node_env == "development" else "warning",
     )
 
 

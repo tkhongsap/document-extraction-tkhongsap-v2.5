@@ -1,14 +1,27 @@
 """
-Batch Resume Extraction Script with Embedding
+Batch Resume Extraction Script with Embedding and Chunking
 Reads resume files from input folder, extracts data using LlamaExtract,
-generates embeddings, and saves individual JSON files to output folder.
+generates embeddings, creates semantic chunks, and saves individual JSON files to output folder.
 
 Output JSON matches the database schema:
 - id, user_id, extraction_id, name, email, phone, location, current_role, etc.
 - embedding (JSONB array), embedding_model, embedding_text
 - raw_extracted_data, created_at, updated_at
 
-Also generates a combined CSV file with all resume data.
+Also generates:
+- Combined CSV file with all resume data
+- Chunks JSON/CSV files with semantic chunks for RAG
+
+Chunking Strategy (Semantic Chunking):
+- personal_info: Name, contact, location
+- summary: Professional summary/objective
+- experience: Work experience (one chunk per job)
+- education: Education history
+- skills: Skills list
+- certifications: Certifications and licenses
+- languages: Languages spoken
+- full_resume: Complete resume text for broad matching
+
 Includes token counting and cost estimation for embeddings.
 """
 import os
@@ -20,7 +33,8 @@ import csv
 import time
 from pathlib import Path
 from datetime import datetime, date
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Literal
+from dataclasses import dataclass, field
 
 # Add parent paths for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -71,6 +85,62 @@ EMBEDDING_COSTS = {
 
 # Exchange rate USD to THB (approximate, update as needed)
 USD_TO_THB = 34.0
+
+
+# ============================================================================
+# CHUNKING TYPES & CLASSES
+# ============================================================================
+
+# Chunk types for resume sections
+ResumeChunkType = Literal[
+    'personal_info',     # Name, contact, location
+    'summary',           # Professional summary/objective
+    'experience',        # Work experience (one chunk per job)
+    'education',         # Education history
+    'skills',            # Skills list
+    'certifications',    # Certifications and licenses
+    'languages',         # Languages spoken
+    'full_resume'        # Complete resume text for broad matching
+]
+
+
+@dataclass
+class ResumeChunk:
+    """Represents a single chunk of resume data"""
+    chunk_type: ResumeChunkType
+    text: str
+    chunk_index: int
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    page_number: Optional[int] = None
+    # For batch processing - will be filled after embedding
+    embedding: Optional[List[float]] = None
+    embedding_model: Optional[str] = None
+
+
+@dataclass
+class ChunkingResult:
+    """Result of chunking operation"""
+    chunks: List[ResumeChunk]
+    total_chunks: int
+    chunk_types_count: Dict[str, int]
+
+
+# Chunk CSV columns
+CHUNK_CSV_COLUMNS = [
+    "id",
+    "user_id",
+    "document_id",
+    "extraction_id",
+    "resume_id",
+    "source_file_name",
+    "chunk_index",
+    "chunk_type",
+    "text",
+    "embedding",
+    "embedding_model",
+    "metadata",
+    "created_at",
+]
 
 
 def estimate_tokens(text: str) -> int:
@@ -147,6 +217,412 @@ def format_cost_thb(cost_usd: float) -> str:
         return f"฿{cost_thb:.4f}"
     else:
         return f"฿{cost_thb:.2f}"
+
+
+# ============================================================================
+# CHUNKING FUNCTIONS (Semantic Chunking for RAG)
+# ============================================================================
+
+def _create_personal_info_chunk(data: Dict[str, Any], index: int) -> Optional[ResumeChunk]:
+    """Create chunk for personal information"""
+    parts = []
+    
+    name = data.get("name") or data.get("full_name")
+    if name:
+        parts.append(f"Name: {name}")
+    
+    email = data.get("email")
+    if email:
+        parts.append(f"Email: {email}")
+    
+    phone = data.get("phone")
+    if phone:
+        parts.append(f"Phone: {phone}")
+    
+    # Handle location
+    location = data.get("location")
+    if not location:
+        address = data.get("address")
+        if isinstance(address, dict):
+            location_parts = [address.get("city"), address.get("country")]
+            location = ", ".join(filter(None, location_parts))
+        elif address:
+            location = str(address)
+    if location:
+        parts.append(f"Location: {location}")
+    
+    current_role = data.get("current_role") or data.get("currentRole") or data.get("desired_position")
+    if current_role:
+        parts.append(f"Current/Desired Role: {current_role}")
+    
+    years_exp = data.get("years_experience") or data.get("yearsExperience") or data.get("total_years_experience")
+    if years_exp:
+        parts.append(f"Years of Experience: {years_exp}")
+    
+    nationality = data.get("nationality")
+    if nationality:
+        parts.append(f"Nationality: {nationality}")
+    
+    if not parts:
+        return None
+    
+    text = "\n".join(parts)
+    return ResumeChunk(
+        chunk_type="personal_info",
+        text=text,
+        chunk_index=index,
+        metadata={"section": "personal_info"}
+    )
+
+
+def _create_summary_chunk(data: Dict[str, Any], index: int) -> Optional[ResumeChunk]:
+    """Create chunk for professional summary"""
+    summary = data.get("summary") or data.get("professional_summary")
+    if not summary:
+        return None
+    
+    text = f"Professional Summary:\n{summary}"
+    return ResumeChunk(
+        chunk_type="summary",
+        text=text,
+        chunk_index=index,
+        metadata={"section": "summary"}
+    )
+
+
+def _create_experience_chunks(data: Dict[str, Any], start_index: int) -> List[ResumeChunk]:
+    """Create separate chunks for each work experience entry"""
+    chunks = []
+    experience = data.get("experience") or data.get("work_experience") or []
+    
+    if not isinstance(experience, list):
+        return chunks
+    
+    for i, job in enumerate(experience):
+        if not isinstance(job, dict):
+            continue
+        
+        parts = ["Work Experience:"]
+        
+        # Job title
+        title = job.get("position") or job.get("job_title") or job.get("title")
+        if title:
+            parts.append(f"Position: {title}")
+        
+        # Company
+        company = job.get("company") or job.get("company_name") or job.get("employer")
+        if company:
+            parts.append(f"Company: {company}")
+        
+        # Duration
+        start_date = job.get("start_date") or job.get("startDate")
+        end_date = job.get("end_date") or job.get("endDate") or "Present"
+        if start_date:
+            parts.append(f"Duration: {start_date} - {end_date}")
+        
+        # Location
+        job_location = job.get("location")
+        if job_location:
+            parts.append(f"Location: {job_location}")
+        
+        # Description/Responsibilities
+        description = job.get("description") or job.get("responsibilities")
+        if isinstance(description, list):
+            description = "\n- " + "\n- ".join(str(d) for d in description)
+        if description:
+            parts.append(f"Responsibilities:\n{description}")
+        
+        # Achievements
+        achievements = job.get("achievements") or job.get("accomplishments")
+        if isinstance(achievements, list):
+            achievements = "\n- " + "\n- ".join(str(a) for a in achievements)
+        if achievements:
+            parts.append(f"Achievements:\n{achievements}")
+        
+        if len(parts) > 1:  # More than just the header
+            chunks.append(ResumeChunk(
+                chunk_type="experience",
+                text="\n".join(parts),
+                chunk_index=start_index + i,
+                metadata={
+                    "section": "experience",
+                    "job_index": i,
+                    "company": company,
+                    "title": title
+                }
+            ))
+    
+    return chunks
+
+
+def _create_education_chunk(data: Dict[str, Any], index: int) -> Optional[ResumeChunk]:
+    """Create chunk for education history"""
+    education = data.get("education") or []
+    
+    if not education:
+        return None
+    
+    if not isinstance(education, list):
+        education = [education]
+    
+    parts = ["Education:"]
+    for edu in education:
+        if isinstance(edu, dict):
+            degree = edu.get("degree") or edu.get("qualification")
+            institution = edu.get("institution") or edu.get("school") or edu.get("university")
+            field_val = edu.get("field") or edu.get("major") or edu.get("field_of_study")
+            year = edu.get("year") or edu.get("graduation_year") or edu.get("graduationYear") or edu.get("end_date")
+            
+            edu_parts = []
+            if degree:
+                edu_parts.append(str(degree))
+            if field_val:
+                edu_parts.append(f"in {field_val}")
+            if institution:
+                edu_parts.append(f"at {institution}")
+            if year:
+                edu_parts.append(f"({year})")
+            
+            if edu_parts:
+                parts.append("- " + " ".join(edu_parts))
+        elif edu:
+            parts.append(f"- {edu}")
+    
+    if len(parts) <= 1:
+        return None
+    
+    return ResumeChunk(
+        chunk_type="education",
+        text="\n".join(parts),
+        chunk_index=index,
+        metadata={"section": "education", "count": len(education)}
+    )
+
+
+def _create_skills_chunk(data: Dict[str, Any], index: int) -> Optional[ResumeChunk]:
+    """Create chunk for skills"""
+    skills_raw = data.get("skills") or []
+    
+    if not skills_raw:
+        return None
+    
+    skills = []
+    for skill in skills_raw:
+        if isinstance(skill, dict):
+            skill_name = skill.get("skill_name") or skill.get("name") or skill.get("skill")
+            if skill_name:
+                skills.append(str(skill_name))
+        elif skill:
+            skills.append(str(skill))
+    
+    if not skills:
+        return None
+    
+    text = f"Skills: {', '.join(skills)}"
+    return ResumeChunk(
+        chunk_type="skills",
+        text=text,
+        chunk_index=index,
+        metadata={"section": "skills", "count": len(skills), "skills_list": skills}
+    )
+
+
+def _create_certifications_chunk(data: Dict[str, Any], index: int) -> Optional[ResumeChunk]:
+    """Create chunk for certifications"""
+    certs_raw = data.get("certifications") or data.get("certificates") or []
+    
+    if not certs_raw:
+        return None
+    
+    certs = []
+    for cert in certs_raw:
+        if isinstance(cert, dict):
+            cert_name = cert.get("name") or cert.get("certification") or cert.get("title")
+            if cert_name:
+                certs.append(str(cert_name))
+        elif cert:
+            certs.append(str(cert))
+    
+    if not certs:
+        return None
+    
+    parts = ["Certifications:"]
+    parts.extend([f"- {cert}" for cert in certs])
+    
+    return ResumeChunk(
+        chunk_type="certifications",
+        text="\n".join(parts),
+        chunk_index=index,
+        metadata={"section": "certifications", "count": len(certs)}
+    )
+
+
+def _create_languages_chunk(data: Dict[str, Any], index: int) -> Optional[ResumeChunk]:
+    """Create chunk for languages"""
+    languages_raw = data.get("languages") or data.get("languages_with_proficiency") or []
+    
+    if not languages_raw:
+        return None
+    
+    lang_parts = []
+    for lang in languages_raw:
+        if isinstance(lang, dict):
+            name = lang.get("language") or lang.get("name")
+            level = lang.get("level") or lang.get("proficiency")
+            if name:
+                if level:
+                    lang_parts.append(f"{name} ({level})")
+                else:
+                    lang_parts.append(str(name))
+        elif lang:
+            lang_parts.append(str(lang))
+    
+    if not lang_parts:
+        return None
+    
+    text = f"Languages: {', '.join(lang_parts)}"
+    return ResumeChunk(
+        chunk_type="languages",
+        text=text,
+        chunk_index=index,
+        metadata={"section": "languages", "count": len(lang_parts)}
+    )
+
+
+def _create_full_resume_chunk(
+    data: Dict[str, Any], 
+    index: int,
+    existing_chunks: List[ResumeChunk]
+) -> Optional[ResumeChunk]:
+    """Create a combined full resume chunk for broad matching"""
+    # Combine all chunk texts
+    all_texts = [chunk.text for chunk in existing_chunks]
+    
+    if not all_texts:
+        return None
+    
+    full_text = "\n\n".join(all_texts)
+    
+    # Limit length for embedding (OpenAI limit is ~8000 tokens)
+    max_chars = 15000
+    if len(full_text) > max_chars:
+        full_text = full_text[:max_chars] + "..."
+    
+    return ResumeChunk(
+        chunk_type="full_resume",
+        text=full_text,
+        chunk_index=index,
+        metadata={"section": "full_resume", "combined_chunks": len(existing_chunks)}
+    )
+
+
+def chunk_resume(extracted_data: Dict[str, Any]) -> ChunkingResult:
+    """
+    Split extracted resume data into semantic chunks.
+    
+    Args:
+        extracted_data: Resume data from LlamaExtract
+        
+    Returns:
+        ChunkingResult with list of chunks
+    """
+    chunks: List[ResumeChunk] = []
+    chunk_index = 0
+    
+    # 1. Personal Info Chunk
+    personal_chunk = _create_personal_info_chunk(extracted_data, chunk_index)
+    if personal_chunk:
+        chunks.append(personal_chunk)
+        chunk_index += 1
+    
+    # 2. Summary Chunk
+    summary_chunk = _create_summary_chunk(extracted_data, chunk_index)
+    if summary_chunk:
+        chunks.append(summary_chunk)
+        chunk_index += 1
+    
+    # 3. Experience Chunks (one per job)
+    experience_chunks = _create_experience_chunks(extracted_data, chunk_index)
+    chunks.extend(experience_chunks)
+    chunk_index += len(experience_chunks)
+    
+    # 4. Education Chunk
+    education_chunk = _create_education_chunk(extracted_data, chunk_index)
+    if education_chunk:
+        chunks.append(education_chunk)
+        chunk_index += 1
+    
+    # 5. Skills Chunk
+    skills_chunk = _create_skills_chunk(extracted_data, chunk_index)
+    if skills_chunk:
+        chunks.append(skills_chunk)
+        chunk_index += 1
+    
+    # 6. Certifications Chunk
+    certs_chunk = _create_certifications_chunk(extracted_data, chunk_index)
+    if certs_chunk:
+        chunks.append(certs_chunk)
+        chunk_index += 1
+    
+    # 7. Languages Chunk
+    langs_chunk = _create_languages_chunk(extracted_data, chunk_index)
+    if langs_chunk:
+        chunks.append(langs_chunk)
+        chunk_index += 1
+    
+    # 8. Full Resume Chunk (for broad matching)
+    full_chunk = _create_full_resume_chunk(extracted_data, chunk_index, chunks)
+    if full_chunk:
+        chunks.append(full_chunk)
+    
+    # Count chunk types
+    type_counts: Dict[str, int] = {}
+    for chunk in chunks:
+        type_counts[chunk.chunk_type] = type_counts.get(chunk.chunk_type, 0) + 1
+    
+    return ChunkingResult(
+        chunks=chunks,
+        total_chunks=len(chunks),
+        chunk_types_count=type_counts
+    )
+
+
+def convert_chunk_to_csv_row(
+    chunk: ResumeChunk,
+    resume_id: str,
+    user_id: str,
+    source_file_name: str,
+    created_at: str,
+    document_id: Optional[str] = None,
+    extraction_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Convert a ResumeChunk to CSV row format"""
+    return {
+        "id": generate_uuid(),
+        "user_id": user_id,
+        "document_id": document_id,
+        "extraction_id": extraction_id,
+        "resume_id": resume_id,
+        "source_file_name": source_file_name,
+        "chunk_index": chunk.chunk_index,
+        "chunk_type": chunk.chunk_type,
+        "text": chunk.text,
+        "embedding": json.dumps(chunk.embedding) if chunk.embedding else None,
+        "embedding_model": chunk.embedding_model,
+        "metadata": json.dumps(chunk.metadata, ensure_ascii=False) if chunk.metadata else None,
+        "created_at": created_at,
+    }
+
+
+def save_chunks_csv(all_chunks: List[Dict[str, Any]], output_path: Path) -> None:
+    """Save all chunks to a CSV file"""
+    if not all_chunks:
+        return
+    
+    with open(output_path, 'w', encoding='utf-8-sig', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=CHUNK_CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(all_chunks)
 
 
 def safe_print(message: str, end: str = "\n") -> None:
@@ -561,18 +1037,20 @@ def generate_embedding_text(data: Dict[str, Any]) -> str:
 async def extract_single_resume(
     file_path: Path,
     generate_embedding: bool = True,
+    generate_chunks: bool = True,
     user_id: str = DEFAULT_USER_ID,
-) -> Dict[str, Any]:
+) -> Tuple[Dict[str, Any], int, float, List[ResumeChunk], int, float]:
     """
-    Extract data from a single resume file with embedding
+    Extract data from a single resume file with embedding and chunking
     
     Args:
         file_path: Path to the resume file
-        generate_embedding: Whether to generate embedding vector
+        generate_embedding: Whether to generate embedding vector for resume
+        generate_chunks: Whether to generate semantic chunks for RAG
         user_id: User ID for the record
         
     Returns:
-        Dictionary matching the database schema
+        Tuple of (output_data, embedding_tokens, embedding_cost, chunks, chunk_tokens, chunk_cost)
     """
     safe_print(f"\n📄 Processing: {file_path.name}")
     
@@ -662,40 +1140,104 @@ async def extract_single_resume(
     # Calculate tokens for embedding text
     embedding_tokens = estimate_tokens(embedding_text) if embedding_text else 0
     
-    # Generate embedding if enabled
-    if generate_embedding and embedding_text:
-        try:
-            safe_print(f"   🔄 Generating embedding ({embedding_tokens} tokens)...")
-            embedding_start = time.time()
-            embedding_service = get_embedding_service()
-            embedding_vector = await embedding_service.create_embedding(embedding_text)
-            embedding_duration = time.time() - embedding_start
-            
-            output_data["embedding"] = embedding_vector  # Store as JSON array
-            output_data["embedding_model"] = embedding_service.model
-            
-            # Calculate cost (for reporting only, not saved to DB)
-            embedding_cost_usd = calculate_embedding_cost(embedding_tokens, embedding_service.model)
-            
-            cost_str = format_cost(embedding_cost_usd)
-            safe_print(f"   ✅ Embedding: {len(embedding_vector)} dims | {embedding_tokens} tokens | {cost_str} | {embedding_duration:.2f}s")
-        except Exception as e:
-            safe_print(f"   ⚠️ Failed to generate embedding: {e}")
-            # Continue without embedding
+    # ========================================
+    # OPTIMIZED: Generate resume embedding + chunk embeddings in ONE batch request
+    # ========================================
+    chunks: List[ResumeChunk] = []
+    chunk_tokens = 0
+    chunk_cost_usd = 0.0
     
-    # Return output_data for DB + stats for reporting
-    return output_data, embedding_tokens, embedding_cost_usd
+    # Create tasks for parallel execution
+    tasks = []
+    
+    # Task 1: Create chunks (CPU-bound, run in executor)
+    async def create_resume_chunks():
+        if not generate_chunks:
+            return []
+        try:
+            loop = asyncio.get_event_loop()
+            chunking_result = await loop.run_in_executor(None, chunk_resume, output_data)
+            return chunking_result.chunks
+        except Exception as e:
+            safe_print(f"   ⚠️ Failed to create chunks: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    # Run chunking while we wait
+    if generate_chunks:
+        safe_print(f"   🔄 Creating chunks...")
+        chunks = await create_resume_chunks()
+        if chunks:
+            chunk_types_count = {}
+            for chunk in chunks:
+                chunk_types_count[chunk.chunk_type] = chunk_types_count.get(chunk.chunk_type, 0) + 1
+            safe_print(f"   ✅ Created {len(chunks)} chunks: {chunk_types_count}")
+    
+    # OPTIMIZE: Generate ALL embeddings in ONE batch API call
+    if generate_embedding and (embedding_text or chunks):
+        try:
+            safe_print(f"   🔄 Generating embeddings for resume + {len(chunks)} chunks in single batch...")
+            batch_start = time.time()
+            embedding_service = get_embedding_service()
+            
+            # Combine resume text + chunk texts into one batch
+            all_texts = []
+            if embedding_text:
+                all_texts.append(embedding_text)  # Resume text is index 0
+            
+            for chunk in chunks:
+                all_texts.append(chunk.text)
+            
+            # Single batch API call for all embeddings
+            all_embeddings = await embedding_service.create_embeddings_batch(all_texts)
+            
+            # Distribute embeddings
+            if embedding_text and len(all_embeddings) > 0:
+                output_data["embedding"] = all_embeddings[0]
+                output_data["embedding_model"] = embedding_service.model
+                embedding_cost_usd = calculate_embedding_cost(embedding_tokens, embedding_service.model)
+            
+            # Assign chunk embeddings (starting from index 1 if resume embedding was included)
+            chunk_start_idx = 1 if embedding_text else 0
+            for i, chunk in enumerate(chunks):
+                embedding_idx = chunk_start_idx + i
+                if embedding_idx < len(all_embeddings):
+                    chunk.embedding = all_embeddings[embedding_idx]
+                    chunk.embedding_model = embedding_service.model
+                    tokens = estimate_tokens(chunk.text)
+                    chunk_tokens += tokens
+            
+            chunk_cost_usd = calculate_embedding_cost(chunk_tokens, embedding_service.model)
+            batch_duration = time.time() - batch_start
+            
+            total_embeddings = len(all_embeddings)
+            total_embed_tokens = embedding_tokens + chunk_tokens
+            total_embed_cost = embedding_cost_usd + chunk_cost_usd
+            cost_str = format_cost(total_embed_cost)
+            
+            safe_print(f"   ✅ Batch embeddings: {total_embeddings} texts | {total_embed_tokens} tokens | {cost_str} | {batch_duration:.2f}s")
+            
+        except Exception as e:
+            safe_print(f"   ⚠️ Failed to generate embeddings: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Return output_data for DB + stats for reporting + chunks
+    return output_data, embedding_tokens, embedding_cost_usd, chunks, chunk_tokens, chunk_cost_usd
 
 
 async def batch_extract_resumes(
     generate_embeddings: bool = True,
+    generate_chunks: bool = True,
     user_id: str = DEFAULT_USER_ID,
 ) -> Dict[str, Any]:
     """
-    Main batch extraction function with embedding support
+    Main batch extraction function with embedding and chunking support
     
     Args:
         generate_embeddings: Whether to generate embeddings for each resume
+        generate_chunks: Whether to generate semantic chunks for RAG
         user_id: User ID to use for all records
         
     Returns:
@@ -704,11 +1246,12 @@ async def batch_extract_resumes(
     start_time = datetime.now()
     
     safe_print("=" * 70)
-    safe_print("🚀 BATCH RESUME EXTRACTION WITH EMBEDDING")
+    safe_print("🚀 BATCH RESUME EXTRACTION WITH EMBEDDING & CHUNKING")
     safe_print("=" * 70)
     safe_print(f"📁 Input folder:  {INPUT_DIR}")
     safe_print(f"📁 Output folder: {OUTPUT_DIR}")
     safe_print(f"🔗 Generate embeddings: {generate_embeddings}")
+    safe_print(f"🧩 Generate chunks: {generate_chunks}")
     
     # Check embedding provider
     embedding_provider = None
@@ -751,15 +1294,22 @@ async def batch_extract_resumes(
     total_tokens = 0
     total_cost = 0.0
     
+    # Chunk statistics
+    total_chunks_created = 0
+    chunk_tokens_total = 0
+    chunk_cost_total = 0.0
+    chunk_types_summary: Dict[str, int] = {}
+    
     for i, file_path in enumerate(files, 1):
         safe_print(f"\n[{i}/{len(files)}] ", end="")
         file_start_time = time.time()
         
         try:
-            # Extract resume data with embedding
-            extraction_result, embedding_tokens, embedding_cost = await extract_single_resume(
+            # Extract resume data with embedding and chunking
+            extraction_result, embedding_tokens, embedding_cost, chunks, chunk_tokens, chunk_cost = await extract_single_resume(
                 file_path,
                 generate_embedding=generate_embeddings,
+                generate_chunks=generate_chunks,
                 user_id=user_id,
             )
             
@@ -782,6 +1332,17 @@ async def batch_extract_resumes(
                 total_tokens += embedding_tokens
                 total_cost += embedding_cost
             
+            # Process chunks stats (chunks data NOT saved to output)
+            chunks_count = len(chunks)
+            if chunks_count > 0:
+                total_chunks_created += chunks_count
+                chunk_tokens_total += chunk_tokens
+                chunk_cost_total += chunk_cost
+                
+                # Update chunk types summary
+                for chunk in chunks:
+                    chunk_types_summary[chunk.chunk_type] = chunk_types_summary.get(chunk.chunk_type, 0) + 1
+            
             safe_print(f"   💾 Saved: {output_filename} ({format_duration(file_duration)})")
             
             results.append({
@@ -794,6 +1355,9 @@ async def batch_extract_resumes(
                 "embedding_dimensions": len(extraction_result.get("embedding") or []),
                 "embedding_tokens": embedding_tokens,
                 "embedding_cost_usd": embedding_cost,
+                "chunks_created": chunks_count,
+                "chunk_tokens": chunk_tokens,
+                "chunk_cost_usd": chunk_cost,
                 "processing_time_seconds": round(file_duration, 2),
             })
             successful += 1
@@ -828,7 +1392,7 @@ async def batch_extract_resumes(
             })
             failed += 1
     
-    # Save combined CSV file
+    # Save combined CSV file (resumes only, chunks are in JSON)
     csv_filename = None
     if all_extracted_data:
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -852,16 +1416,34 @@ async def batch_extract_resumes(
     safe_print(f"   ✅ Successful:        {successful}")
     safe_print(f"   ❌ Failed:            {failed}")
     safe_print(f"   🔗 With embeddings:   {embeddings_generated}")
-    safe_print(f"   📊 CSV file:          {csv_filename or 'N/A'}")
+    safe_print(f"   📊 Resume CSV:        {csv_filename or 'N/A'}")
     safe_print("")
+    
+    # Chunking summary
+    safe_print("   --- CHUNKING ---")
+    safe_print(f"   🧩 Total chunks:      {total_chunks_created}")
+    if chunk_types_summary:
+        safe_print(f"   📈 Chunk types:       {chunk_types_summary}")
+    safe_print("")
+    
     safe_print(f"   ⏱️  Total time:        {format_duration(duration)}")
     safe_print(f"   ⏱️  Avg per file:      {format_duration(avg_time_per_file)}")
     safe_print("")
-    safe_print(f"   🔢 Total tokens:       {total_tokens:,}")
-    safe_print(f"   � Total cost (USD):   ${total_cost:.6f}")
-    safe_print(f"   💰 Total cost (THB):   {format_cost_thb(total_cost)}")
-    if total_tokens > 0 and total_cost > 0:
-        cost_per_1k_usd = (total_cost / total_tokens) * 1000
+    
+    # Cost summary (resume + chunks)
+    total_all_tokens = total_tokens + chunk_tokens_total
+    total_all_cost = total_cost + chunk_cost_total
+    
+    safe_print("   --- EMBEDDING COSTS ---")
+    safe_print(f"   📝 Resume tokens:      {total_tokens:,}")
+    safe_print(f"   🧩 Chunk tokens:       {chunk_tokens_total:,}")
+    safe_print(f"   🔢 Total tokens:       {total_all_tokens:,}")
+    safe_print(f"   💵 Resume cost (USD):  ${total_cost:.6f}")
+    safe_print(f"   💵 Chunk cost (USD):   ${chunk_cost_total:.6f}")
+    safe_print(f"   💵 Total cost (USD):   ${total_all_cost:.6f}")
+    safe_print(f"   💰 Total cost (THB):   {format_cost_thb(total_all_cost)}")
+    if total_all_tokens > 0 and total_all_cost > 0:
+        cost_per_1k_usd = (total_all_cost / total_all_tokens) * 1000
         cost_per_1k_thb = cost_per_1k_usd * USD_TO_THB
         safe_print(f"   💰 Cost per 1K tokens: ${cost_per_1k_usd:.6f} (฿{cost_per_1k_thb:.4f})")
     safe_print("")
@@ -885,6 +1467,15 @@ async def batch_extract_resumes(
         "total_embedding_tokens": total_tokens,
         "total_embedding_cost_usd": round(total_cost, 8),
         "csv_file": csv_filename,
+        # Chunking stats
+        "chunking_enabled": generate_chunks,
+        "total_chunks_created": total_chunks_created,
+        "chunk_types_summary": chunk_types_summary,
+        "chunk_tokens_total": chunk_tokens_total,
+        "chunk_cost_usd": round(chunk_cost_total, 8),
+        # Combined totals
+        "total_all_tokens": total_tokens + chunk_tokens_total,
+        "total_all_cost_usd": round(total_cost + chunk_cost_total, 8),
         "results": results,
     }
     
@@ -899,11 +1490,16 @@ def main():
     """Entry point for command line execution"""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Batch Resume Extraction with Embedding")
+    parser = argparse.ArgumentParser(description="Batch Resume Extraction with Embedding and Chunking")
     parser.add_argument(
         "--no-embedding", 
         action="store_true", 
         help="Skip embedding generation"
+    )
+    parser.add_argument(
+        "--no-chunks",
+        action="store_true",
+        help="Skip chunking (RAG chunks) generation"
     )
     parser.add_argument(
         "--user-id",
@@ -917,6 +1513,7 @@ def main():
     try:
         result = asyncio.run(batch_extract_resumes(
             generate_embeddings=not args.no_embedding,
+            generate_chunks=not args.no_chunks,
             user_id=args.user_id,
         ))
         
