@@ -380,12 +380,14 @@ CONTRACT_SCHEMA = {
 }
 
 # ============ Resume/CV Schema ============
+<<<<<<< HEAD
 # Schema aligned with database: resumes table
-# Focused on essential fields for candidate analysis
+=======
+# Simplified schema - only essential fields for recruitment
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 RESUME_SCHEMA = {
     "type": "object",
     "properties": {
-        # === Personal Information ===
         "name": {
             "type": "string",
             "description": "Candidate's full name (required)",
@@ -400,9 +402,12 @@ RESUME_SCHEMA = {
         },
         "location": {
             "type": "string",
+<<<<<<< HEAD
             "description": "Current or preferred location (city, country)",
+=======
+            "description": "Current location as single string (e.g., 'Bangkok, Thailand')",
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         },
-        # === Professional Profile ===
         "currentRole": {
             "type": "string",
             "description": "Current job title or most recent position",
@@ -411,26 +416,37 @@ RESUME_SCHEMA = {
             "type": "integer",
             "description": "Total years of professional experience",
         },
+<<<<<<< HEAD
+        "skills": {
+            "type": "array",
+            "description": "Array of skill names",
+=======
         "summary": {
             "type": "string",
             "description": "Professional summary or objective statement",
         },
-        # === Skills ===
         "skills": {
             "type": "array",
-            "description": "Array of skill names",
+            "description": "List of skill names only (no categories or proficiency)",
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             "items": {
                 "type": "string",
                 "description": "Skill name (e.g., Python, React, Project Management)",
             },
         },
-        # === Education ===
         "education": {
             "type": "array",
             "description": "Array of education entries",
             "items": {
                 "type": "object",
                 "properties": {
+<<<<<<< HEAD
+=======
+                    "institution": {
+                        "type": "string",
+                        "description": "School or university name",
+                    },
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     "degree": {
                         "type": "string",
                         "description": "Degree type (Bachelor, Master, PhD, Associate)",
@@ -439,51 +455,104 @@ RESUME_SCHEMA = {
                         "type": "string",
                         "description": "Field of study or major",
                     },
+<<<<<<< HEAD
                     "institution": {
                         "type": "string",
                         "description": "School or university name",
                     },
                     "year": {
                         "type": "integer",
+=======
+                    "year": {
+                        "type": "string",
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                         "description": "Graduation year",
                     },
                 },
             },
         },
-        # === Work Experience ===
         "experience": {
             "type": "array",
             "description": "Array of work experience entries",
             "items": {
                 "type": "object",
                 "properties": {
+<<<<<<< HEAD
                     "title": {
                         "type": "string",
                         "description": "Job title",
                     },
+=======
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     "company": {
                         "type": "string",
                         "description": "Company name",
                     },
+<<<<<<< HEAD
+                    "location": {
+                        "type": "string",
+                        "description": "Work location",
+                    },
                     "startDate": {
                         "type": "string",
-                        "description": "Start date (YYYY-MM or YYYY)",
+                        "description": "Start date in ISO 8601 format (YYYY-MM-DD)",
                     },
                     "endDate": {
                         "type": "string",
-                        "description": "End date (YYYY-MM or YYYY), or 'Present' if current",
+                        "description": "End date in ISO 8601 format or null if current",
                     },
                     "description": {
                         "type": "string",
-                        "description": "Job description and key responsibilities/achievements",
+                        "description": "Job description and responsibilities",
+                    },
+                    "isCurrent": {
+                        "type": "boolean",
+                        "description": "Whether this is the current position",
+=======
+                    "title": {
+                        "type": "string",
+                        "description": "Job title",
+                    },
+                    "startDate": {
+                        "type": "string",
+                        "description": "Start date (e.g., 'Jan 2020' or '2020')",
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "description": "End date or 'Present' if current",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Job responsibilities (brief)",
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     },
                 },
             },
         },
-        # === Languages ===
+        "certifications": {
+            "type": "array",
+<<<<<<< HEAD
+            "description": "Array of certification names",
+=======
+            "description": "List of certification names",
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+            "items": {
+                "type": "string",
+                "description": "Certification name",
+            },
+        },
         "languages": {
             "type": "array",
-            "description": "Languages with proficiency level",
+<<<<<<< HEAD
+            "description": "Simple array of language names",
+            "items": {
+                "type": "string",
+                "description": "Language name",
+            },
+        },
+        "languagesWithProficiency": {
+            "type": "array",
+            "description": "Detailed language proficiency data",
             "items": {
                 "type": "object",
                 "properties": {
@@ -493,19 +562,75 @@ RESUME_SCHEMA = {
                     },
                     "level": {
                         "type": "string",
-                        "description": "Proficiency level (Native, Fluent, Business, Conversational, Basic)",
+                        "description": "Proficiency level (native, fluent, business, conversational, basic, N1-N5)",
                     },
                 },
             },
         },
-        # === Certifications ===
-        "certifications": {
-            "type": "array",
-            "description": "Array of certification names",
+        "summary": {
+            "type": "string",
+            "description": "Professional summary or objective statement",
+        },
+        "salaryExpectation": {
+            "type": "integer",
+            "description": "Expected salary in base currency units",
+        },
+        "availabilityDate": {
+            "type": "string",
+            "description": "When candidate is available to start (ISO 8601 date)",
+        },
+        "gender": {
+            "type": "string",
+            "description": "Gender (male, female, other)",
+        },
+        "nationality": {
+            "type": "string",
+            "description": "Candidate nationality",
+        },
+        "birthYear": {
+            "type": "integer",
+            "description": "Birth year for age calculation",
+        },
+        "hasCar": {
+            "type": "boolean",
+            "description": "Whether candidate owns a car",
+        },
+        "hasLicense": {
+            "type": "boolean",
+            "description": "Whether candidate has a driver's license",
+        },
+        "willingToTravel": {
+            "type": "boolean",
+            "description": "Travel willingness indicator",
+=======
+            "description": "List of languages spoken",
             "items": {
                 "type": "string",
-                "description": "Certification name",
+                "description": "Language name",
             },
+        },
+        "projects": {
+            "type": "array",
+            "description": "List of personal or professional projects",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Project name",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Brief project description",
+                    },
+                    "technologies": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Technologies used",
+                    },
+                },
+            },
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         },
     },
 }
@@ -525,16 +650,18 @@ LINE_ITEMS_KEYS: Dict[DocumentType, str | None] = {
     "invoice": "line_items",
     "po": "line_items",
     "contract": "parties",
-    "resume": None,  # Resume uses multiple arrays displayed separately
+    "resume": "work_experience",
 }
 
-# Resume array keys to skip (shown in separate sections, not header fields)
+# Resume array keys to skip
 RESUME_ARRAY_KEYS = [
-    "experience",
+    "work_experience",
     "education",
     "skills",
     "certifications",
     "languages",
+    "projects",
+    "references",
 ]
 
 # Document type names

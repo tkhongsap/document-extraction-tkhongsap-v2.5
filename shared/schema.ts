@@ -318,73 +318,88 @@ export const usageHistory = pgTable("usage_history", {
 });
 
 // ============================================================================
-// API ACCESS TABLES
+// API KEYS TABLE
 // ============================================================================
 
-// API Keys table - for public API access
 export const apiKeys = pgTable("api_keys", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   
-  // Key details
+  // Key identification
   name: varchar("name", { length: 255 }).notNull(),
-  keyHash: varchar("key_hash", { length: 64 }).notNull(), // SHA-256 hash
-  keyPrefix: varchar("key_prefix", { length: 12 }).notNull(), // e.g., "dex_live_abc"
+  prefix: varchar("prefix", { length: 8 }).notNull(), // First 8 chars for identification (e.g., "dae_abc1")
+  hashedKey: varchar("hashed_key", { length: 255 }).notNull().unique(), // SHA-256 hash of full key
   
-  // Permissions
-  scopes: jsonb("scopes").notNull().default(sql`'["extract", "read"]'::jsonb`), // ["extract", "batch", "read", "webhook"]
-  
-  // Rate limiting
-  rateLimit: integer("rate_limit").notNull().default(100), // Requests per minute
+  // Usage limits
+  monthlyLimit: integer("monthly_limit").notNull().default(1000),
+  monthlyUsage: integer("monthly_usage").notNull().default(0),
   
   // Status
   isActive: boolean("is_active").notNull().default(true),
-  lastUsedAt: timestamp("last_used_at"),
-  expiresAt: timestamp("expires_at"), // Optional expiration
   
+  // Expiration (optional)
+  expiresAt: timestamp("expires_at"),
+  
+  // Scopes/permissions
+  scopes: text("scopes").notNull().default("extract,read"),
+  
+  // Timestamps
+  lastUsedAt: timestamp("last_used_at"),
+  lastResetAt: timestamp("last_reset_at").defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
-  index("IDX_apikey_user").on(table.userId),
-  index("IDX_apikey_hash").on(table.keyHash),
-  index("IDX_apikey_prefix").on(table.keyPrefix),
+  index("idx_api_keys_hashed_key").on(table.hashedKey),
+  index("idx_api_keys_user_id").on(table.userId),
+  index("idx_api_keys_prefix").on(table.prefix),
+  index("idx_api_keys_is_active").on(table.isActive),
 ]);
 
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
 
-// API Usage Logs table - tracks all API requests
+// ============================================================================
+// API USAGE LOGS TABLE
+// ============================================================================
+
 export const apiUsageLogs = pgTable("api_usage_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  apiKeyId: varchar("api_key_id").references(() => apiKeys.id),
+  apiKeyId: varchar("api_key_id").notNull().references(() => apiKeys.id, { onDelete: "cascade" }),
   
   // Request details
   endpoint: varchar("endpoint", { length: 255 }).notNull(),
-  method: varchar("method", { length: 10 }).notNull(),
-  documentType: varchar("document_type", { length: 50 }),
-  
-  // Usage metrics
-  pagesProcessed: integer("pages_processed").notNull().default(0),
+  method: varchar("method", { length: 10 }).notNull().default("POST"),
   
   // Response details
   statusCode: integer("status_code").notNull(),
   responseTimeMs: integer("response_time_ms"),
+  
+  // Usage tracking
+  pagesProcessed: integer("pages_processed").default(0),
+  
+  // Request metadata
+  requestMetadata: jsonb("request_metadata"),
+  
+  // Error tracking
   errorMessage: text("error_message"),
   
   // Client info
-  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 support
-  userAgent: varchar("user_agent", { length: 500 }),
-  requestId: varchar("request_id", { length: 36 }), // UUID for tracing
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
   
+  // Timestamp
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
-  index("IDX_apiusage_user").on(table.userId),
-  index("IDX_apiusage_apikey").on(table.apiKeyId),
-  index("IDX_apiusage_created").on(table.createdAt),
+  index("idx_api_usage_api_key_id").on(table.apiKeyId),
+  index("idx_api_usage_created_at").on(table.createdAt),
+  index("idx_api_usage_endpoint").on(table.endpoint),
+  index("idx_api_usage_status_code").on(table.statusCode),
+  index("idx_api_usage_key_date").on(table.apiKeyId, table.createdAt),
 ]);
 
 export const insertApiUsageLogSchema = createInsertSchema(apiUsageLogs).omit({
@@ -629,3 +644,43 @@ export const API_KEY_SCOPES = [
 ] as const;
 
 export type ApiKeyScope = typeof API_KEY_SCOPES[number];
+
+
+// ============================================================================
+// DOCUMENT CHUNKS (for RAG / chunking)
+// ============================================================================
+
+// Document chunks table - stores text chunks extracted from documents with embeddings
+export const documentChunks = pgTable("document_chunks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  documentId: varchar("document_id").references(() => documents.id),
+  extractionId: varchar("extraction_id").references(() => extractions.id),
+
+  // chunk metadata
+  chunkIndex: integer("chunk_index").notNull().default(0),
+  pageNumber: integer("page_number"),
+  startOffset: integer("start_offset"),
+  endOffset: integer("end_offset"),
+  text: text("text").notNull(),
+
+  // Vector embedding for semantic search
+  embedding: vector("embedding", { dimensions: 1536 }),
+  embeddingModel: varchar("embedding_model").default('text-embedding-3-small'),
+  embeddingText: text("embedding_text"),
+
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_docchunk_user").on(table.userId),
+  index("IDX_docchunk_document").on(table.documentId),
+]);
+
+export const insertDocumentChunkSchema = createInsertSchema(documentChunks, {
+  embedding: z.array(z.number()).nullable(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDocumentChunk = z.infer<typeof insertDocumentChunkSchema>;
+export type DocumentChunk = typeof documentChunks.$inferSelect;

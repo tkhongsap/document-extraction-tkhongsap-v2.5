@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   User, 
@@ -14,7 +14,6 @@ import {
   Briefcase, 
   Mail, 
   Phone, 
-  Calendar, 
   FileText,
   Trash2,
   ChevronDown,
@@ -22,7 +21,17 @@ import {
   Sparkles,
   AlertCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  MessageSquare,
+  Bot,
+  Clock,
+  Zap,
+  Users,
+  TrendingUp,
+  Database,
+  Send,
+  ArrowRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -30,17 +39,34 @@ import {
   listResumesApi, 
   deleteResumeApi,
   regenerateAllEmbeddingsApi,
+  ragQueryApi,
+<<<<<<< HEAD
   type ResumeSearchResult,
-  type ResumeSearchResponse 
+  type RAGQueryResponse,
+  type RAGSource
+=======
+  searchChunksApi,
+  type ResumeSearchResult,
+  type RAGQueryResponse,
+  type RAGSource,
+  type ChunkSearchResult,
+  type ChunkSearchResponse
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 } from "@/lib/api";
 import { toast } from "sonner";
 
 export default function ResumeSearch() {
+  // Mode: "search" or "chat"
+  const [mode, setMode] = useState<"search" | "chat">("search");
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLimit, setSearchLimit] = useState(10);
-  const [threshold, setThreshold] = useState(0.0);  // Start with 0 to show all results
-  const [useSemanticSearch, setUseSemanticSearch] = useState(true);
+  const [threshold, setThreshold] = useState(0.0);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [showOptions, setShowOptions] = useState(false);
+  
+  // AI Chat state
+  const [chatResponse, setChatResponse] = useState<RAGQueryResponse | null>(null);
 
   // List all resumes
   const { data: allResumes, refetch: refetchAll } = useQuery({
@@ -83,12 +109,35 @@ export default function ResumeSearch() {
     },
   });
 
+  // RAG Chat mutation
+  const ragMutation = useMutation({
+    mutationFn: ragQueryApi,
+    onSuccess: (data) => {
+      setChatResponse(data);
+      if (data.sources.length === 0) {
+        toast.info("No matching candidates found");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "AI query failed");
+    },
+  });
+
   const handleSearch = () => {
     if (!searchQuery.trim()) {
       toast.error("Please enter a search query");
       return;
     }
-    searchMutation.mutate();
+    
+    if (mode === "chat") {
+      ragMutation.mutate({
+        query: searchQuery,
+        top_k: searchLimit,
+        similarity_threshold: threshold || 0.2,
+      });
+    } else {
+      searchMutation.mutate();
+    }
   };
 
   const toggleExpand = (id: string) => {
@@ -101,214 +150,632 @@ export default function ResumeSearch() {
     setExpandedCards(newExpanded);
   };
 
-  // Determine which results to show
   const displayResults = searchMutation.data?.results || 
     (searchQuery ? [] : allResumes?.resumes) || 
     [];
 
   const suggestions = [
-    "Python developer with 5 years experience",
-    "Data scientist in Bangkok",
-    "Project manager with PMP certification",
-    "Frontend developer with React skills",
-    "Machine learning engineer",
+    "Python developer 5+ years",
+    "Data scientist Bangkok",
+    "React developer",
+    "Project manager PMP",
+    "Machine learning",
   ];
 
+  const chatSuggestions = [
+    "ใครเก่ง Python ที่สุด?",
+    "เปรียบเทียบผู้สมัครที่เก่ง React",
+    "หาคนที่เหมาะกับ Data Engineer",
+    "Who has AWS certification?",
+  ];
+
+<<<<<<< HEAD
+  const isLoading = mode === "chat" ? ragMutation.isPending : searchMutation.isPending;
+=======
+  const chunksSuggestions = [
+    "Python experience",
+    "AWS certification",
+    "React frontend",
+    "Data analyst skills",
+    "Machine learning project",
+  ];
+
+  const isLoading = mode === "chat" 
+    ? ragMutation.isPending 
+    : mode === "chunks" 
+      ? chunksMutation.isPending 
+      : searchMutation.isPending;
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+
+  // Stats
+  const totalResumes = allResumes?.total || 0;
+  const withEmbeddings = allResumes?.resumes?.filter((r: any) => r.has_embedding)?.length || 0;
+
   return (
-    <div className="container max-w-6xl py-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-lg bg-primary/10">
-            <Search className="h-6 w-6 text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+<<<<<<< HEAD
+      <div className="container max-w-7xl py-8 space-y-6">
+        
+        {/* ===== COMPACT HEADER ===== */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg">
+              <Users className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Talent Search</h1>
+              <p className="text-sm text-muted-foreground">
+=======
+      <div className="w-full px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+        
+        {/* ===== COMPACT HEADER ===== */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Talent Search</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+                AI-powered candidate search & assistant
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Resume Search</h1>
-            <p className="text-muted-foreground">
-              Search candidates using AI semantic search
-            </p>
+
+          {/* Stats Cards */}
+<<<<<<< HEAD
+          <div className="flex gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border text-sm">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="font-semibold">{totalResumes}</span>
+              <span className="text-muted-foreground">candidates</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border text-sm">
+              <Database className="h-4 w-4 text-green-500" />
+=======
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-muted/50 border text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+              <span className="font-semibold">{totalResumes}</span>
+              <span className="text-muted-foreground">candidates</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-muted/50 border text-xs sm:text-sm">
+              <Database className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+              <span className="font-semibold">{withEmbeddings}</span>
+              <span className="text-muted-foreground">indexed</span>
+            </div>
           </div>
         </div>
 
-        {/* Search Box */}
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            {/* Search Input */}
-            <div className="flex gap-2">
+        {/* ===== SEARCH BOX ===== */}
+        <Card className="shadow-lg border-2 overflow-hidden">
+          {/* Mode Tabs in Card Header */}
+<<<<<<< HEAD
+          <div className="border-b bg-muted/30">
+=======
+          <div className="border-b bg-muted/30 overflow-x-auto">
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+            <Tabs 
+              value={mode} 
+              onValueChange={(v) => setMode(v as "search" | "chat")}
+            >
+<<<<<<< HEAD
+              <TabsList className="bg-transparent h-12 p-0 w-full justify-start rounded-none">
+                <TabsTrigger 
+                  value="search" 
+                  className="h-12 px-6 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+=======
+              <TabsList className="bg-transparent h-10 sm:h-12 p-0 w-full justify-start rounded-none">
+                <TabsTrigger 
+                  value="search" 
+                  className="h-10 sm:h-12 px-3 sm:px-6 text-xs sm:text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+                  Search
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="chat" 
+<<<<<<< HEAD
+                  className="h-12 px-6 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+=======
+                  className="h-10 sm:h-12 px-3 sm:px-6 text-xs sm:text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+                  AI Chat
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+<<<<<<< HEAD
+          <CardContent className="p-6 space-y-5">
+            {/* Main Search Input */}
+            <div className="flex gap-3">
+=======
+          <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+            {/* Main Search Input */}
+            <div className="flex flex-col sm:flex-row gap-3">
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                  {mode === "chat" ? (
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
                 <Input
-                  placeholder="Search by skills, experience, location..."
+                  placeholder={mode === "chat" 
+<<<<<<< HEAD
+                    ? "Ask anything about your candidates... (Thai or English)"
+                    : "Search by skills, experience, location, or any criteria..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-10"
+                  className="h-14 pl-12 pr-4 text-lg rounded-xl border-2 focus:border-primary transition-colors"
                 />
               </div>
+=======
+                    ? "Ask about candidates..."
+                    : "Search skills, experience, location..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="h-12 sm:h-14 pl-12 pr-4 text-base sm:text-lg rounded-xl border-2 focus:border-primary transition-colors"
+                />
+              </div>
+              <div className="flex gap-2 sm:gap-3">
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
               <Button 
                 onClick={handleSearch} 
-                disabled={searchMutation.isPending}
+                disabled={isLoading}
+                size="lg"
+<<<<<<< HEAD
+                className="h-14 px-8 rounded-xl text-lg font-semibold shadow-md hover:shadow-lg transition-all"
+=======
+                className="flex-1 sm:flex-none h-12 sm:h-14 px-4 sm:px-8 rounded-xl text-base sm:text-lg font-semibold shadow-md hover:shadow-lg transition-all"
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
               >
-                {searchMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : mode === "chat" ? (
+                  <>
+                    <Send className="h-5 w-5 mr-2" />
+                    Ask AI
+                  </>
+<<<<<<< HEAD
+=======
+                ) : mode === "chunks" ? (
+                  <>
+                    <Zap className="h-5 w-5 mr-2" />
+                    Search Sections
+                  </>
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                 ) : (
-                  <Search className="h-4 w-4 mr-2" />
+                  <>
+                    <Search className="h-5 w-5 mr-2" />
+                    Search
+                  </>
                 )}
-                Search
               </Button>
-            </div>
-
-            {/* Options */}
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="semantic"
-                  checked={useSemanticSearch}
-                  onCheckedChange={setUseSemanticSearch}
-                />
-                <Label htmlFor="semantic" className="flex items-center gap-1">
-                  <Sparkles className="h-4 w-4" />
-                  AI Semantic Search
-                </Label>
-              </div>
               
-              <div className="flex items-center gap-2">
-                <Label>Results:</Label>
-                <Slider
-                  value={[searchLimit]}
-                  onValueChange={([v]) => setSearchLimit(v)}
-                  min={1}
-                  max={50}
-                  step={1}
-                  className="w-24"
-                />
-                <span className="text-sm text-muted-foreground w-8">{searchLimit}</span>
-              </div>
+<<<<<<< HEAD
+              {/* Options Toggle - Only for Search mode */}
+              {mode === "search" && (
+=======
+              {/* Options Toggle - for Search and Chunks mode */}
+              {(mode === "search" || mode === "chunks") && (
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+<<<<<<< HEAD
+                    "h-14 w-14 rounded-xl border-2 transition-colors",
+=======
+                    "h-12 w-12 sm:h-14 sm:w-14 rounded-xl border-2 transition-colors",
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+                    showOptions && "bg-primary/10 border-primary"
+                  )}
+                  onClick={() => setShowOptions(!showOptions)}
+                >
+                  <SlidersHorizontal className="h-5 w-5" />
+                </Button>
+              )}
+<<<<<<< HEAD
+            </div>
 
-              <div className="flex items-center gap-2">
-                <Label>Threshold:</Label>
-                <Slider
-                  value={[threshold * 100]}
-                  onValueChange={([v]) => setThreshold(v / 100)}
-                  min={0}
-                  max={100}
-                  step={5}
-                  className="w-24"
-                />
-                <span className="text-sm text-muted-foreground w-10">{Math.round(threshold * 100)}%</span>
+            {/* Options Row - Collapsible */}
+            {mode === "search" && showOptions && (
+=======
               </div>
             </div>
 
-            {/* Suggestions */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-muted-foreground">Try:</span>
-              {suggestions.map((suggestion) => (
+            {/* Options Row - Collapsible */}
+            {(mode === "search" || mode === "chunks") && showOptions && (
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+              <div className="flex flex-wrap items-center gap-6 p-4 rounded-xl bg-muted/50 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground">Max results:</Label>
+                  <Slider
+                    value={[searchLimit]}
+                    onValueChange={([v]) => setSearchLimit(v)}
+                    min={1}
+<<<<<<< HEAD
+                    max={50}
+=======
+                    max={mode === "chunks" ? 20 : 50}
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
+                    step={1}
+                    className="w-28"
+                  />
+                  <Badge variant="secondary">{searchLimit}</Badge>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-muted-foreground">Min match:</Label>
+                  <Slider
+                    value={[threshold * 100]}
+                    onValueChange={([v]) => setThreshold(v / 100)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    className="w-28"
+                  />
+                  <Badge variant="secondary">{Math.round(threshold * 100)}%</Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Suggestions */}
+<<<<<<< HEAD
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Quick search:</span>
+              {(mode === "chat" ? chatSuggestions : suggestions).map((suggestion) => (
+=======
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground w-full sm:w-auto mb-1 sm:mb-0">Quick search:</span>
+              {(mode === "chat" 
+                ? chatSuggestions 
+                : mode === "chunks" 
+                  ? chunksSuggestions 
+                  : suggestions
+              ).map((suggestion) => (
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                 <Button
                   key={suggestion}
                   variant="outline"
                   size="sm"
-                  className="text-xs h-7"
-                  onClick={() => {
-                    setSearchQuery(suggestion);
-                  }}
+<<<<<<< HEAD
+                  className="h-8 text-xs rounded-full hover:bg-primary/10 hover:border-primary transition-colors"
+                  onClick={() => setSearchQuery(suggestion)}
                 >
                   {suggestion}
+                  <ArrowRight className="h-3 w-3 ml-1 opacity-50" />
+=======
+                  className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3 rounded-full hover:bg-primary/10 hover:border-primary transition-colors"
+                  onClick={() => setSearchQuery(suggestion)}
+                >
+                  {suggestion}
+                  <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 ml-1 opacity-50" />
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                 </Button>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Results */}
-        <div className="space-y-4">
-          {/* Results Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              {searchMutation.data 
-                ? `Search Results (${searchMutation.data.results.length})` 
-                : `All Resumes (${allResumes?.total || 0})`}
-            </h2>
-            <div className="flex items-center gap-2">
-              {/* Regenerate Embeddings Button */}
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => regenerateMutation.mutate()}
-                disabled={regenerateMutation.isPending}
-              >
-                {regenerateMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Regenerate Embeddings
-                  </>
-                )}
-              </Button>
-              {searchMutation.data && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    searchMutation.reset();
-                    setSearchQuery("");
-                  }}
-                >
-                  Clear search
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Error State */}
-          {searchMutation.isError && (
-            <Card className="border-destructive">
-              <CardContent className="flex items-center gap-3 py-4">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                <div>
-                  <p className="font-medium text-destructive">Search Error</p>
-                  <p className="text-sm text-muted-foreground">
-                    {searchMutation.error?.message || "Failed to search"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* No Results */}
-          {displayResults.length === 0 && !searchMutation.isPending && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium">No resumes found</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {searchQuery 
-                    ? "Try a different search query or adjust the threshold"
-                    : "Extract resumes from the Templates page to start searching"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Resume Cards */}
-          <div className="grid gap-4">
-            {displayResults.map((resume: ResumeSearchResult) => (
-              <ResumeCard
-                key={resume.id}
-                resume={resume}
-                expanded={expandedCards.has(resume.id)}
-                onToggle={() => toggleExpand(resume.id)}
-                onDelete={() => deleteMutation.mutate(resume.id)}
-                isDeleting={deleteMutation.isPending}
-              />
-            ))}
-          </div>
-        </div>
+        {/* ===== RESULTS AREA ===== */}
+        {mode === "chat" ? (
+          <ChatResultsArea 
+            response={chatResponse}
+            isLoading={ragMutation.isPending}
+            error={ragMutation.error}
+          />
+        ) : (
+          <SearchResultsArea
+            searchMutation={searchMutation}
+            allResumes={allResumes}
+            searchQuery={searchQuery}
+            displayResults={displayResults}
+            expandedCards={expandedCards}
+            toggleExpand={toggleExpand}
+            deleteMutation={deleteMutation}
+            regenerateMutation={regenerateMutation}
+            setSearchQuery={setSearchQuery}
+          />
+        )}
       </div>
+    </div>
   );
 }
+
+// =============================================================================
+// AI Chat Results Component
+// =============================================================================
+
+interface ChatResultsAreaProps {
+  response: RAGQueryResponse | null;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+function ChatResultsArea({ response, isLoading, error }: ChatResultsAreaProps) {
+  if (isLoading) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <div className="relative">
+            <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+            <div className="relative p-4 rounded-full bg-primary/10">
+              <Bot className="h-10 w-10 text-primary animate-pulse" />
+            </div>
+          </div>
+          <p className="mt-4 text-lg font-medium">AI is analyzing candidates...</p>
+          <p className="text-sm text-muted-foreground">This may take a few seconds</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive border-2">
+        <CardContent className="flex items-center gap-4 py-6">
+          <div className="p-3 rounded-full bg-destructive/10">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <div>
+            <p className="font-semibold text-destructive">AI Error</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!response) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="p-4 rounded-full bg-muted mb-4">
+            <MessageSquare className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <h3 className="text-xl font-semibold">Ask AI about your candidates</h3>
+          <p className="text-muted-foreground mt-2 max-w-md">
+            Try questions like "ใครที่มีประสบการณ์ Python มากที่สุด?" or "Compare candidates with React experience"
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* AI Answer - Takes 2 columns */}
+      <div className="lg:col-span-2">
+        <Card className="h-full border-2 shadow-lg">
+          <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary text-primary-foreground">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">AI Response</CardTitle>
+                  <CardDescription className="truncate max-w-md">
+                    "{response.query}"
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted">
+                  <Clock className="h-3 w-3" />
+                  {Math.round(response.processing_time_ms)}ms
+                </div>
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted">
+                  <Zap className="h-3 w-3" />
+                  {response.tokens_used} tokens
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <p className="whitespace-pre-wrap text-base leading-relaxed">{response.answer}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sources Panel - Takes 1 column */}
+      <div>
+        <Card className="h-full border-2 shadow-lg">
+          <CardHeader className="border-b pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-5 w-5 text-primary" />
+              Candidates Analyzed
+              <Badge variant="secondary" className="ml-auto">{response.sources.length}</Badge>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              AI analyzed these top matching candidates to answer your question
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4">
+            {response.sources.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No matching candidates found</p>
+            ) : (
+              <div className="space-y-2">
+                {response.sources.map((source, idx) => (
+                  <SourceCard key={source.resume_id} source={source} rank={idx + 1} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Source Card Component
+function SourceCard({ source, rank }: { source: RAGSource; rank: number }) {
+  const scoreColor = source.similarity_score > 0.8 ? "text-green-600 bg-green-50 dark:bg-green-950 dark:text-green-400" :
+                     source.similarity_score > 0.6 ? "text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400" :
+                     "text-gray-600 bg-gray-50 dark:bg-gray-800 dark:text-gray-400";
+  
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+        {rank}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate group-hover:text-primary transition-colors">{source.name}</p>
+        {source.position && (
+          <p className="text-xs text-muted-foreground truncate">{source.position}</p>
+        )}
+      </div>
+      <Badge className={cn("text-xs font-bold", scoreColor)}>
+        {Math.round(source.similarity_score * 100)}%
+      </Badge>
+    </div>
+  );
+}
+
+// =============================================================================
+// Search Results Component
+// =============================================================================
+
+interface SearchResultsAreaProps {
+  searchMutation: any;
+  allResumes: any;
+  searchQuery: string;
+  displayResults: ResumeSearchResult[];
+  expandedCards: Set<string>;
+  toggleExpand: (id: string) => void;
+  deleteMutation: any;
+  regenerateMutation: any;
+  setSearchQuery: (q: string) => void;
+}
+
+function SearchResultsArea({
+  searchMutation,
+  allResumes,
+  searchQuery,
+  displayResults,
+  expandedCards,
+  toggleExpand,
+  deleteMutation,
+  regenerateMutation,
+  setSearchQuery,
+}: SearchResultsAreaProps) {
+  return (
+    <div className="space-y-6">
+      {/* Results Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold">
+            {searchMutation.data 
+              ? `Search Results` 
+              : `All Candidates`}
+          </h2>
+          <Badge variant="secondary" className="text-sm">
+            {searchMutation.data ? searchMutation.data.results.length : allResumes?.total || 0}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => regenerateMutation.mutate()}
+            disabled={regenerateMutation.isPending}
+            className="rounded-full"
+          >
+            {regenerateMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Reindex All
+          </Button>
+          {searchMutation.data && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                searchMutation.reset();
+                setSearchQuery("");
+              }}
+              className="rounded-full"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Error State */}
+      {searchMutation.isError && (
+        <Card className="border-destructive border-2">
+          <CardContent className="flex items-center gap-4 py-6">
+            <div className="p-3 rounded-full bg-destructive/10">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <div>
+              <p className="font-semibold text-destructive">Search Error</p>
+              <p className="text-sm text-muted-foreground">
+                {searchMutation.error?.message || "Failed to search"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Results */}
+      {displayResults.length === 0 && !searchMutation.isPending && (
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="p-4 rounded-full bg-muted mb-4">
+              <Users className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-semibold">No candidates found</h3>
+            <p className="text-muted-foreground mt-2">
+              {searchQuery 
+                ? "Try a different search query or lower the match threshold"
+                : "Extract resumes from the Templates page to start searching"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resume Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {displayResults.map((resume: ResumeSearchResult) => (
+          <ResumeCard
+            key={resume.id}
+            resume={resume}
+            expanded={expandedCards.has(resume.id)}
+            onToggle={() => toggleExpand(resume.id)}
+            onDelete={() => deleteMutation.mutate(resume.id)}
+            isDeleting={deleteMutation.isPending}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Resume Card Component
+// =============================================================================
 
 interface ResumeCardProps {
   resume: ResumeSearchResult;
@@ -319,16 +786,32 @@ interface ResumeCardProps {
 }
 
 function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: ResumeCardProps) {
+  const scoreColor = (resume.similarity_score || 0) > 0.8 ? "bg-green-500" :
+                     (resume.similarity_score || 0) > 0.6 ? "bg-amber-500" :
+                     (resume.similarity_score || 0) > 0.4 ? "bg-orange-500" : "bg-gray-400";
+
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden border-2 hover:border-primary/50 hover:shadow-lg transition-all group">
+      <CardHeader className="pb-3 bg-gradient-to-r from-muted/50 to-transparent">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-primary/10">
-              <User className="h-5 w-5 text-primary" />
+            <div className="relative">
+              <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+              {resume.similarity_score !== undefined && (
+                <div className={cn(
+                  "absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white",
+                  scoreColor
+                )}>
+                  {Math.round(resume.similarity_score * 100)}
+                </div>
+              )}
             </div>
             <div>
-              <CardTitle className="text-lg">{resume.name}</CardTitle>
+              <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                {resume.name}
+              </CardTitle>
               {resume.current_role && (
                 <CardDescription className="flex items-center gap-1">
                   <Briefcase className="h-3 w-3" />
@@ -338,84 +821,86 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            {resume.similarity_score !== undefined && (
-              <Badge 
-                variant={resume.similarity_score > 0.8 ? "default" : resume.similarity_score > 0.6 ? "secondary" : "outline"}
-              >
-                {Math.round(resume.similarity_score * 100)}% match
-              </Badge>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={onDelete}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={onDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          </Button>
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pt-0">
         {/* Quick Info */}
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {resume.email && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 hover:text-foreground transition-colors">
               <Mail className="h-3 w-3" />
-              {resume.email}
-            </span>
-          )}
-          {resume.phone && (
-            <span className="flex items-center gap-1">
-              <Phone className="h-3 w-3" />
-              {resume.phone}
+              <span className="truncate max-w-[150px]">{resume.email}</span>
             </span>
           )}
           {resume.location && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 hover:text-foreground transition-colors">
               <MapPin className="h-3 w-3" />
               {resume.location}
             </span>
           )}
           {resume.years_experience && (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {resume.years_experience} years exp
+            <span className="flex items-center gap-1 hover:text-foreground transition-colors">
+              <TrendingUp className="h-3 w-3" />
+              {resume.years_experience}y exp
             </span>
           )}
         </div>
 
         {/* Skills */}
         {resume.skills && resume.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {resume.skills.slice(0, expanded ? undefined : 5).map((skill, i) => (
-              <Badge key={i} variant="secondary" className="text-xs">
+          <div className="flex flex-wrap gap-1.5">
+            {resume.skills.slice(0, expanded ? undefined : 4).map((skill, i) => (
+              <Badge 
+                key={i} 
+                variant="secondary" 
+                className="text-xs px-2 py-0.5 bg-primary/5 hover:bg-primary/10 transition-colors"
+              >
                 {skill}
               </Badge>
             ))}
-            {!expanded && resume.skills.length > 5 && (
-              <Badge variant="outline" className="text-xs">
-                +{resume.skills.length - 5} more
+            {!expanded && resume.skills.length > 4 && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5">
+                +{resume.skills.length - 4}
               </Badge>
             )}
           </div>
         )}
 
-        {/* Summary (expanded) */}
-        {expanded && resume.summary && (
-          <div className="pt-2 border-t">
-            <p className="text-sm text-muted-foreground">{resume.summary}</p>
-          </div>
-        )}
+        {/* Expanded Content */}
+        {expanded && (
+          <div className="space-y-3 pt-3 border-t animate-in slide-in-from-top-2 duration-200">
+            {/* Contact */}
+            {resume.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                {resume.phone}
+              </div>
+            )}
+            
+            {/* Summary */}
+            {resume.summary && (
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground leading-relaxed">{resume.summary}</p>
+              </div>
+            )}
 
-        {/* Source file */}
-        {resume.source_file_name && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <FileText className="h-3 w-3" />
-            {resume.source_file_name}
+            {/* Source file */}
+            {resume.source_file_name && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <FileText className="h-3 w-3" />
+                {resume.source_file_name}
+              </div>
+            )}
           </div>
         )}
 
@@ -423,7 +908,7 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
         <Button
           variant="ghost"
           size="sm"
-          className="w-full h-6 text-xs"
+          className="w-full h-7 text-xs text-muted-foreground hover:text-foreground"
           onClick={onToggle}
         >
           {expanded ? (
@@ -434,7 +919,7 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
           ) : (
             <>
               <ChevronDown className="h-3 w-3 mr-1" />
-              Show more
+              Show details
             </>
           )}
         </Button>
@@ -442,3 +927,161 @@ function ResumeCard({ resume, expanded, onToggle, onDelete, isDeleting }: Resume
     </Card>
   );
 }
+<<<<<<< HEAD
+=======
+
+// =============================================================================
+// Chunks Results Component
+// =============================================================================
+
+interface ChunksResultsAreaProps {
+  chunksMutation: ReturnType<typeof useMutation<ChunkSearchResponse, Error, void>>;
+  searchQuery: string;
+}
+
+function ChunksResultsArea({ chunksMutation, searchQuery }: ChunksResultsAreaProps) {
+  if (chunksMutation.isPending) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="mt-4 text-lg font-medium">Searching sections...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (chunksMutation.error) {
+    return (
+      <Card className="border-destructive border-2">
+        <CardContent className="flex items-center gap-4 py-6">
+          <div className="p-3 rounded-full bg-destructive/10">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <div>
+            <p className="font-semibold text-destructive">Search Error</p>
+            <p className="text-sm text-muted-foreground">{chunksMutation.error.message}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const results = chunksMutation.data?.results || [];
+
+  if (!chunksMutation.data && !searchQuery) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="p-4 rounded-full bg-orange-100 dark:bg-orange-900/30 mb-4">
+            <Zap className="h-10 w-10 text-orange-500" />
+          </div>
+          <h3 className="text-xl font-semibold">Section Search</h3>
+          <p className="text-muted-foreground mt-2 max-w-md">
+            Search specific resume sections like skills, experience, or education.
+            <br />
+            More precise than full resume search.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <Search className="h-12 w-12 text-muted-foreground/50" />
+          <p className="mt-4 text-lg font-medium">No matching sections found</p>
+          <p className="text-sm text-muted-foreground">Try different keywords</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Group by chunk type
+  const chunkTypeLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+    personal_info: { label: "Personal Info", icon: <User className="h-4 w-4" />, color: "bg-blue-500" },
+    summary: { label: "Summary", icon: <FileText className="h-4 w-4" />, color: "bg-purple-500" },
+    experience: { label: "Experience", icon: <Briefcase className="h-4 w-4" />, color: "bg-green-500" },
+    education: { label: "Education", icon: <TrendingUp className="h-4 w-4" />, color: "bg-yellow-500" },
+    skills: { label: "Skills", icon: <Zap className="h-4 w-4" />, color: "bg-orange-500" },
+    certifications: { label: "Certifications", icon: <Database className="h-4 w-4" />, color: "bg-pink-500" },
+    languages: { label: "Languages", icon: <MessageSquare className="h-4 w-4" />, color: "bg-cyan-500" },
+    full_resume: { label: "Full Resume", icon: <FileText className="h-4 w-4" />, color: "bg-gray-500" },
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">
+          Found {results.length} matching sections
+        </h2>
+        <Badge variant="secondary" className="text-xs">
+          Query: "{chunksMutation.data?.query}"
+        </Badge>
+      </div>
+
+      <div className="grid gap-4">
+        {results.map((chunk) => {
+          const chunkType = chunk.chunkType || chunk.metadata?.type || "unknown";
+          const typeInfo = chunkTypeLabels[chunkType] || { 
+            label: chunkType, 
+            icon: <FileText className="h-4 w-4" />, 
+            color: "bg-gray-500" 
+          };
+          const similarity = Math.round(chunk.similarity * 100);
+
+          return (
+            <Card key={chunk.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardHeader className="py-3 px-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("p-1.5 rounded-md text-white", typeInfo.color)}>
+                      {typeInfo.icon}
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-medium">
+                        {chunk.metadata?.title || typeInfo.label}
+                      </CardTitle>
+                      {chunk.metadata?.company && (
+                        <CardDescription className="text-xs">
+                          {chunk.metadata.position} @ {chunk.metadata.company}
+                        </CardDescription>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={similarity >= 70 ? "default" : similarity >= 50 ? "secondary" : "outline"}
+                      className="text-xs"
+                    >
+                      {similarity}% match
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {typeInfo.label}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {chunk.text}
+                </p>
+                {chunk.extractionId && (
+                  <div className="mt-3 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span>From extraction: {chunk.extractionId.slice(0, 8)}...</span>
+                    <Clock className="h-3 w-3 ml-2" />
+                    <span>{chunk.createdAt ? new Date(chunk.createdAt).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+>>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd

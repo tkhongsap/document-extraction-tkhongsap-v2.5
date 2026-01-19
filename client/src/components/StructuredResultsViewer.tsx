@@ -28,7 +28,7 @@ interface StructuredResultsViewerProps {
 interface ArraySectionConfig {
   key: string;
   title: string;
-  columns: { key: string; label: string; width?: string }[];
+  columns: { key: string; altKeys?: string[]; label: string; width?: string }[];
 }
 
 /**
@@ -92,40 +92,47 @@ function getResumeArrayConfigs(): ArraySectionConfig[] {
       key: "experience",
       title: "Work Experience",
       columns: [
-        { key: "company", label: "Company" },
-        { key: "title", label: "Job Title" },
-        { key: "startDate", label: "Start", width: "w-24" },
-        { key: "endDate", label: "End", width: "w-24" },
-        { key: "description", label: "Description" },
+        { key: "company", altKeys: ["company_name"], label: "Company" },
+        { key: "title", altKeys: ["job_title", "position"], label: "Job Title" },
+        { key: "location", label: "Location", width: "w-28" },
+        { key: "startDate", altKeys: ["start_date"], label: "Start", width: "w-24" },
+        { key: "endDate", altKeys: ["end_date"], label: "End", width: "w-24" },
       ],
     },
     {
       key: "education",
       title: "Education",
       columns: [
-        { key: "institution", label: "Institution" },
+        { key: "institution", altKeys: ["institution_name"], label: "Institution" },
         { key: "degree", label: "Degree" },
-        { key: "field", label: "Field", width: "w-32" },
-        { key: "year", label: "Year", width: "w-20" },
+        { key: "field", altKeys: ["field_of_study", "major"], label: "Field", width: "w-32" },
+        { key: "year", altKeys: ["graduation_date", "graduation_year", "end_date"], label: "Year", width: "w-24" },
       ],
     },
     {
       key: "skills",
       title: "Skills",
       columns: [
-        { key: "_value", label: "Skill" },
+        { key: "value", label: "Skill" },
       ],
     },
     {
       key: "certifications",
       title: "Certifications",
       columns: [
-        { key: "_value", label: "Certification" },
+        { key: "value", label: "Certification" },
       ],
     },
     {
       key: "languages",
       title: "Languages",
+      columns: [
+        { key: "value", label: "Language" },
+      ],
+    },
+    {
+      key: "languagesWithProficiency",
+      title: "Languages (Detailed)",
       columns: [
         { key: "language", label: "Language" },
         { key: "level", label: "Proficiency", width: "w-32" },
@@ -149,7 +156,7 @@ function formatFieldKey(key: string): string {
  * Format a value for display
  */
 function formatValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') return "";
+  if (value === null || value === undefined) return "-";
   if (typeof value === "number") {
     return value.toLocaleString(undefined, { 
       minimumFractionDigits: 0, 
@@ -263,13 +270,23 @@ function ArraySection({
                 <TableRow key={rowIndex} data-testid={`row-${config.key}-${rowIndex}`}>
                   {config.columns.map((col) => {
                     const confidence = getCellConfidence(rowIndex, col.key);
+                    // Try primary key first, then altKeys
+                    let cellValue = item[col.key];
+                    if ((cellValue === undefined || cellValue === null || cellValue === "") && col.altKeys) {
+                      for (const altKey of col.altKeys) {
+                        if (item[altKey] !== undefined && item[altKey] !== null && item[altKey] !== "") {
+                          cellValue = item[altKey];
+                          break;
+                        }
+                      }
+                    }
                     return (
                       <TableCell
                         key={col.key}
                         className={cn("text-sm py-2", col.width)}
                       >
                         <span className="inline-flex items-center">
-                          {formatValue(item[col.key])}
+                          {formatValue(cellValue)}
                           {confidence !== undefined && (
                             <ConfidenceIndicator confidence={confidence} />
                           )}
@@ -321,19 +338,42 @@ export function StructuredResultsViewer({
 
   const getArrayData = (key: string): Array<Record<string, unknown>> => {
     if (extractedData && Array.isArray(extractedData[key])) {
-      const arr = extractedData[key] as unknown[];
-      // Filter out null/empty items
-      const filtered = arr.filter((item) => item !== null && item !== undefined && item !== '');
-      if (filtered.length === 0) return [];
-      
-      // Handle string arrays (like skills, certifications)
-      if (typeof filtered[0] === 'string') {
-        return filtered.map((item) => ({ _value: item }));
+      const data = extractedData[key];
+      // Handle array of strings (skills, certifications, languages)
+      if (data.length > 0 && typeof data[0] === 'string') {
+        return data.map((item: string) => ({ value: item })) as Array<Record<string, unknown>>;
       }
-      // Filter out objects with all empty values
-      return (filtered as Array<Record<string, unknown>>).filter((item) => {
-        return Object.values(item).some((v) => v !== null && v !== undefined && v !== '');
-      });
+      // Handle array of objects - try to extract value from common keys
+      if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
+        return data.map((item: Record<string, unknown>) => {
+          // If already has 'value' key, return as-is
+          if (item.value !== undefined) {
+            return item;
+          }
+          // For skills: try skill_name, name, skill keys
+          const skillValue = item.skill_name || item.name || item.skill;
+          if (skillValue !== undefined) {
+            return { ...item, value: skillValue };
+          }
+          // For certifications: try certification_name, name, certification keys
+          const certValue = item.certification_name || item.name || item.certification;
+          if (certValue !== undefined) {
+            return { ...item, value: certValue };
+          }
+          // For languages: try language_name, name, language keys
+          const langValue = item.language_name || item.name || item.language;
+          if (langValue !== undefined) {
+            return { ...item, value: langValue };
+          }
+          // Fallback: use the first string value found in the object
+          const firstStringValue = Object.values(item).find(v => typeof v === 'string');
+          if (firstStringValue) {
+            return { ...item, value: firstStringValue };
+          }
+          return item;
+        }) as Array<Record<string, unknown>>;
+      }
+      return data as Array<Record<string, unknown>>;
     }
     return [];
   };
@@ -351,7 +391,9 @@ export function StructuredResultsViewer({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {headerFields.map((field, i) => (
+            {headerFields
+              .filter((field) => field.value !== null && field.value !== undefined && field.value !== "")
+              .map((field, i) => (
               <TableRow key={`${field.key}-${i}`} data-testid={`field-row-${i}`}>
                 <TableCell className="font-medium text-muted-foreground text-xs uppercase tracking-wider align-middle">
                   {formatFieldKey(field.key)}

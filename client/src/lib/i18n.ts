@@ -271,6 +271,20 @@ export const translations: Translations = {
     'export.markdown': 'Markdown',
     'export.text': 'Text',
 
+    // File Limit Dialog
+    'fileLimit.title': 'File Limit Exceeded',
+    'fileLimit.attempted': 'You tried to upload',
+    'fileLimit.files': 'files',
+    'fileLimit.maxAllowed': 'but the system allows a maximum of',
+    'fileLimit.filesPerBatch': 'files per batch',
+    'fileLimit.currentFiles': 'You currently have',
+    'fileLimit.canAddMore': 'files. You can add',
+    'fileLimit.moreFiles': 'more files',
+    'fileLimit.limit': 'Limit',
+    'fileLimit.current': 'Current files',
+    'fileLimit.canAdd': 'Can add',
+    'fileLimit.understand': 'OK, I understand',
+
     // Common
     'common.back': 'Back',
     'common.upgrade': 'Upgrade Plan',
@@ -548,6 +562,20 @@ export const translations: Translations = {
     'export.excel': 'Excel',
     'export.markdown': 'Markdown',
     'export.text': 'ข้อความ',
+
+    // File Limit Dialog
+    'fileLimit.title': 'จำนวนไฟล์เกินขีดจำกัด',
+    'fileLimit.attempted': 'คุณพยายามอัปโหลด',
+    'fileLimit.files': 'ไฟล์',
+    'fileLimit.maxAllowed': 'แต่ระบบรองรับได้สูงสุด',
+    'fileLimit.filesPerBatch': 'ไฟล์ต่อครั้ง',
+    'fileLimit.currentFiles': 'ปัจจุบันมีไฟล์อยู่แล้ว',
+    'fileLimit.canAddMore': 'ไฟล์ สามารถเพิ่มได้อีก',
+    'fileLimit.moreFiles': 'ไฟล์',
+    'fileLimit.limit': 'ขีดจำกัด',
+    'fileLimit.current': 'ไฟล์ปัจจุบัน',
+    'fileLimit.canAdd': 'เพิ่มได้อีก',
+    'fileLimit.understand': 'เข้าใจแล้ว',
 
     // Common
     'common.back': 'ย้อนกลับ',
