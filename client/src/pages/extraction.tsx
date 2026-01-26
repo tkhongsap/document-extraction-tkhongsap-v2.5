@@ -1,11 +1,12 @@
 import { useLanguage } from "@/lib/i18n";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X, Files, FileCheck, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { UploadCloud, FileText, Loader2, ArrowLeft, Play, X, Files, FileCheck, AlertCircle, Edit, XCircle, CheckCircle, Clock, Zap } from "lucide-react";
 import { useParams, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { getTemplateById } from "@/lib/templates";
@@ -14,13 +15,16 @@ import {
   processGeneralExtraction, 
   processBatchTemplateExtraction,
   processBatchGeneralExtraction,
+  updateExtractionReviewStatus,
   type GeneralExtractionResponse,
   type TemplateExtractionResponse,
   type DocumentType,
   type BatchExtractionResponse,
   type BatchTemplateResultData,
   type BatchGeneralResultData,
+  type ExtractionReviewStatus,
 } from "@/lib/api";
+import { formatErrorToast, getErrorTitle } from "@/lib/errorHandler";
 import { toast } from "sonner";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
@@ -28,6 +32,7 @@ import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +44,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PDFDocument } from "pdf-lib";
 
-// Batch processing limit - realistic limit to avoid network issues
+// File upload configuration
 const BATCH_FILE_LIMIT = 100;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+const ALLOWED_FILE_TYPES = {
+  'application/pdf': ['.pdf'],
+  'image/png': ['.png'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+};
+
+// Format file size for display
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // Helper to count PDF pages from a File
 async function countPdfPages(file: File): Promise<number> {
@@ -82,6 +100,118 @@ function formatEstimatedTime(totalSeconds: number): string {
     }
     return `~${hours}h ${minutes}m`;
   }
+}
+
+// Processing steps for loading UI
+type ProcessingStep = 'uploading' | 'parsing' | 'extracting' | 'completing';
+
+interface ProcessingLoadingProps {
+  pages: number;
+  elapsedSeconds: number;
+  totalEstimatedSeconds: number;
+  mode: 'template' | 'general' | 'batch';
+  fileCount?: number;
+  t: (key: string) => string;
+}
+
+function ProcessingLoading({ pages, elapsedSeconds, totalEstimatedSeconds, mode, fileCount = 1, t }: ProcessingLoadingProps) {
+  const progress = Math.min(100, Math.round((elapsedSeconds / totalEstimatedSeconds) * 100));
+  const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
+  
+  // Determine current step based on progress
+  const currentStep: ProcessingStep = 
+    progress < 10 ? 'uploading' :
+    progress < 50 ? 'parsing' :
+    progress < 90 ? 'extracting' : 'completing';
+  
+  const steps = [
+    { key: 'uploading', label: t('loading.uploading') || 'Uploading', icon: UploadCloud },
+    { key: 'parsing', label: t('loading.parsing') || 'Parsing document', icon: FileText },
+    { key: 'extracting', label: t('loading.extracting') || 'Extracting data', icon: Zap },
+    { key: 'completing', label: t('loading.completing') || 'Completing', icon: FileCheck },
+  ];
+  
+  const getStepStatus = (stepKey: string) => {
+    const stepOrder = ['uploading', 'parsing', 'extracting', 'completing'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const stepIndex = stepOrder.indexOf(stepKey);
+    if (stepIndex < currentIndex) return 'completed';
+    if (stepIndex === currentIndex) return 'active';
+    return 'pending';
+  };
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-8">
+      <div className="w-full max-w-md space-y-6">
+        {/* Animated spinner */}
+        <div className="flex justify-center">
+          <div className="relative">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-bold text-primary">{progress}%</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-2" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{formatEstimatedTime(elapsedSeconds)} elapsed</span>
+            <span>{remainingSeconds > 0 ? `${formatEstimatedTime(remainingSeconds)} remaining` : 'Finishing up...'}</span>
+          </div>
+        </div>
+        
+        {/* Processing info */}
+        <div className="text-center space-y-1">
+          <p className="font-medium">
+            {mode === 'batch' 
+              ? `${t('loading.processing_batch') || 'Processing'} ${fileCount} ${t('loading.files') || 'files'}`
+              : `${t('loading.processing') || 'Processing'} ${pages} ${pages > 1 ? t('loading.pages') || 'pages' : t('loading.page') || 'page'}`
+            }
+          </p>
+          <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+            <Clock className="h-3 w-3" />
+            {mode === 'template' 
+              ? t('loading.template_hint') || 'Using AI template extraction'
+              : t('loading.general_hint') || 'Parsing with LlamaParse'
+            }
+          </p>
+        </div>
+        
+        {/* Steps indicator */}
+        <div className="flex justify-between items-center px-4">
+          {steps.map((step, index) => {
+            const status = getStepStatus(step.key);
+            const Icon = step.icon;
+            return (
+              <div key={step.key} className="flex flex-col items-center gap-1">
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                  status === 'completed' && "bg-green-500 text-white",
+                  status === 'active' && "bg-primary text-white animate-pulse",
+                  status === 'pending' && "bg-muted text-muted-foreground"
+                )}>
+                  {status === 'completed' ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    <Icon className="h-4 w-4" />
+                  )}
+                </div>
+                <span className={cn(
+                  "text-[10px] text-center",
+                  status === 'active' && "text-primary font-medium",
+                  status === 'pending' && "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Extraction() {
@@ -128,6 +258,10 @@ export default function Extraction() {
   // Single file state for page count and timer
   const [singleFilePages, setSingleFilePages] = useState<number>(1);
   const [singleFileStartTime, setSingleFileStartTime] = useState<number | null>(null);
+
+  // Review status state
+  const [reviewStatus, setReviewStatus] = useState<ExtractionReviewStatus>('pending');
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Timer effect for real-time countdown (works for both batch and single file)
   useEffect(() => {
@@ -197,6 +331,9 @@ export default function Extraction() {
     setBatchTemplateResults(null);
     setBatchGeneralResults(null);
     setSelectedBatchIndex(0);
+    // Reset review status for new file
+    setReviewStatus('pending');
+    setIsEditMode(false);
   }, [isBatchMode]);
 
   // Handle template-based extraction with LlamaExtract (on button click)
@@ -248,7 +385,10 @@ export default function Extraction() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Extraction] Error during extraction:', error);
-      toast.error(error.message || 'Extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setTemplateResults(null);
     } finally {
       setIsProcessing(false);
@@ -302,7 +442,10 @@ export default function Extraction() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Batch Extraction] Error:', error);
-      toast.error(error.message || 'Batch extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setBatchTemplateResults(null);
     } finally {
       setIsProcessing(false);
@@ -346,7 +489,10 @@ export default function Extraction() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
       console.error('[Batch General Extraction] Error:', error);
-      toast.error(error.message || 'Batch extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setBatchGeneralResults(null);
     } finally {
       setIsProcessing(false);
@@ -389,7 +535,10 @@ export default function Extraction() {
       // Refresh user data to update Monthly Usage display
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     } catch (error: any) {
-      toast.error(error.message || 'Extraction failed');
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
       setGeneralResults(null);
     } finally {
       setIsProcessing(false);
@@ -429,50 +578,34 @@ export default function Extraction() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
     onDropRejected: (fileRejections) => {
-      // Check if files were rejected due to too many files
+      // Check rejection reasons
       const tooManyFiles = fileRejections.some(
         rejection => rejection.errors.some(e => e.code === 'too-many-files')
       );
+      const filesTooLarge = fileRejections.filter(
+        r => r.errors.some(e => e.code === 'file-too-large')
+      );
+      const invalidTypes = fileRejections.filter(
+        r => r.errors.some(e => e.code === 'file-invalid-type')
+      );
       
       if (tooManyFiles) {
-        // Show popup dialog for file limit exceeded
         setFileLimitDialogMessage({
           attempted: fileRejections.length,
           limit: BATCH_FILE_LIMIT,
           current: batchFiles.length
         });
         setShowFileLimitDialog(true);
-      } else {
-        // Other rejection reasons (file type, size, etc.)
-        const invalidTypes = fileRejections.filter(
-          r => r.errors.some(e => e.code === 'file-invalid-type')
-        );
-        if (invalidTypes.length > 0) {
-          toast.error(`${invalidTypes.length} ไฟล์ถูกปฏิเสธเนื่องจากประเภทไฟล์ไม่รองรับ`);
-        }
+      } else if (filesTooLarge.length > 0) {
+        const fileNames = filesTooLarge.map(r => r.file.name).slice(0, 3).join(', ');
+        const moreCount = filesTooLarge.length > 3 ? ` และอีก ${filesTooLarge.length - 3} ไฟล์` : '';
+        toast.error(`ไฟล์ใหญ่เกิน 10MB: ${fileNames}${moreCount}`);
+      } else if (invalidTypes.length > 0) {
+        toast.error(`${invalidTypes.length} ไฟล์ถูกปฏิเสธ - รองรับเฉพาะ PDF และรูปภาพ (PNG, JPG)`);
       }
     },
-    accept: isGeneralExtraction 
-      ? {
-          'application/pdf': ['.pdf'],
-          'image/png': ['.png'],
-          'image/jpeg': ['.jpg', '.jpeg'],
-          'image/gif': ['.gif'],
-          'image/webp': ['.webp'],
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-          'application/msword': ['.doc'],
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-          'application/vnd.ms-excel': ['.xls'],
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-          'application/vnd.ms-powerpoint': ['.ppt'],
-          'text/plain': ['.txt'],
-          'text/csv': ['.csv'],
-        }
-      : {
-          'application/pdf': ['.pdf'],
-          'image/png': ['.png'],
-          'image/jpeg': ['.jpg', '.jpeg']
-        },
+    accept: ALLOWED_FILE_TYPES,
+    maxSize: MAX_FILE_SIZE,
     maxFiles: isBatchMode ? BATCH_FILE_LIMIT : 1,
     multiple: isBatchMode
   });
@@ -483,6 +616,60 @@ export default function Extraction() {
     const newHeaderFields = [...templateResults.headerFields];
     newHeaderFields[index] = { ...newHeaderFields[index], value: newValue };
     setTemplateResults({ ...templateResults, headerFields: newHeaderFields });
+  };
+
+  // Get current extraction ID for review actions
+  const currentExtractionId = isGeneralExtraction 
+    ? generalResults?.extractionId 
+    : templateResults?.extractionId;
+
+  // Review mutation
+  const reviewMutation = useMutation({
+    mutationFn: ({ status }: { status: ExtractionReviewStatus }) => 
+      updateExtractionReviewStatus(currentExtractionId!, status),
+    onSuccess: (data, variables) => {
+      setReviewStatus(variables.status);
+      queryClient.invalidateQueries({ queryKey: ['/api/extractions'] });
+      const message = variables.status === 'approved' 
+        ? (t('review.success_approved') || 'Extraction approved successfully')
+        : (t('review.success_rejected') || 'Extraction rejected');
+      toast.success(message);
+    },
+    onError: (error: Error) => {
+      toast.error(formatErrorToast(error), {
+        description: getErrorTitle(error),
+        duration: 5000,
+      });
+    },
+  });
+
+  const handleApprove = () => {
+    if (!currentExtractionId) {
+      toast.error('Extraction not saved yet');
+      return;
+    }
+    reviewMutation.mutate({ status: 'approved' });
+  };
+
+  const handleReject = () => {
+    if (!currentExtractionId) {
+      toast.error('Extraction not saved yet');
+      return;
+    }
+    reviewMutation.mutate({ status: 'rejected' });
+  };
+
+  const handleEdit = () => {
+    setIsEditMode(!isEditMode);
+    toast(
+      isEditMode ? (t('review.edit_disabled') || 'Edit mode disabled') : (t('review.edit_enabled') || 'Edit mode enabled'),
+      { 
+        description: isEditMode 
+          ? (t('review.changes_discarded') || 'Changes discarded') 
+          : (t('review.can_edit_now') || 'You can now edit the extracted data'),
+        duration: 3000,
+      }
+    );
   };
 
   const hasResults = isBatchMode 
@@ -581,10 +768,7 @@ export default function Extraction() {
                   }
                 </p>
                 <p className="text-xs text-muted-foreground mt-4 text-center">
-                  {isGeneralExtraction 
-                    ? t('extract.upload_formats')
-                    : 'PDF, JPG, PNG'
-                  } • {t('extract.upload_size_limit')}
+                  {t('extract.upload_formats')} • {t('extract.upload_size_limit')}
                 </p>
               </div>
             ) : isBatchMode ? (
@@ -772,91 +956,85 @@ export default function Extraction() {
                   </span>
                 )
               )}
+              {/* Review Status Badge */}
+              {!isBatchMode && hasResults && currentExtractionId && (
+                <Badge 
+                  variant={
+                    reviewStatus === 'approved' ? 'success' : 
+                    reviewStatus === 'rejected' ? 'destructive' : 
+                    reviewStatus === 'edited' ? 'secondary' : 
+                    'outline'
+                  }
+                  className="text-xs"
+                >
+                  {t(`review.status.${reviewStatus}`) || reviewStatus}
+                </Badge>
+              )}
             </div>
+            {/* Review Action Buttons */}
+            {!isBatchMode && hasResults && currentExtractionId && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={isEditMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleEdit}
+                  disabled={reviewStatus === 'approved' || reviewStatus === 'rejected'}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  {t('review.edit') || 'Edit'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReject}
+                  disabled={reviewMutation.isPending || reviewStatus === 'approved' || reviewStatus === 'rejected'}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  {t('review.reject') || 'Reject'}
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleApprove}
+                  disabled={reviewMutation.isPending || reviewStatus === 'approved' || reviewStatus === 'rejected'}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {t('review.approve') || 'Approve'}
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isBatchMode ? (
               // Loading state for batch processing
-              (() => {
-                const totalEstimatedSeconds = Math.ceil(batchFiles.length * (isGeneralExtraction ? 20 : 30));
-                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-                return (
-                  <div className="h-full flex flex-col items-center justify-center space-y-4 p-8">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <div className="text-center">
-                      <p className="text-muted-foreground font-medium">
-                        {t('extract.batch_processing') || 'Processing batch...'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Processing {batchFiles.length} files sequentially
-                      </p>
-                      <p className="text-sm text-primary mt-2 font-medium">
-                        {remainingSeconds > 0 
-                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
-                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
+              <ProcessingLoading 
+                pages={batchFiles.length}
+                elapsedSeconds={elapsedSeconds}
+                totalEstimatedSeconds={Math.ceil(batchFiles.length * (isGeneralExtraction ? 20 : 30))}
+                mode="batch"
+                fileCount={batchFiles.length}
+                t={t}
+              />
             ) : isProcessing && isGeneralExtraction && !isBatchMode ? (
               // Loading state for single file general extraction
-              (() => {
-                const totalEstimatedSeconds = Math.ceil(singleFilePages * 20);
-                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-                return (
-                  <div className="h-full flex flex-col items-center justify-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <div className="text-center">
-                      <p className="text-muted-foreground font-medium">
-                        {t('extract.parsing') || 'Parsing document with LlamaParse...'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Processing {singleFilePages} page{singleFilePages > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-sm text-primary mt-2 font-medium">
-                        {remainingSeconds > 0 
-                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
-                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
+              <ProcessingLoading 
+                pages={singleFilePages}
+                elapsedSeconds={elapsedSeconds}
+                totalEstimatedSeconds={Math.ceil(singleFilePages * 20)}
+                mode="general"
+                t={t}
+              />
             ) : isProcessing && !isGeneralExtraction && !isBatchMode ? (
               // Loading state for single file template extraction
-              (() => {
-                const totalEstimatedSeconds = Math.ceil(singleFilePages * 30);
-                const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-                return (
-                  <div className="h-full flex flex-col items-center justify-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <div className="text-center">
-                      <p className="text-muted-foreground font-medium">{t('extract.processing')}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Processing {singleFilePages} page{singleFilePages > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-sm text-primary mt-2 font-medium">
-                        {remainingSeconds > 0 
-                          ? `${formatEstimatedTime(remainingSeconds)} remaining`
-                          : `${formatEstimatedTime(elapsedSeconds)} elapsed (finishing up...)`
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Elapsed: {formatEstimatedTime(elapsedSeconds)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
+              <ProcessingLoading 
+                pages={singleFilePages}
+                elapsedSeconds={elapsedSeconds}
+                totalEstimatedSeconds={Math.ceil(singleFilePages * 30)}
+                mode="template"
+                t={t}
+              />
             ) : isBatchMode && batchGeneralResults ? (
               // Batch general results
               (() => {
@@ -930,7 +1108,7 @@ export default function Extraction() {
                 extractedData={templateResults.extractedData}
                 confidenceScores={templateResults.confidenceScores}
                 documentType={type as DocumentType}
-                onFieldChange={handleFieldChange}
+                onFieldChange={isEditMode ? handleFieldChange : undefined}
                 className="h-full"
                 fileName={file?.name || "extraction"}
               />

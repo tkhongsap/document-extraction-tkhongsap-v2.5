@@ -48,6 +48,21 @@ export type BatchJobStatus = typeof batchJobStatuses[number];
 export const batchItemStatuses = ["pending", "processing", "completed", "failed"] as const;
 export type BatchItemStatus = typeof batchItemStatuses[number];
 
+// Extraction review status (for approval workflow)
+export const extractionReviewStatuses = ["pending", "edited", "rejected", "approved"] as const;
+export type ExtractionReviewStatus = typeof extractionReviewStatuses[number];
+
+// Audit log action types
+export const auditActionTypes = [
+  "login", "logout",
+  "extraction_create", "extraction_view", "extraction_edit", "extraction_delete",
+  "review_approve", "review_reject", "review_edit",
+  "document_upload", "document_delete",
+  "batch_start", "batch_complete",
+  "settings_change", "user_create", "user_update"
+] as const;
+export type AuditActionType = typeof auditActionTypes[number];
+
 // Document types for extraction
 export const documentTypes = ["bank", "invoice", "po", "contract", "resume", "general"] as const;
 export type DocumentType = typeof documentTypes[number];
@@ -130,6 +145,10 @@ export const extractions = pgTable("extractions", {
   pagesProcessed: integer("pages_processed").notNull(),
   extractedData: jsonb("extracted_data").notNull(),
   status: text("status").notNull().default('completed'),
+  // Review status for approval workflow (pending, edited, rejected, approved)
+  reviewStatus: text("review_status").notNull().default('pending'),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"),
   // Link to batch item if part of batch processing
   batchItemId: varchar("batch_item_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -151,6 +170,33 @@ export interface DocumentWithExtractions {
   latestExtraction: Extraction;
   totalExtractions: number;
 }
+
+// ============================================================================
+// AUDIT LOGS TABLE (Track user actions for compliance and debugging)
+// ============================================================================
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  action: text("action").notNull(), // e.g., 'extraction_create', 'review_approve'
+  resourceType: text("resource_type"), // e.g., 'extraction', 'document', 'user'
+  resourceId: varchar("resource_id"), // ID of the affected resource
+  details: jsonb("details"), // Additional context (old/new values, metadata)
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_audit_logs_user_id").on(table.userId),
+  index("idx_audit_logs_action").on(table.action),
+  index("idx_audit_logs_created_at").on(table.createdAt),
+]);
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
 
 // ============================================================================
 // RESUMES TABLE (Structured resume data + vector embeddings for RAG)

@@ -36,9 +36,9 @@ export function getSession() {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
+      httpOnly: true,      // Prevent XSS from reading cookie
       secure: isProduction, // Only require HTTPS in production
-      sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin OAuth in production
+      sameSite: 'lax',     // Protect against CSRF while allowing normal navigation
       maxAge: sessionTtl,
     },
   });

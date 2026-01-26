@@ -3,9 +3,9 @@ import { useDateFormatter } from "@/lib/date-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { getExtraction } from "@/lib/api";
+import { ArrowLeft, Download, Edit, XCircle, CheckCircle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getExtraction, updateExtractionReviewStatus, type ExtractionReviewStatus } from "@/lib/api";
 import { Link, useParams } from "wouter";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 // Keys that should be treated as arrays and not converted to header fields
 const RESUME_ARRAY_KEYS = [
@@ -73,6 +75,9 @@ export default function ExtractionDetail() {
   const { t } = useLanguage();
   const { formatDate } = useDateFormatter();
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const { data: extractionData, isLoading: isLoadingExtraction } = useQuery({
     queryKey: ['extraction', id],
@@ -80,8 +85,49 @@ export default function ExtractionDetail() {
     enabled: !!id,
   });
 
+  // Mutation for updating review status
+  const reviewMutation = useMutation({
+    mutationFn: ({ status }: { status: ExtractionReviewStatus }) => 
+      updateExtractionReviewStatus(id!, status),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['extraction', id] });
+      const message = variables.status === 'approved' 
+        ? t('review.success_approved') 
+        : t('review.success_rejected');
+      toast({
+        title: message,
+        variant: variables.status === 'approved' ? 'default' : 'destructive',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleApprove = () => {
+    reviewMutation.mutate({ status: 'approved' });
+  };
+
+  const handleReject = () => {
+    reviewMutation.mutate({ status: 'rejected' });
+  };
+
+  const handleEdit = () => {
+    setIsEditMode(!isEditMode);
+    // TODO: Implement edit mode UI - for now just toggle state
+    toast({
+      title: isEditMode ? 'Edit mode disabled' : 'Edit mode enabled',
+      description: isEditMode ? 'Changes discarded' : 'You can now edit the extracted data',
+    });
+  };
+
   const extraction = extractionData?.extraction;
   const isGeneralExtraction = extraction?.documentType === 'general';
+  const reviewStatus = (extraction as any)?.reviewStatus as ExtractionReviewStatus | undefined;
 
   if (isLoadingExtraction) {
     return (
@@ -124,55 +170,109 @@ export default function ExtractionDetail() {
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/history">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {t('common.back') || 'Back'}
+        <div className="flex flex-col gap-1">
+          {/* Breadcrumb navigation */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Link href="/history" className="hover:text-foreground transition-colors">
+              {t('nav.history') || 'History'}
             </Link>
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold">{extraction.fileName}</h1>
-            <div className="flex items-center gap-3 mt-1">
-              <Badge variant="secondary" className="capitalize">
-                {extraction.documentType}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {formatDate(new Date(extraction.createdAt))}
-              </span>
+            <span>/</span>
+            <span className="text-foreground font-medium truncate max-w-[300px]">
+              {extraction.fileName}
+            </span>
+          </div>
+          {/* Document info */}
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="capitalize">
+              {extraction.documentType}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {formatDate(new Date(extraction.createdAt))}
+            </span>
+            <Badge 
+              variant={extraction.status === 'completed' ? 'success' : extraction.status === 'processing' ? 'default' : 'warning'}
+            >
+              {extraction.status}
+            </Badge>
+            {/* Review Status Badge */}
+            {reviewStatus && (
               <Badge 
-                variant={extraction.status === 'completed' ? 'success' : extraction.status === 'processing' ? 'default' : 'warning'}
+                variant={
+                  reviewStatus === 'approved' ? 'success' : 
+                  reviewStatus === 'rejected' ? 'destructive' : 
+                  reviewStatus === 'edited' ? 'secondary' : 
+                  'outline'
+                }
               >
-                {extraction.status}
+                {t(`review.status.${reviewStatus}`) || reviewStatus}
               </Badge>
-            </div>
+            )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              {t('docs.download') || 'Download'}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => exportToJSON(extraction)}>
-              {t('export.json') || 'JSON'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportToCSV(extraction)}>
-              {t('export.csv') || 'CSV'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportToExcel(extraction)}>
-              {t('export.excel') || 'Excel'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportToMarkdown(extraction)}>
-              {t('export.markdown') || 'Markdown'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportToText(extraction)}>
-              {t('export.text') || 'Text'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Edit Button */}
+          <Button 
+            variant={isEditMode ? "default" : "outline"} 
+            size="sm"
+            onClick={handleEdit}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            {t('review.edit') || 'Edit'}
+          </Button>
+          
+          {/* Reject Button */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleReject}
+            disabled={reviewMutation.isPending || reviewStatus === 'rejected'}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            {t('review.reject') || 'Reject'}
+          </Button>
+          
+          {/* Approve Button */}
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={handleApprove}
+            disabled={reviewMutation.isPending || reviewStatus === 'approved'}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            {t('review.approve') || 'Approve'}
+          </Button>
+          
+          {/* Download Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                {t('docs.download') || 'Download'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportToJSON(extraction)}>
+                {t('export.json') || 'JSON'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(extraction)}>
+                {t('export.csv') || 'CSV'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(extraction)}>
+                {t('export.excel') || 'Excel'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToMarkdown(extraction)}>
+                {t('export.markdown') || 'Markdown'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToText(extraction)}>
+                {t('export.text') || 'Text'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Main Content - Full Width */}

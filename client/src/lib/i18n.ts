@@ -215,9 +215,9 @@ export const translations: Translations = {
 
     // Extraction
     'extract.upload_title': 'Drop your document here',
-    'extract.upload_desc': 'Documents, images, spreadsheets, audio - we parse them all',
-    'extract.upload_formats': 'PDF, DOCX, PPTX, XLSX, CSV, JPG, PNG, GIF, MP3, WAV and more',
-    'extract.upload_size_limit': 'Most files up to 10MB, Audio up to 20MB',
+    'extract.upload_desc': 'PDF documents and images (PNG, JPG)',
+    'extract.upload_formats': 'PDF, PNG, JPG, JPEG',
+    'extract.upload_size_limit': 'Max 10MB per file',
     'extract.processing': 'Extracting...',
     'extract.processing_sub': 'This usually takes just a few seconds',
     'extract.results': "Here's what we found",
@@ -241,6 +241,19 @@ export const translations: Translations = {
     'extract.batch_process': 'Process All',
     'extract.ready_to_process': 'Ready to process',
     'extract.click_process_all': 'Click "Process All" to extract content from all files',
+
+    // Loading states
+    'loading.uploading': 'Uploading',
+    'loading.parsing': 'Parsing',
+    'loading.extracting': 'Extracting',
+    'loading.completing': 'Completing',
+    'loading.processing': 'Processing',
+    'loading.processing_batch': 'Processing',
+    'loading.files': 'files',
+    'loading.pages': 'pages',
+    'loading.page': 'page',
+    'loading.template_hint': 'Using AI template extraction',
+    'loading.general_hint': 'Parsing with LlamaParse',
 
     // Empty states
     'empty.no_history': 'No documents yet',
@@ -290,6 +303,25 @@ export const translations: Translations = {
     'common.upgrade': 'Upgrade Plan',
     'common.usage': 'Monthly Usage',
     'common.pages': 'page(s)',
+
+    // Review Actions
+    'review.edit': 'Edit',
+    'review.editing': 'Editing...',
+    'review.edit_enabled': 'Edit mode enabled',
+    'review.edit_disabled': 'Edit mode disabled',
+    'review.can_edit_now': 'You can now edit the extracted data',
+    'review.changes_discarded': 'Changes discarded',
+    'review.reject': 'Reject',
+    'review.approve': 'Approve',
+    'review.status.pending': 'Pending Review',
+    'review.status.edited': 'Edited',
+    'review.status.rejected': 'Rejected',
+    'review.status.approved': 'Approved',
+    'review.confirm_reject': 'Are you sure you want to reject this extraction?',
+    'review.confirm_approve': 'Are you sure you want to approve this extraction?',
+    'review.success_approved': 'Extraction approved successfully',
+    'review.success_rejected': 'Extraction rejected',
+    'review.success_saved': 'Changes saved successfully',
 
     // Footer
     'footer.description': 'Secure document extraction for Thai businesses. Extract structured data in seconds.',
@@ -507,9 +539,9 @@ export const translations: Translations = {
 
     // Extraction
     'extract.upload_title': 'วางเอกสารของคุณที่นี่',
-    'extract.upload_desc': 'เอกสาร, รูปภาพ, สเปรดชีต, เสียง - เราแยกวิเคราะห์ได้ทั้งหมด',
-    'extract.upload_formats': 'PDF, DOCX, PPTX, XLSX, CSV, JPG, PNG, GIF, MP3, WAV และอื่นๆ',
-    'extract.upload_size_limit': 'ไฟล์ส่วนใหญ่สูงสุด 10MB, ไฟล์เสียงสูงสุด 20MB',
+    'extract.upload_desc': 'เอกสาร PDF และรูปภาพ (PNG, JPG)',
+    'extract.upload_formats': 'PDF, PNG, JPG, JPEG',
+    'extract.upload_size_limit': 'ไฟล์สูงสุด 10MB ต่อไฟล์',
     'extract.processing': 'กำลังดึงข้อมูล...',
     'extract.processing_sub': 'ปกติใช้เวลาไม่กี่วินาที',
     'extract.results': 'นี่คือข้อมูลที่เราพบ',
@@ -533,6 +565,19 @@ export const translations: Translations = {
     'extract.batch_process': 'ประมวลผลทั้งหมด',
     'extract.ready_to_process': 'พร้อมประมวลผล',
     'extract.click_process_all': 'คลิก "ประมวลผลทั้งหมด" เพื่อดึงข้อมูลจากทุกไฟล์',
+
+    // Loading states
+    'loading.uploading': 'กำลังอัปโหลด',
+    'loading.parsing': 'กำลังวิเคราะห์',
+    'loading.extracting': 'กำลังดึงข้อมูล',
+    'loading.completing': 'กำลังเสร็จสิ้น',
+    'loading.processing': 'กำลังประมวลผล',
+    'loading.processing_batch': 'กำลังประมวลผล',
+    'loading.files': 'ไฟล์',
+    'loading.pages': 'หน้า',
+    'loading.page': 'หน้า',
+    'loading.template_hint': 'ใช้ AI Template Extraction',
+    'loading.general_hint': 'กำลังวิเคราะห์ด้วย LlamaParse',
 
     // Empty states
     'empty.no_history': 'ยังไม่มีเอกสาร',
@@ -582,6 +627,25 @@ export const translations: Translations = {
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
     'common.pages': 'หน้า',
+
+    // Review Actions
+    'review.edit': 'แก้ไข',
+    'review.editing': 'กำลังแก้ไข...',
+    'review.edit_enabled': 'เปิดโหมดแก้ไข',
+    'review.edit_disabled': 'ปิดโหมดแก้ไข',
+    'review.can_edit_now': 'คุณสามารถแก้ไขข้อมูลที่ดึงออกมาได้แล้ว',
+    'review.changes_discarded': 'ยกเลิกการเปลี่ยนแปลง',
+    'review.reject': 'ปฏิเสธ',
+    'review.approve': 'อนุมัติ',
+    'review.status.pending': 'รอตรวจสอบ',
+    'review.status.edited': 'แก้ไขแล้ว',
+    'review.status.rejected': 'ปฏิเสธแล้ว',
+    'review.status.approved': 'อนุมัติแล้ว',
+    'review.confirm_reject': 'คุณแน่ใจหรือไม่ว่าต้องการปฏิเสธการดึงข้อมูลนี้?',
+    'review.confirm_approve': 'คุณแน่ใจหรือไม่ว่าต้องการอนุมัติการดึงข้อมูลนี้?',
+    'review.success_approved': 'อนุมัติเรียบร้อยแล้ว',
+    'review.success_rejected': 'ปฏิเสธเรียบร้อยแล้ว',
+    'review.success_saved': 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
 
     // Footer
     'footer.description': 'การดึงข้อมูลเอกสารที่ปลอดภัยสำหรับธุรกิจไทย ดึงข้อมูลที่มีโครงสร้างได้ในไม่กี่วินาที',

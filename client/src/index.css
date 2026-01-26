@@ -52,9 +52,9 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  /* Luxury Enterprise Typography */
-  --font-display: 'DM Serif Display', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, sans-serif;
+  /* Modern Typography - Inter */
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
   --radius: 0.625rem;
 }
 
@@ -198,15 +198,15 @@
     line-height: 1.8;
   }
 
-  /* Display headings use serif font */
+  /* Display headings */
   h1, h2, h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     letter-spacing: -0.02em;
-    line-height: 1.1;
-    font-weight: 400;
+    line-height: 1.2;
+    font-weight: 600;
   }
 
-  /* Smaller headings use sans-serif */
+  /* Smaller headings */
   h4, h5, h6 {
     font-family: var(--font-sans);
     letter-spacing: -0.01em;

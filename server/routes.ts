@@ -1,7 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
-import { storage } from "./storage";
+import path from "path";
+import { storage, logAudit } from "./storage";
 import { insertExtractionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated, ensureUsageReset } from "./replitAuth";
@@ -20,32 +21,44 @@ import {
 import type { DocumentType } from "./extractionSchemas";
 import { randomUUID } from "crypto";
 
+// Helper to get IP address from request
+function getClientIp(req: Request): string {
+  return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+    || req.socket.remoteAddress 
+    || 'unknown';
+}
+
+// File upload security configuration
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+];
+const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
+
 // Configure multer for memory storage (files stored in buffer)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
+    fileSize: MAX_FILE_SIZE,
   },
   fileFilter: (_req, file, cb) => {
-    // Accept common document formats
-    const allowedMimes = [
-      "application/pdf",
-      "image/png",
-      "image/jpeg",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/vnd.ms-powerpoint",
-      "text/plain",
-      "text/html",
-    ];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    // Check MIME type
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(new Error(`ประเภทไฟล์ไม่รองรับ: ${file.mimetype} (รองรับเฉพาะ PDF และรูปภาพ)`));
+      return;
     }
+    
+    // Check file extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      cb(new Error(`นามสกุลไฟล์ไม่รองรับ: ${ext} (รองรับเฉพาะ .pdf, .png, .jpg, .jpeg)`));
+      return;
+    }
+    
+    cb(null, true);
   },
 });
 
@@ -100,6 +113,14 @@ async function uploadDocumentAndCreateRecord(
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
+
+  // Security: Add Cache-Control headers to prevent caching of sensitive API responses
+  app.use('/api', (req: Request, res: Response, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
 
   // Mock login endpoint for development
   app.post('/api/auth/mock-login', async (req: any, res: Response) => {
@@ -298,6 +319,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extraction = await storage.createExtraction(validatedData);
       await storage.updateUserUsage(userId, validatedData.pagesProcessed);
 
+      // Log extraction creation
+      await logAudit('extraction_create', {
+        userId,
+        resourceType: 'extraction',
+        resourceId: extraction.id,
+        details: {
+          fileName: validatedData.fileName,
+          documentType: validatedData.documentType,
+          pagesProcessed: validatedData.pagesProcessed,
+        },
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
       res.json({ extraction });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -335,6 +370,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ extraction });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update extraction review status (approve/reject)
+  app.patch("/api/extractions/:id/review", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const { reviewStatus } = req.body;
+
+    try {
+      // Validate review status
+      const validStatuses = ['pending', 'edited', 'rejected', 'approved'];
+      if (!reviewStatus || !validStatuses.includes(reviewStatus)) {
+        return res.status(400).json({ 
+          message: `Invalid review status. Must be one of: ${validStatuses.join(', ')}` 
+        });
+      }
+
+      const extraction = await storage.getExtraction(req.params.id);
+      
+      if (!extraction) {
+        return res.status(404).json({ message: "Extraction not found" });
+      }
+
+      if (extraction.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.updateExtractionReviewStatus(req.params.id, reviewStatus, userId);
+
+      // Log review action
+      const actionType = reviewStatus === 'approved' ? 'review_approve' : 
+                         reviewStatus === 'rejected' ? 'review_reject' : 'review_edit';
+      await logAudit(actionType as any, {
+        userId,
+        resourceType: 'extraction',
+        resourceId: req.params.id,
+        details: {
+          previousStatus: extraction.reviewStatus,
+          newStatus: reviewStatus,
+          fileName: extraction.fileName,
+        },
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
+      res.json({ extraction: updated });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update extraction data (edit mode)
+  app.patch("/api/extractions/:id/data", isAuthenticated, async (req: any, res: Response) => {
+    const userId = req.user?.claims?.sub;
+    const { extractedData } = req.body;
+
+    try {
+      if (!extractedData) {
+        return res.status(400).json({ message: "extractedData is required" });
+      }
+
+      const extraction = await storage.getExtraction(req.params.id);
+      
+      if (!extraction) {
+        return res.status(404).json({ message: "Extraction not found" });
+      }
+
+      if (extraction.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updated = await storage.updateExtractionData(req.params.id, extractedData, userId);
+
+      // Log data edit
+      await logAudit('extraction_edit', {
+        userId,
+        resourceType: 'extraction',
+        resourceId: req.params.id,
+        details: {
+          fileName: extraction.fileName,
+          edited: true,
+        },
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
+      res.json({ extraction: updated });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -487,6 +611,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Template Extraction] Skipping resume save`);
         }
 
+        // Save extraction to database
+        let extractionId: string | undefined;
+        try {
+          const extraction = await storage.createExtraction({
+            userId,
+            documentId: documentId || null,
+            fileName: originalname,
+            fileSize: size,
+            documentType,
+            pagesProcessed: extractionResult.pagesProcessed,
+            extractedData: extractionResult.extractedData,
+            status: 'completed',
+          });
+          extractionId = extraction.id;
+          console.log(`[Template Extraction] Saved extraction with ID: ${extractionId}`);
+        } catch (saveError: any) {
+          console.error("[Template Extraction] Warning: Failed to save extraction:", saveError);
+          // Continue - extraction data is still returned
+        }
+
         // Return the extraction result
         const responsePayload = {
           success: extractionResult.success,
@@ -500,6 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mimeType: mimetype,
           documentId, // Include documentId so frontend can link it
           resumeId, // Include resumeId if resume was saved
+          extractionId, // Include extractionId for review workflow
         };
         console.log(`[Template Extraction] Sending response with ${extractionResult.headerFields.length} header fields, ${Object.keys(extractionResult.confidenceScores || {}).length} confidence scores`);
         res.json(responsePayload);
@@ -579,6 +724,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update user's monthly usage after successful parsing
         await storage.updateUserUsage(userId, parsedDocument.pageCount);
 
+        // Save extraction to database
+        let extractionId: string | undefined;
+        try {
+          const extraction = await storage.createExtraction({
+            userId,
+            documentId: documentId || null,
+            fileName: originalname,
+            fileSize: size,
+            documentType: 'general',
+            pagesProcessed: parsedDocument.pageCount,
+            extractedData: {
+              markdown: parsedDocument.markdown,
+              text: parsedDocument.text,
+              pages: parsedDocument.pages,
+              overallConfidence: parsedDocument.overallConfidence,
+              confidenceStats: parsedDocument.confidenceStats,
+            },
+            status: 'completed',
+          });
+          extractionId = extraction.id;
+          console.log(`[General Extraction] Saved extraction with ID: ${extractionId}`);
+        } catch (saveError: any) {
+          console.error("[General Extraction] Warning: Failed to save extraction:", saveError);
+          // Continue - extraction data is still returned
+        }
+
         // Return the parsed document
         res.json({
           success: true,
@@ -592,6 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           overallConfidence: parsedDocument.overallConfidence,
           confidenceStats: parsedDocument.confidenceStats,
           documentId, // Include documentId so frontend can link it
+          extractionId, // Include extractionId for review workflow
         });
       } catch (error: any) {
         console.error("[General Extraction] Error:", error);
