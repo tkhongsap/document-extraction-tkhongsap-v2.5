@@ -86,7 +86,7 @@ export function UseCasesCarousel({
           transition={{ duration: 0.5 }}
           className="max-w-2xl mx-auto text-center mb-16"
         >
-          <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+          <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
             {t('usecases.eyebrow')}
           </span>
           <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display text-foreground mt-3 mb-4">
@@ -110,12 +110,12 @@ export function UseCasesCarousel({
                 className="relative z-10"
               >
                 {/* Icon */}
-                <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/30 mb-6">
-                  <Icon className="h-8 w-8 text-[hsl(var(--gold))]" />
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/30 mb-6">
+                  <Icon className="h-8 w-8 text-[hsl(var(--brand))]" />
                 </div>
 
                 {/* Industry Label */}
-                <span className="block text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider mb-2">
+                <span className="block text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider mb-2">
                   {t(useCase.industryKey)}
                 </span>
 
@@ -150,7 +150,7 @@ export function UseCasesCarousel({
               variant="ghost"
               size="icon"
               onClick={prev}
-              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--gold))]/10 hover:border-[hsl(var(--gold))]/30"
+              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--brand))]/10 hover:border-[hsl(var(--brand))]/30"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -164,7 +164,7 @@ export function UseCasesCarousel({
                   className={cn(
                     'h-2 rounded-full transition-all duration-300',
                     i === current
-                      ? 'bg-[hsl(var(--gold))] w-8'
+                      ? 'bg-[hsl(var(--brand))] w-8'
                       : 'bg-muted-foreground/20 hover:bg-muted-foreground/40 w-2'
                   )}
                 />
@@ -175,7 +175,7 @@ export function UseCasesCarousel({
               variant="ghost"
               size="icon"
               onClick={next}
-              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--gold))]/10 hover:border-[hsl(var(--gold))]/30"
+              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--brand))]/10 hover:border-[hsl(var(--brand))]/30"
             >
               <ChevronRight className="h-5 w-5" />
             </Button>

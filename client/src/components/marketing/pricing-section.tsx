@@ -116,7 +116,7 @@ export function PricingSection({ className }: PricingSectionProps) {
                 </span>
               </div>
 
-              {/* Gray top accent */}
+              {/* Brand top accent */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300" />
 
               <div className="mb-8">

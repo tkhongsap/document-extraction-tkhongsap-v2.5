@@ -86,7 +86,7 @@ export function ComparisonSection({ className }: ComparisonSectionProps) {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <div className="text-center mb-8">
-                <span className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold))] mb-4">
+                <span className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-[hsl(var(--brand))]/10 text-[hsl(var(--brand))] mb-4">
                   <Check className="h-6 w-6" />
                 </span>
                 <h3 className="text-xl font-semibold text-foreground">
@@ -101,9 +101,9 @@ export function ComparisonSection({ className }: ComparisonSectionProps) {
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.3, delay: 0.2 + i * 0.1 }}
-                    className="flex items-start gap-3 p-4 rounded-xl bg-[hsl(var(--gold))]/5 border border-[hsl(var(--gold))]/20"
+                    className="flex items-start gap-3 p-4 rounded-xl bg-[hsl(var(--brand))]/5 border border-[hsl(var(--brand))]/20"
                   >
-                    <Check className="h-5 w-5 text-[hsl(var(--gold))] shrink-0 mt-0.5" />
+                    <Check className="h-5 w-5 text-[hsl(var(--brand))] shrink-0 mt-0.5" />
                     <span className="text-foreground font-medium">{item}</span>
                   </motion.div>
                 ))}

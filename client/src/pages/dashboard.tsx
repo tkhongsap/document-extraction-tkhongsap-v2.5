@@ -83,7 +83,7 @@ export default function Dashboard() {
             <motion.div key={template.id} variants={staggerItem}>
               <Link href={`/extraction/${template.id}`}>
                 <motion.div {...cardHover}>
-                  <Card className="hover:border-[hsl(var(--gold))]/40 hover:shadow-[0_0_20px_-5px_hsl(var(--gold)/0.15)] transition-all duration-300 cursor-pointer group">
+                  <Card className="hover:border-[hsl(var(--brand))]/30 hover:shadow-[0_0_20px_-5px_hsl(var(--brand)/0.12)] transition-all duration-300 cursor-pointer group">
                     <CardContent className="p-6 flex items-center gap-5">
                       <div
                         className={cn(
@@ -95,10 +95,10 @@ export default function Dashboard() {
                         <template.icon className="h-8 w-8" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base mb-1 group-hover:text-[hsl(var(--gold))] transition-colors">{template.name}</h3>
+                        <h3 className="font-semibold text-base mb-1 group-hover:text-[hsl(var(--brand))] transition-colors">{template.name}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-2">{template.desc}</p>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-[hsl(var(--gold))] group-hover:translate-x-1 transition-all flex-shrink-0" />
+                      <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-[hsl(var(--brand))] group-hover:translate-x-1 transition-all flex-shrink-0" />
                     </CardContent>
                   </Card>
                 </motion.div>

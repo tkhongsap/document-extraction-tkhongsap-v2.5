@@ -38,7 +38,7 @@ export function SecuritySection({ className }: SecuritySectionProps) {
   return (
     <section className={cn('py-24 lg:py-32 bg-section-dark relative overflow-hidden', className)}>
       {/* Background effects */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[hsl(var(--gold))]/5 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[hsl(var(--brand))]/5 rounded-full blur-3xl" />
 
       <div className="container relative mx-auto px-6">
         {/* Section Header */}
@@ -55,9 +55,9 @@ export function SecuritySection({ className }: SecuritySectionProps) {
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 mb-6 glow-gold"
+            className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/20 mb-6 glow-brand"
           >
-            <Shield className="h-10 w-10 text-[hsl(var(--gold))]" />
+            <Shield className="h-10 w-10 text-[hsl(var(--brand))]" />
           </motion.div>
 
           <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display text-white mb-4">
@@ -105,7 +105,7 @@ export function SecuritySection({ className }: SecuritySectionProps) {
               key={i}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white/5 border border-white/10 text-white/80"
             >
-              <badge.icon className="h-4 w-4 text-[hsl(var(--gold))]" />
+              <badge.icon className="h-4 w-4 text-[hsl(var(--brand))]" />
               <span className="text-sm font-medium">{badge.label}</span>
             </div>
           ))}

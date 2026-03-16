@@ -58,8 +58,8 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
       <div className="noise-overlay absolute inset-0" />
 
       {/* Gradient orbs for visual interest */}
-      <div className="absolute top-20 left-1/4 w-96 h-96 bg-[hsl(var(--gold))]/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-[hsl(192_70%_30%)]/20 rounded-full blur-3xl" />
+      <div className="absolute top-20 left-1/4 w-96 h-96 bg-[hsl(var(--brand))]/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-[hsl(224 60% 25%)]/20 rounded-full blur-3xl" />
 
       <div className="container relative mx-auto px-6 py-20 lg:py-28">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
@@ -72,7 +72,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
           >
             {/* Accuracy Badge */}
             <motion.div variants={itemVariants}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/30 text-[hsl(var(--gold))]">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/30 text-[hsl(var(--brand))]">
                 <Sparkles className="h-4 w-4" />
                 <span className="text-sm font-medium">{t('hero.accuracy_badge')}</span>
               </div>
@@ -102,7 +102,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
               <Button
                 size="lg"
                 onClick={handleLogin}
-                className="bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] h-12 px-8 text-base font-semibold shadow-lg shadow-[hsl(var(--gold))]/20"
+                className="bg-[hsl(var(--brand))] hover:bg-[hsl(var(--brand-hover))] text-white h-12 px-8 text-base font-semibold shadow-lg shadow-[hsl(var(--brand))]/20"
               >
                 {t('nav.signin')}
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -135,7 +135,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
           <div className="lg:col-span-6 xl:col-span-5 relative">
             <div className="relative h-[400px] lg:h-[500px]">
               {/* Background glow */}
-              <div className="absolute inset-0 bg-[hsl(var(--gold))]/5 rounded-3xl blur-2xl" />
+              <div className="absolute inset-0 bg-[hsl(var(--brand))]/5 rounded-3xl blur-2xl" />
 
               {/* Card 1: Document */}
               <motion.div
@@ -175,13 +175,13 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
                     animate={{ rotate: 360 }}
                     transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Sparkles className="h-6 w-6 text-[hsl(var(--gold))]" />
+                    <Sparkles className="h-6 w-6 text-[hsl(var(--brand))]" />
                   </motion.div>
                   <span className="font-semibold text-sm">AI Extracting...</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-[hsl(var(--gold))] to-[hsl(var(--primary))]"
+                    className="h-full bg-gradient-to-r from-[hsl(var(--brand))] to-[hsl(var(--primary))]"
                     initial={{ width: '0%' }}
                     animate={{ width: '75%' }}
                     transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
@@ -195,13 +195,13 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
-                className="absolute bottom-0 right-0 w-72 glass rounded-2xl p-5 shadow-2xl border-[hsl(var(--gold))]/20"
+                className="absolute bottom-0 right-0 w-72 glass rounded-2xl p-5 shadow-2xl border-[hsl(var(--brand))]/20"
               >
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Extracted Data
                   </span>
-                  <div className="flex items-center gap-1 text-[hsl(var(--gold))]">
+                  <div className="flex items-center gap-1 text-[hsl(var(--brand))]">
                     <Sparkles className="h-3 w-3" />
                     <span className="text-xs font-semibold">99.2%</span>
                   </div>
@@ -230,7 +230,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
                   cx="160"
                   cy="180"
                   r="4"
-                  fill="hsl(var(--gold))"
+                  fill="hsl(var(--brand))"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 1, 0] }}
                   transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
@@ -239,7 +239,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
                   cx="220"
                   cy="240"
                   r="3"
-                  fill="hsl(var(--gold))"
+                  fill="hsl(var(--brand))"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 1, 0] }}
                   transition={{ duration: 2, repeat: Infinity, delay: 1 }}
@@ -248,7 +248,7 @@ export function HeroEnterprise({ className }: HeroEnterpriseProps) {
                   cx="280"
                   cy="300"
                   r="4"
-                  fill="hsl(var(--gold))"
+                  fill="hsl(var(--brand))"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 1, 0] }}
                   transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}

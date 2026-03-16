@@ -96,8 +96,8 @@ export function DemoInteractive({ className }: DemoInteractiveProps) {
   return (
     <section className={cn('py-24 lg:py-32 bg-section-dark relative overflow-hidden', className)}>
       {/* Background effects */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[hsl(var(--gold))]/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[hsl(192_70%_30%)]/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[hsl(var(--brand))]/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[hsl(224 60% 25%)]/10 rounded-full blur-3xl" />
 
       <div className="container relative mx-auto px-6">
         {/* Section Header */}
@@ -139,7 +139,7 @@ export function DemoInteractive({ className }: DemoInteractiveProps) {
                     'inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium',
                     'transition-all duration-300 disabled:opacity-50',
                     isActive
-                      ? 'bg-[hsl(var(--gold))] text-[hsl(192_85%_12%)] shadow-lg shadow-[hsl(var(--gold))]/20'
+                      ? 'bg-[hsl(var(--brand))] text-white shadow-lg shadow-[hsl(var(--brand))]/20'
                       : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white border border-white/10'
                   )}
                 >
@@ -177,18 +177,18 @@ export function DemoInteractive({ className }: DemoInteractiveProps) {
                     'flex flex-col items-center justify-center gap-4',
                     'transition-all duration-300',
                     isDragOver
-                      ? 'border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/10 scale-[1.02]'
-                      : 'border-white/20 hover:border-[hsl(var(--gold))]/50 hover:bg-white/5'
+                      ? 'border-[hsl(var(--brand))] bg-[hsl(var(--brand))]/10 scale-[1.02]'
+                      : 'border-white/20 hover:border-[hsl(var(--brand))]/50 hover:bg-white/5'
                   )}
                 >
                   <div className={cn(
                     'h-16 w-16 rounded-2xl flex items-center justify-center',
                     'transition-colors duration-300',
-                    isDragOver ? 'bg-[hsl(var(--gold))]/20' : 'bg-white/10'
+                    isDragOver ? 'bg-[hsl(var(--brand))]/20' : 'bg-white/10'
                   )}>
                     <Upload className={cn(
                       'h-8 w-8 transition-colors',
-                      isDragOver ? 'text-[hsl(var(--gold))]' : 'text-white/60'
+                      isDragOver ? 'text-[hsl(var(--brand))]' : 'text-white/60'
                     )} />
                   </div>
                   <div className="text-center">
@@ -209,8 +209,8 @@ export function DemoInteractive({ className }: DemoInteractiveProps) {
                   className="h-64 rounded-2xl bg-white/5 flex flex-col items-center justify-center gap-4"
                 >
                   <div className="relative">
-                    <Loader2 className="h-12 w-12 text-[hsl(var(--gold))] animate-spin" />
-                    <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-[hsl(var(--gold))] animate-pulse" />
+                    <Loader2 className="h-12 w-12 text-[hsl(var(--brand))] animate-spin" />
+                    <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-[hsl(var(--brand))] animate-pulse" />
                   </div>
                   <div className="text-center">
                     <p className="text-white font-medium mb-1">{t('demo.processing_title')}</p>
@@ -231,17 +231,17 @@ export function DemoInteractive({ className }: DemoInteractiveProps) {
                   {/* Results Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-[hsl(var(--gold))]/20 flex items-center justify-center">
-                        <activeTemplate.icon className="h-5 w-5 text-[hsl(var(--gold))]" />
+                      <div className="h-10 w-10 rounded-xl bg-[hsl(var(--brand))]/20 flex items-center justify-center">
+                        <activeTemplate.icon className="h-5 w-5 text-[hsl(var(--brand))]" />
                       </div>
                       <div>
                         <p className="text-white font-medium">{t(activeTemplate.nameKey)}</p>
                         <p className="text-white/40 text-sm">{t('demo.extraction_complete')}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/30">
-                      <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" />
-                      <span className="text-sm font-semibold text-[hsl(var(--gold))]">99.2% {t('demo.accuracy')}</span>
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/30">
+                      <Sparkles className="h-4 w-4 text-[hsl(var(--brand))]" />
+                      <span className="text-sm font-semibold text-[hsl(var(--brand))]">99.2% {t('demo.accuracy')}</span>
                     </div>
                   </div>
 

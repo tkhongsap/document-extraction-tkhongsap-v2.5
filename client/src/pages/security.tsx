@@ -47,7 +47,7 @@ export default function Security() {
             transition={{ duration: 0.5 }}
             className="max-w-3xl mx-auto text-center"
           >
-            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
               {t('security.eyebrow')}
             </span>
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-display text-foreground mt-3 mb-6">
@@ -63,7 +63,7 @@ export default function Security() {
       {/* Security Features Grid */}
       <section className="py-16 lg:py-24 bg-section-dark relative overflow-hidden">
         {/* Background effects */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[hsl(var(--gold))]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[hsl(var(--brand))]/5 rounded-full blur-3xl" />
 
         <div className="container relative mx-auto px-6">
           {/* Shield Icon */}
@@ -74,8 +74,8 @@ export default function Security() {
             transition={{ duration: 0.5 }}
             className="flex justify-center mb-12"
           >
-            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 glow-gold">
-              <Shield className="h-10 w-10 text-[hsl(var(--gold))]" />
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/20 glow-brand">
+              <Shield className="h-10 w-10 text-[hsl(var(--brand))]" />
             </div>
           </motion.div>
 
@@ -115,7 +115,7 @@ export default function Security() {
             transition={{ duration: 0.5 }}
             className="max-w-2xl mx-auto text-center mb-12"
           >
-            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
               {t('security.certifications_eyebrow')}
             </span>
             <h2 className="text-3xl lg:text-4xl font-display text-foreground mt-3 mb-4">
@@ -141,10 +141,10 @@ export default function Security() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="flex items-center gap-3 px-6 py-4 bg-white rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-[hsl(var(--gold))]/30 transition-all"
+                className="flex items-center gap-3 px-6 py-4 bg-white rounded-xl border border-border/50 shadow-sm hover:shadow-md hover:border-[hsl(var(--brand))]/30 transition-all"
               >
-                <div className="h-10 w-10 rounded-lg bg-[hsl(var(--gold))]/10 flex items-center justify-center">
-                  <cert.icon className="h-5 w-5 text-[hsl(var(--gold))]" />
+                <div className="h-10 w-10 rounded-lg bg-[hsl(var(--brand))]/10 flex items-center justify-center">
+                  <cert.icon className="h-5 w-5 text-[hsl(var(--brand))]" />
                 </div>
                 <span className="font-semibold text-foreground">{t(cert.labelKey)}</span>
               </motion.div>
@@ -156,10 +156,10 @@ export default function Security() {
       {/* CTA Section */}
       <section className="py-24 lg:py-32 bg-section-dark relative overflow-hidden">
         {/* Gold accent line at top */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[hsl(var(--brand))] to-transparent" />
 
         {/* Background effects */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[hsl(var(--gold))]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[hsl(var(--brand))]/5 rounded-full blur-3xl" />
 
         <div className="container relative mx-auto px-6">
           <motion.div
@@ -175,9 +175,9 @@ export default function Security() {
               whileInView={{ scale: 1, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 mb-8"
+              className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/20 mb-8"
             >
-              <Sparkles className="h-7 w-7 text-[hsl(var(--gold))]" />
+              <Sparkles className="h-7 w-7 text-[hsl(var(--brand))]" />
             </motion.div>
 
             <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display text-white mb-6">
@@ -197,7 +197,7 @@ export default function Security() {
               <Button
                 size="lg"
                 onClick={handleLogin}
-                className="h-14 px-10 text-lg bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] font-semibold shadow-xl shadow-[hsl(var(--gold))]/30 animate-pulse-glow"
+                className="h-14 px-10 text-lg bg-[hsl(var(--brand))] hover:bg-[hsl(var(--brand-hover))] text-white font-semibold shadow-xl shadow-[hsl(var(--brand))]/30 animate-pulse-glow"
               >
                 {t('security.cta_primary')}
                 <ArrowRight className="ml-2 h-5 w-5" />

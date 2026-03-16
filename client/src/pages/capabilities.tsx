@@ -25,7 +25,7 @@ export default function Capabilities() {
             transition={{ duration: 0.5 }}
             className="max-w-3xl mx-auto text-center"
           >
-            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
               {t('capabilities.eyebrow')}
             </span>
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-display text-foreground mt-3 mb-6">
@@ -43,7 +43,7 @@ export default function Capabilities() {
               <Button
                 size="lg"
                 onClick={handleLogin}
-                className="h-12 px-8 bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] font-semibold shadow-lg shadow-[hsl(var(--gold))]/20"
+                className="h-12 px-8 bg-[hsl(var(--brand))] hover:bg-[hsl(var(--brand-hover))] text-white font-semibold shadow-lg shadow-[hsl(var(--brand))]/20"
               >
                 {t('capabilities.cta_primary')}
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -52,7 +52,7 @@ export default function Capabilities() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 px-8 border-border hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10"
+                  className="h-12 px-8 border-border hover:border-[hsl(var(--brand))] hover:bg-[hsl(var(--brand))]/10"
                 >
                   {t('capabilities.cta_secondary')}
                 </Button>

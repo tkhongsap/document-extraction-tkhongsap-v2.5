@@ -67,7 +67,7 @@ export function TestimonialCarousel({
           <div className="relative bg-white rounded-3xl shadow-xl border border-border/50 p-8 lg:p-12">
             {/* Large Quote Mark */}
             <div className="absolute top-8 left-8 lg:top-12 lg:left-12">
-              <Quote className="h-12 w-12 text-[hsl(var(--gold))]/20" />
+              <Quote className="h-12 w-12 text-[hsl(var(--brand))]/20" />
             </div>
 
             <AnimatePresence mode="wait">
@@ -87,7 +87,7 @@ export function TestimonialCarousel({
                 {/* Author Info */}
                 <div className="flex flex-col sm:flex-row items-center gap-4 pl-8">
                   {/* Avatar */}
-                  <div className="h-14 w-14 rounded-full bg-[hsl(var(--gold))]/10 flex items-center justify-center text-[hsl(var(--gold))] font-semibold text-lg border-2 border-[hsl(var(--gold))]/20">
+                  <div className="h-14 w-14 rounded-full bg-[hsl(var(--brand))]/10 flex items-center justify-center text-[hsl(var(--brand))] font-semibold text-lg border-2 border-[hsl(var(--brand))]/20">
                     {testimonial.avatar ? (
                       <img
                         src={testimonial.avatar}
@@ -114,7 +114,7 @@ export function TestimonialCarousel({
                             className={cn(
                               'h-4 w-4',
                               i < testimonial.rating!
-                                ? 'fill-[hsl(var(--gold))] text-[hsl(var(--gold))]'
+                                ? 'fill-[hsl(var(--brand))] text-[hsl(var(--brand))]'
                                 : 'fill-muted text-muted'
                             )}
                           />
@@ -133,7 +133,7 @@ export function TestimonialCarousel({
               variant="ghost"
               size="icon"
               onClick={prev}
-              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--gold))]/10 hover:border-[hsl(var(--gold))]/30"
+              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--brand))]/10 hover:border-[hsl(var(--brand))]/30"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -147,7 +147,7 @@ export function TestimonialCarousel({
                   className={cn(
                     'h-2 rounded-full transition-all duration-300',
                     i === current
-                      ? 'bg-[hsl(var(--gold))] w-8'
+                      ? 'bg-[hsl(var(--brand))] w-8'
                       : 'bg-muted-foreground/20 hover:bg-muted-foreground/40 w-2'
                   )}
                 />
@@ -158,7 +158,7 @@ export function TestimonialCarousel({
               variant="ghost"
               size="icon"
               onClick={next}
-              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--gold))]/10 hover:border-[hsl(var(--gold))]/30"
+              className="h-10 w-10 rounded-full border border-border hover:bg-[hsl(var(--brand))]/10 hover:border-[hsl(var(--brand))]/30"
             >
               <ChevronRight className="h-5 w-5" />
             </Button>

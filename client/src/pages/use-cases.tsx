@@ -70,7 +70,7 @@ export default function UseCases() {
             transition={{ duration: 0.5 }}
             className="max-w-3xl mx-auto text-center"
           >
-            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
               {t('usecases.eyebrow')}
             </span>
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-display text-foreground mt-3 mb-6">
@@ -108,7 +108,7 @@ export default function UseCases() {
             transition={{ duration: 0.5 }}
             className="max-w-2xl mx-auto text-center mb-12"
           >
-            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
               {t('usecases.features_eyebrow')}
             </span>
             <h2 className="text-3xl lg:text-4xl font-display text-foreground mt-3 mb-4">
@@ -129,8 +129,8 @@ export default function UseCases() {
                 transition={{ duration: 0.4, delay: index * 0.08 }}
                 className="flex items-center gap-3 p-4 bg-white rounded-xl border border-border/50 shadow-sm"
               >
-                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-[hsl(var(--gold))]/10 flex items-center justify-center">
-                  <Check className="h-4 w-4 text-[hsl(var(--gold))]" />
+                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-[hsl(var(--brand))]/10 flex items-center justify-center">
+                  <Check className="h-4 w-4 text-[hsl(var(--brand))]" />
                 </div>
                 <span className="text-foreground font-medium">{t(featureKey)}</span>
               </motion.div>
@@ -142,10 +142,10 @@ export default function UseCases() {
       {/* CTA Section */}
       <section className="py-24 lg:py-32 bg-section-dark relative overflow-hidden">
         {/* Gold accent line at top */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[hsl(var(--brand))] to-transparent" />
 
         {/* Background effects */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[hsl(var(--gold))]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[hsl(var(--brand))]/5 rounded-full blur-3xl" />
 
         <div className="container relative mx-auto px-6">
           <motion.div
@@ -161,9 +161,9 @@ export default function UseCases() {
               whileInView={{ scale: 1, opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 mb-8"
+              className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/20 mb-8"
             >
-              <Sparkles className="h-7 w-7 text-[hsl(var(--gold))]" />
+              <Sparkles className="h-7 w-7 text-[hsl(var(--brand))]" />
             </motion.div>
 
             <h2 className="text-3xl lg:text-4xl xl:text-5xl font-display text-white mb-6">
@@ -183,7 +183,7 @@ export default function UseCases() {
               <Button
                 size="lg"
                 onClick={handleLogin}
-                className="h-14 px-10 text-lg bg-[hsl(var(--gold))] hover:bg-[hsl(var(--gold-dark))] text-[hsl(192_85%_12%)] font-semibold shadow-xl shadow-[hsl(var(--gold))]/30 animate-pulse-glow"
+                className="h-14 px-10 text-lg bg-[hsl(var(--brand))] hover:bg-[hsl(var(--brand-hover))] text-white font-semibold shadow-xl shadow-[hsl(var(--brand))]/30 animate-pulse-glow"
               >
                 {t('usecases.cta_primary')}
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -223,14 +223,14 @@ function UseCaseCard({ useCase, index }: UseCaseCardProps) {
       transition={{ duration: 0.5, delay: index * 0.1 }}
       className="group"
     >
-      <div className="h-full p-8 bg-white rounded-2xl border border-border/50 shadow-sm hover:shadow-xl hover:border-[hsl(var(--gold))]/30 transition-all duration-300 hover:-translate-y-1">
+      <div className="h-full p-8 bg-white rounded-2xl border border-border/50 shadow-sm hover:shadow-xl hover:border-[hsl(var(--brand))]/30 transition-all duration-300 hover:-translate-y-1">
         {/* Icon */}
-        <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/30 mb-6 group-hover:bg-[hsl(var(--gold))]/20 transition-colors">
-          <Icon className="h-7 w-7 text-[hsl(var(--gold))]" />
+        <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/30 mb-6 group-hover:bg-[hsl(var(--brand))]/20 transition-colors">
+          <Icon className="h-7 w-7 text-[hsl(var(--brand))]" />
         </div>
 
         {/* Industry Label */}
-        <span className="block text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider mb-2">
+        <span className="block text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider mb-2">
           {t(useCase.industryKey)}
         </span>
 

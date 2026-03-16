@@ -81,9 +81,9 @@ function LanguageSwitcher() {
             "border border-border/60 bg-background/80 backdrop-blur-sm",
             "text-sm font-medium text-foreground/80",
             "transition-all duration-300 ease-out",
-            "hover:border-[hsl(var(--gold))]/50 hover:bg-background",
-            "hover:shadow-[0_0_20px_-5px_hsl(var(--gold)/0.25)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/30 focus-visible:ring-offset-2",
+            "hover:border-[hsl(var(--brand))]/50 hover:bg-background",
+            "hover:shadow-[0_0_20px_-5px_hsl(var(--brand)/0.25)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand))]/30 focus-visible:ring-offset-2",
             "active:scale-[0.97]"
           )}
           aria-label="Select language"
@@ -92,7 +92,7 @@ function LanguageSwitcher() {
           <motion.span
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-muted-foreground group-hover:text-[hsl(var(--gold))] transition-colors"
+            className="text-muted-foreground group-hover:text-[hsl(var(--brand))] transition-colors"
           >
             <ChevronDown className="h-3.5 w-3.5" />
           </motion.span>
@@ -129,7 +129,7 @@ function LanguageSwitcher() {
                     className={cn(
                       "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5",
                       "text-sm transition-all duration-200",
-                      "hover:bg-[hsl(var(--gold))]/10",
+                      "hover:bg-[hsl(var(--brand))]/10",
                       isActive
                         ? "text-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground"
@@ -146,9 +146,9 @@ function LanguageSwitcher() {
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0, opacity: 0 }}
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--gold))]/15"
+                          className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--brand))]/15"
                         >
-                          <Check className="h-3 w-3 text-[hsl(var(--gold))]" />
+                          <Check className="h-3 w-3 text-[hsl(var(--brand))]" />
                         </motion.span>
                       )}
                     </AnimatePresence>
@@ -284,12 +284,12 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
   const { t } = useLanguage();
   
   return (
-    <footer className="relative border-t bg-gradient-to-b from-cream via-cream/95 to-cream/90 overflow-hidden">
-      {/* Decorative gold accent line at top */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/40 to-transparent" />
+    <footer className="relative border-t bg-gradient-to-b from-background via-background/95 to-background/90 overflow-hidden">
+      {/* Decorative brand accent line at top */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[hsl(var(--brand))]/40 to-transparent" />
       
       {/* Subtle background glow effect */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[hsl(var(--gold))]/3 rounded-full blur-3xl opacity-50" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[hsl(var(--brand))]/3 rounded-full blur-3xl opacity-50" />
       
       <div className="container relative px-6 mx-auto py-20 lg:py-24">
         <div className="grid md:grid-cols-3 gap-16 lg:gap-20 mb-16">
@@ -312,6 +312,7 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
                 <FileText className="h-5 w-5" />
               </div>
               <span className="font-display font-semibold text-xl tracking-tight text-foreground">DocExtract</span>
+              <span className="block text-xs text-muted-foreground/60 font-normal mt-0.5">by TCC Technology</span>
             </motion.div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               {t('footer.description')}
@@ -333,27 +334,27 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
               <li>
                 <Link 
                   href="/use-cases" 
-                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--gold))] transition-all duration-300 hover:translate-x-1"
+                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--brand))] transition-all duration-300 hover:translate-x-1"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--gold))]/0 group-hover:bg-[hsl(var(--gold))] mr-2 transition-all duration-300" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand))]/0 group-hover:bg-[hsl(var(--brand))] mr-2 transition-all duration-300" />
                   {t('nav.usecases')}
                 </Link>
               </li>
               <li>
                 <Link 
                   href="/security" 
-                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--gold))] transition-all duration-300 hover:translate-x-1"
+                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--brand))] transition-all duration-300 hover:translate-x-1"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--gold))]/0 group-hover:bg-[hsl(var(--gold))] mr-2 transition-all duration-300" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand))]/0 group-hover:bg-[hsl(var(--brand))] mr-2 transition-all duration-300" />
                   {t('nav.security')}
                 </Link>
               </li>
               <li>
                 <Link 
                   href="/pricing" 
-                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--gold))] transition-all duration-300 hover:translate-x-1"
+                  className="group inline-flex items-center text-sm text-muted-foreground hover:text-[hsl(var(--brand))] transition-all duration-300 hover:translate-x-1"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--gold))]/0 group-hover:bg-[hsl(var(--gold))] mr-2 transition-all duration-300" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--brand))]/0 group-hover:bg-[hsl(var(--brand))] mr-2 transition-all duration-300" />
                   {t('nav.pricing')}
                 </Link>
               </li>
@@ -386,8 +387,8 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
                   transition={{ duration: 0.4, delay: 0.2 + i * 0.05 }}
                   className="flex items-center gap-3 group"
                 >
-                  <div className="h-5 w-5 rounded-md bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 flex items-center justify-center group-hover:bg-[hsl(var(--gold))]/20 group-hover:border-[hsl(var(--gold))]/30 transition-all duration-300">
-                    <item.icon className="h-3 w-3 text-[hsl(var(--gold))]" />
+                  <div className="h-5 w-5 rounded-md bg-[hsl(var(--brand))]/10 border border-[hsl(var(--brand))]/20 flex items-center justify-center group-hover:bg-[hsl(var(--brand))]/20 group-hover:border-[hsl(var(--brand))]/30 transition-all duration-300">
+                    <item.icon className="h-3 w-3 text-[hsl(var(--brand))]" />
                   </div>
                   <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">
                     {t(item.key)}

@@ -80,7 +80,7 @@ export function StatCounter({ stats, className }: StatCounterProps) {
           <div
             className={cn(
               'text-4xl lg:text-5xl font-display mb-2',
-              stat.highlight ? 'text-[hsl(var(--gold))]' : 'text-foreground'
+              stat.highlight ? 'text-[hsl(var(--brand))]' : 'text-foreground'
             )}
           >
             <AnimatedNumber value={stat.value} suffix={stat.suffix} />

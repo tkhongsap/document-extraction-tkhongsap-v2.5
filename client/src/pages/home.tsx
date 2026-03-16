@@ -23,7 +23,7 @@ export default function Home() {
       <section className="py-16 lg:py-20 bg-cream">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider">
               {t('stats.eyebrow')}
             </span>
             <h2 className="text-3xl lg:text-4xl font-display text-foreground mt-3">

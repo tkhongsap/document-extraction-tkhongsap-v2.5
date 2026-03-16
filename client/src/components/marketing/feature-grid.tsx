@@ -47,7 +47,7 @@ export function FeatureGrid({ className, condensed = false }: FeatureGridProps) 
           transition={{ duration: 0.5 }}
           className={cn('mx-auto text-center', condensed ? 'max-w-xl mb-10' : 'max-w-2xl mb-16')}
         >
-          <span className="text-sm font-semibold text-[hsl(var(--gold))] uppercase tracking-wider mb-3 block">
+          <span className="text-sm font-semibold text-[hsl(var(--brand))] uppercase tracking-wider mb-3 block">
             {t('features.eyebrow')}
           </span>
           <h2 className={cn('font-display text-foreground mb-3', condensed ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl xl:text-5xl mb-4')}>
@@ -86,7 +86,7 @@ export function FeatureGrid({ className, condensed = false }: FeatureGridProps) 
             <Link href="/capabilities">
               <Button
                 variant="outline"
-                className="group h-12 px-6 border-[hsl(var(--gold))]/30 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 transition-all duration-300"
+                className="group h-12 px-6 border-[hsl(var(--brand))]/20 hover:border-[hsl(var(--brand))]/50 hover:bg-[hsl(var(--brand))]/5 transition-all duration-300"
               >
                 {t('capabilities.view_all')}
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -117,15 +117,15 @@ export function FeatureCard({ icon: Icon, title, description, index, condensed =
       className="group"
     >
       <div className={cn(
-        'h-full bg-white rounded-2xl border border-border/50 shadow-sm hover:shadow-xl hover:border-[hsl(var(--gold))]/30 transition-all duration-300 hover:-translate-y-1',
+        'h-full bg-white rounded-2xl border border-border/50 shadow-sm hover:shadow-xl hover:border-[hsl(var(--brand))]/25 transition-all duration-300 hover:-translate-y-1',
         condensed ? 'p-6' : 'p-8'
       )}>
         {/* Icon */}
         <div className={cn(
-          'rounded-2xl bg-[hsl(var(--gold))]/10 flex items-center justify-center mb-4 group-hover:bg-[hsl(var(--gold))]/20 transition-colors',
+          'rounded-2xl bg-[hsl(var(--brand))]/8 flex items-center justify-center mb-4 group-hover:bg-[hsl(var(--brand))]/12 transition-colors',
           condensed ? 'h-12 w-12' : 'h-14 w-14 mb-6'
         )}>
-          <Icon className={cn('text-[hsl(var(--gold))]', condensed ? 'h-6 w-6' : 'h-7 w-7')} />
+          <Icon className={cn('text-[hsl(var(--brand))]', condensed ? 'h-6 w-6' : 'h-7 w-7')} />
         </div>
 
         {/* Content */}

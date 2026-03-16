@@ -327,14 +327,14 @@ export const translations: Translations = {
     'review.success_saved': 'Changes saved successfully',
 
     // Footer
-    'footer.description': 'Secure document extraction for Thai businesses. Extract structured data in seconds.',
+    'footer.description': 'Enterprise document extraction by TCC Technology. Extract structured data from Thai & English documents in seconds.',
     'footer.product': 'Product',
     'footer.security': 'Security',
     'footer.security_encryption': 'Bank-grade Encryption',
     'footer.security_pdpa': 'PDPA Compliant',
     'footer.security_autodelete': 'Auto-delete in 24hrs',
     'footer.security_soc2': 'SOC 2 Type II',
-    'footer.copyright': '© 2025 DocExtract. All rights reserved.',
+    'footer.copyright': '© 2025 TCC Technology Co., Ltd. All rights reserved.',
   },
   th: {
     // Navigation
@@ -654,14 +654,14 @@ export const translations: Translations = {
     'review.success_saved': 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
 
     // Footer
-    'footer.description': 'การดึงข้อมูลเอกสารที่ปลอดภัยสำหรับธุรกิจไทย ดึงข้อมูลที่มีโครงสร้างได้ในไม่กี่วินาที',
+    'footer.description': 'การดึงข้อมูลเอกสารระดับองค์กรโดย TCC Technology ดึงข้อมูลจากเอกสารภาษาไทยและอังกฤษได้ในไม่กี่วินาที',
     'footer.product': 'ผลิตภัณฑ์',
     'footer.security': 'ความปลอดภัย',
     'footer.security_encryption': 'เข้ารหัสระดับธนาคาร',
     'footer.security_pdpa': 'รองรับ PDPA',
     'footer.security_autodelete': 'ลบอัตโนมัติภายใน 24 ชั่วโมง',
     'footer.security_soc2': 'SOC 2 Type II',
-    'footer.copyright': '© 2025 DocExtract สงวนลิขสิทธิ์ทุกประการ',
+    'footer.copyright': '© 2025 TCC Technology Co., Ltd. สงวนลิขสิทธิ์ทุกประการ',
   }
 };
 
