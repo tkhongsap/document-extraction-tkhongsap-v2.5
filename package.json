@@ -9,7 +9,7 @@
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:backend\"",
     "build": "npx tsx script/build.ts",
     "build:client": "npx vite build",
-    "start": "NODE_ENV=production node dist/index.cjs",
+    "start": "NODE_ENV=production PORT=5000 python backend/main.py",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",

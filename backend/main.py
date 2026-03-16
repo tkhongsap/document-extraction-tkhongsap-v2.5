@@ -6,10 +6,6 @@ import os
 import sys
 import io
 import asyncio
-import io
-import asyncio
-import io
-import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -27,11 +23,13 @@ from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 import uvicorn
 
-# Add parent directory to path for imports
+# Add backend directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.core.config import get_settings
-from app.core.database import init_db
+from app.core.database import init_db, async_session_maker
+from app.core.errors import ApiError
+from app.services.storage import StorageService
 from app.routes import (
     auth_router,
     documents_router,
@@ -40,44 +38,62 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
+    chunks_router,
+    api_keys_router,
+    public_extract_router,
     search_router,
 )
 from app.middlewares.usage_logging import UsageLoggingMiddleware
 
 
+async def cleanup_old_extractions_task():
+    """Background task to cleanup old extractions every 6 hours"""
+    # Wait 30s before first run to avoid interfering with startup
+    await asyncio.sleep(30)
+    while True:
+        try:
+            async with async_session_maker() as db:
+                storage = StorageService(db)
+                deleted_count = await storage.cleanup_old_extractions()
+                if deleted_count > 0:
+                    print(f"[Cleanup] Deleted {deleted_count} old extractions (older than 3 days)")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[Cleanup] Error: {e}")
+        await asyncio.sleep(6 * 60 * 60)  # Run every 6 hours
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
-    # Startup
     settings = get_settings()
     print(f"[FastAPI] Starting server in {settings.node_env} mode")
     print(f"[FastAPI] API key configured: {settings.llama_cloud_api_key[:10]}..." if settings.llama_cloud_api_key else "[FastAPI] WARNING: No API key configured")
-    
+
     # Initialize database tables
     print("[FastAPI] Initializing database...")
     await init_db()
     print("[FastAPI] Database initialized")
-    
-    # Start background cleanup task
+
+    # Background cleanup task (starts after 30s delay)
     cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
-    print("[FastAPI] Started extraction cleanup background task")
-    
-    # Start monthly usage reset scheduler
+    print("[FastAPI] Scheduled extraction cleanup background task (starts in 30s, runs every 6 hours)")
+
+    # Monthly usage reset scheduler
     from app.tasks.scheduler import get_scheduler
     scheduler = get_scheduler()
     scheduler.start()
     print("[FastAPI] Started monthly usage reset scheduler")
-    
+
     yield
-    
+
     # Shutdown
     cleanup_task.cancel()
     try:
         await cleanup_task
     except asyncio.CancelledError:
         pass
-    
-    # Shutdown scheduler
     scheduler.shutdown()
     print("[FastAPI] Shutting down...")
 
@@ -106,12 +122,7 @@ app.add_middleware(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5000",
-        "http://localhost:3000",
-        "http://127.0.0.1:5000",
-        "http://127.0.0.1:3000",
-    ] if settings.node_env != "production" else [
+    allow_origins=["*"] if settings.node_env != "production" else [
         "https://*.replit.app",
         "https://*.replit.dev",
     ],
@@ -124,23 +135,26 @@ app.add_middleware(
 app.add_middleware(UsageLoggingMiddleware)
 
 
+# Global exception handler for custom API errors
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError):
+    return JSONResponse(status_code=exc.status_code, content=exc.detail)
+
+
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log API requests"""
     import time
     from datetime import datetime
-    
+
     start_time = time.time()
-    
     response = await call_next(request)
-    
     duration = time.time() - start_time
-    
+
     if request.url.path.startswith("/api"):
         timestamp = datetime.now().strftime("%I:%M:%S %p")
         print(f"{timestamp} [fastapi] {request.method} {request.url.path} {response.status_code} in {int(duration * 1000)}ms")
-    
+
     return response
 
 
@@ -152,45 +166,54 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
-app.include_router(public_extract_router)  # Public API endpoints
+app.include_router(chunks_router)
+app.include_router(api_keys_router)
+app.include_router(public_extract_router)
 app.include_router(search_router)
 
 
-# Object storage routes for serving files
+# Health check endpoint - must respond quickly for deployment probes
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "service": "document-ai-extractor"}
+
+
+# Root endpoint - health check for non-browser, SPA for browser
+@app.get("/")
+async def root_health(request: Request):
+    accept_header = request.headers.get("accept", "")
+    if "text/html" not in accept_header:
+        return {"status": "ok", "message": "Document AI Extractor API"}
+    if settings.node_env == "production":
+        static_path = Path(__file__).parent.parent / "dist" / "public"
+        index_path = static_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+    return {"status": "ok", "message": "Document AI Extractor API"}
+
+
+# Object storage routes
 @app.get("/objects/{object_path:path}")
 async def serve_private_object(object_path: str, request: Request):
-    """Serve private objects with ACL check"""
     from app.core.auth import get_current_user_id
     from app.services.object_storage import ObjectStorageService, ObjectPermission, ObjectNotFoundError
-    
+
     user_id = await get_current_user_id(request)
-    
     if not user_id:
         return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
+
     try:
         object_storage = ObjectStorageService()
         blob = await object_storage.get_object_entity_file(f"/objects/{object_path}")
-        
-        can_access = await object_storage.can_access_object_entity(
-            blob,
-            user_id,
-            ObjectPermission.READ,
-        )
-        
+        can_access = await object_storage.can_access_object_entity(blob, user_id, ObjectPermission.READ)
         if not can_access:
             return JSONResponse(status_code=401, content={"message": "Access denied"})
-        
-        # Get metadata and stream content
         metadata = object_storage.get_object_metadata(blob)
         content = object_storage.download_object(blob)
-        
         return FileResponse(
             content,
             media_type=metadata.get("content_type", "application/octet-stream"),
-            headers={
-                "Cache-Control": "private, max-age=3600",
-            }
+            headers={"Cache-Control": "private, max-age=3600"},
         )
     except ObjectNotFoundError:
         return JSONResponse(status_code=404, content={"message": "Object not found"})
@@ -201,66 +224,57 @@ async def serve_private_object(object_path: str, request: Request):
 
 @app.get("/public-objects/{file_path:path}")
 async def serve_public_object(file_path: str):
-    """Serve public objects"""
     from app.services.object_storage import ObjectStorageService
-    
+
     try:
         object_storage = ObjectStorageService()
         blob = await object_storage.search_public_object(file_path)
-        
         if not blob:
             return JSONResponse(status_code=404, content={"error": "File not found"})
-        
         metadata = object_storage.get_object_metadata(blob)
         content = object_storage.download_object(blob)
-        
         return FileResponse(
             content,
             media_type=metadata.get("content_type", "application/octet-stream"),
-            headers={
-                "Cache-Control": "public, max-age=3600",
-            }
+            headers={"Cache-Control": "public, max-age=3600"},
         )
     except Exception as e:
         print(f"Error serving public object: {e}")
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 
-# Health check endpoint
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "ok", "service": "document-ai-extractor"}
-
-
 # Serve static files in production
 if settings.node_env == "production":
-    # Serve frontend static files
     static_path = Path(__file__).parent.parent / "dist" / "public"
+    print(f"[FastAPI] Production mode - looking for static files at: {static_path}")
     if static_path.exists():
-        app.mount("/assets", StaticFiles(directory=str(static_path / "assets")), name="assets")
-        
+        print(f"[FastAPI] Serving static assets from {static_path}")
+        assets_path = static_path / "assets"
+        if assets_path.exists():
+            app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
+
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
-            """Serve SPA for all non-API routes"""
+            if full_path.startswith("api/") or full_path.startswith("objects/"):
+                return JSONResponse(status_code=404, content={"error": "Not found"})
             index_path = static_path / "index.html"
             if index_path.exists():
                 return FileResponse(str(index_path))
             return JSONResponse(status_code=404, content={"error": "Not found"})
+    else:
+        print(f"[FastAPI] WARNING: Static path not found at {static_path}")
 
 
 def main():
     """Main entry point"""
-    port = settings.port
-    
+    port = int(os.environ.get("PORT", settings.port))
     print(f"[FastAPI] Starting server on port {port}")
-    
     uvicorn.run(
-        "main:app",
-        host="::",  # Bind to IPv6 (also accepts IPv4)
+        app,
+        host="0.0.0.0",
         port=port,
-        reload=settings.node_env == "development",
-        log_level="info" if settings.node_env == "development" else "warning",
+        reload=False,
+        log_level="info",
     )
 
 
