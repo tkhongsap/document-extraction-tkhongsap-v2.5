@@ -42,6 +42,7 @@ from app.routes import (
     user_router,
     search_router,
 )
+from app.middlewares.usage_logging import UsageLoggingMiddleware
 
 
 @asynccontextmanager

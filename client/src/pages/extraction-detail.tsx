@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
 import { useDateFormatter } from "@/lib/date-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +8,10 @@ import { ArrowLeft, Download, Edit, XCircle, CheckCircle, Save, X } from "lucide
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getExtraction, updateExtractionReviewStatus, updateExtractionData, type ExtractionReviewStatus } from "@/lib/api";
 import { Link, useParams } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
-import type { DocumentType, ExtractedField, ExtractedField } from "@/lib/api";
+import type { DocumentType, ExtractedField } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
+
+function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
+  const result = { ...obj };
+  result[path] = value;
+  return result;
+}
 
 export default function ExtractionDetail() {
   const { t } = useLanguage();
@@ -83,6 +91,8 @@ export default function ExtractionDetail() {
   const handleReject = () => {
     reviewMutation.mutate({ status: 'rejected' });
   };
+
+  const headerFields: ExtractedField[] = (extractionData?.extraction?.extractedData as any)?.headerFields || [];
 
   const handleEdit = () => {
     if (isEditMode) {
@@ -262,6 +272,7 @@ export default function ExtractionDetail() {
           {isGeneralExtraction ? (
             <MarkdownViewer 
               data={{
+                success: true,
                 markdown: extractedData?.markdown || '',
                 text: extractedData?.text || '',
                 pages: extractedData?.pages || [],

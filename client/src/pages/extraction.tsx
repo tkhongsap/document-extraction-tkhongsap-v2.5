@@ -1,7 +1,7 @@
 import { useLanguage } from "@/lib/i18n";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { useQuery, useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -32,6 +32,16 @@ import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Batch processing limit - change this value to adjust max files allowed
 const BATCH_FILE_LIMIT = 5000;
@@ -65,6 +75,27 @@ export default function Extraction() {
   // Selected batch result for viewing
   const [selectedBatchIndex, setSelectedBatchIndex] = useState<number>(0);
 
+  // Review status for extracted results
+  const [reviewStatus, setReviewStatus] = useState<'pending' | 'approved' | 'rejected' | 'edited'>('pending');
+
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Page count for single file (PDF page counting)
+  const [singleFilePages, setSingleFilePages] = useState<number>(0);
+
+  // Timing state for processing feedback
+  const [singleFileStartTime, setSingleFileStartTime] = useState<number | null>(null);
+  const [batchStartTime, setBatchStartTime] = useState<number | null>(null);
+
+  // Monthly limit dialog state
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [limitDialogMessage, setLimitDialogMessage] = useState({ files: 0, remaining: 0, excess: 0 });
+
+  // File limit dialog state (batch mode)
+  const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
+  const [fileLimitDialogMessage, setFileLimitDialogMessage] = useState({ attempted: 0, limit: 0, current: 0 });
+
   // Check if this is a general extraction
   const isGeneralExtraction = !type || type === 'general';
 
@@ -80,6 +111,25 @@ export default function Extraction() {
   
   // Calculate remaining pages
   const pagesRemaining = userData ? userData.monthlyLimit - userData.monthlyUsage : 0;
+
+  // Count pages in a single PDF file
+  const countPdfPages = async (file: File): Promise<number> => {
+    if (!file.name.endsWith('.pdf')) return 1;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const text = new TextDecoder('latin1').decode(new Uint8Array(arrayBuffer));
+      const matches = text.match(/\/Type\s*\/Page[^s]/g);
+      return matches ? matches.length : 1;
+    } catch {
+      return 1;
+    }
+  };
+
+  // Count total pages across multiple files
+  const countTotalPages = async (files: File[]): Promise<number> => {
+    const pageCounts = await Promise.all(files.map(countPdfPages));
+    return pageCounts.reduce((sum, count) => sum + count, 0);
+  };
 
   // Handle file drop - just store file for preview (two-phase UX for all types)
   const onDrop = useCallback((acceptedFiles: File[]) => {

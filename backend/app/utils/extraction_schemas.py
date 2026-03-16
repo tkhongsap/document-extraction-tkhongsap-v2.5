@@ -552,6 +552,86 @@ RESUME_SCHEMA = {
     },
 }
 
+# ============ Receipt Schema ============
+RECEIPT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "merchant_name": {
+            "type": "string",
+            "description": "Name of the merchant or store",
+        },
+        "merchant_address": {
+            "type": "string",
+            "description": "Address of the merchant or store",
+        },
+        "receipt_number": {
+            "type": "string",
+            "description": "Receipt or transaction number",
+        },
+        "receipt_date": {
+            "type": "string",
+            "description": "Date of the transaction in YYYY-MM-DD format",
+        },
+        "receipt_time": {
+            "type": "string",
+            "description": "Time of the transaction in HH:MM format",
+        },
+        "currency": {
+            "type": "string",
+            "description": "Currency code (e.g., THB, USD, EUR)",
+        },
+        "subtotal": {
+            "type": "number",
+            "description": "Subtotal before tax and discounts",
+        },
+        "discount": {
+            "type": "number",
+            "description": "Total discount amount",
+        },
+        "tax": {
+            "type": "number",
+            "description": "Total tax amount (e.g., VAT)",
+        },
+        "total": {
+            "type": "number",
+            "description": "Grand total amount paid",
+        },
+        "payment_method": {
+            "type": "string",
+            "description": "Payment method used (e.g., cash, credit card, QR code)",
+        },
+        "cashier": {
+            "type": "string",
+            "description": "Name or ID of the cashier",
+        },
+        "items": {
+            "type": "array",
+            "description": "List of purchased items",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": "Item name or description",
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "description": "Quantity purchased",
+                    },
+                    "unit_price": {
+                        "type": "number",
+                        "description": "Price per unit",
+                    },
+                    "amount": {
+                        "type": "number",
+                        "description": "Total amount for this line (quantity × unit_price)",
+                    },
+                },
+            },
+        },
+    },
+}
+
 # Schema mapping
 SCHEMAS: Dict[DocumentType, Dict[str, Any]] = {
     "bank": BANK_STATEMENT_SCHEMA,

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Files,
+  FileText,
   History,
   Settings,
   LogOut,
@@ -447,7 +448,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     .toUpperCase()
     .slice(0, 2);
 
-  const navItems = [
+  const navItems: Array<{ href: string; icon: React.FC<{ className?: string }>; label: string; isPrimary?: boolean }> = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
