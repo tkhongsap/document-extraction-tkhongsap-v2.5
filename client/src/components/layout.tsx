@@ -457,6 +457,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
   const mobileNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
+    { href: '/extraction/general', icon: Plus, label: t('nav.general') },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];
@@ -464,10 +465,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center justify-center">
-          <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold text-sidebar-foreground">
-            <TCCSidebarLogo size={18} />
-            <span className="group-data-[collapsible=icon]:hidden text-sm font-bold tracking-tight">TCC Document Intelligence</span>
+        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg text-sidebar-foreground">
+            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
+              <FileText className="h-4 w-4" />
+            </div>
+            <span className="group-data-[collapsible=icon]:hidden">DocExtract</span>
           </Link>
         </SidebarHeader>
 

@@ -1,7 +1,7 @@
 import { useLanguage } from "@/lib/i18n";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -32,187 +32,9 @@ import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { PDFDocument } from "pdf-lib";
 
-// File upload configuration
-const BATCH_FILE_LIMIT = 100;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
-const ALLOWED_FILE_TYPES = {
-  'application/pdf': ['.pdf'],
-  'image/png': ['.png'],
-  'image/jpeg': ['.jpg', '.jpeg'],
-};
-
-// Format file size for display
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-// Helper to count PDF pages from a File
-async function countPdfPages(file: File): Promise<number> {
-  if (!file.name.toLowerCase().endsWith('.pdf')) {
-    return 1; // Non-PDF files count as 1 page
-  }
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-    return pdfDoc.getPageCount();
-  } catch (error) {
-    console.warn(`[PDF] Could not count pages for ${file.name}:`, error);
-    return 1; // Default to 1 page on error
-  }
-}
-
-// Helper to count total pages for multiple files
-async function countTotalPages(files: File[]): Promise<number> {
-  const pageCounts = await Promise.all(files.map(countPdfPages));
-  return pageCounts.reduce((sum, count) => sum + count, 0);
-}
-
-// Helper to format seconds into human-readable time
-function formatEstimatedTime(totalSeconds: number): string {
-  if (totalSeconds < 60) {
-    return `~${totalSeconds} seconds`;
-  } else if (totalSeconds < 3600) {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    if (seconds === 0) {
-      return `~${minutes} minute${minutes > 1 ? 's' : ''}`;
-    }
-    return `~${minutes}m ${seconds}s`;
-  } else {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    if (minutes === 0) {
-      return `~${hours} hour${hours > 1 ? 's' : ''}`;
-    }
-    return `~${hours}h ${minutes}m`;
-  }
-}
-
-// Processing steps for loading UI
-type ProcessingStep = 'uploading' | 'parsing' | 'extracting' | 'completing';
-
-interface ProcessingLoadingProps {
-  pages: number;
-  elapsedSeconds: number;
-  totalEstimatedSeconds: number;
-  mode: 'template' | 'general' | 'batch';
-  fileCount?: number;
-  t: (key: string) => string;
-}
-
-function ProcessingLoading({ pages, elapsedSeconds, totalEstimatedSeconds, mode, fileCount = 1, t }: ProcessingLoadingProps) {
-  const progress = Math.min(100, Math.round((elapsedSeconds / totalEstimatedSeconds) * 100));
-  const remainingSeconds = Math.max(0, totalEstimatedSeconds - elapsedSeconds);
-  
-  // Determine current step based on progress
-  const currentStep: ProcessingStep = 
-    progress < 10 ? 'uploading' :
-    progress < 50 ? 'parsing' :
-    progress < 90 ? 'extracting' : 'completing';
-  
-  const steps = [
-    { key: 'uploading', label: t('loading.uploading') || 'Uploading', icon: UploadCloud },
-    { key: 'parsing', label: t('loading.parsing') || 'Parsing document', icon: FileText },
-    { key: 'extracting', label: t('loading.extracting') || 'Extracting data', icon: Zap },
-    { key: 'completing', label: t('loading.completing') || 'Completing', icon: FileCheck },
-  ];
-  
-  const getStepStatus = (stepKey: string) => {
-    const stepOrder = ['uploading', 'parsing', 'extracting', 'completing'];
-    const currentIndex = stepOrder.indexOf(currentStep);
-    const stepIndex = stepOrder.indexOf(stepKey);
-    if (stepIndex < currentIndex) return 'completed';
-    if (stepIndex === currentIndex) return 'active';
-    return 'pending';
-  };
-
-  return (
-    <div className="h-full flex flex-col items-center justify-center p-8">
-      <div className="w-full max-w-md space-y-6">
-        {/* Animated spinner */}
-        <div className="flex justify-center">
-          <div className="relative">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-bold text-primary">{progress}%</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Progress bar */}
-        <div className="space-y-2">
-          <Progress value={progress} className="h-2" />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{formatEstimatedTime(elapsedSeconds)} elapsed</span>
-            <span>{remainingSeconds > 0 ? `${formatEstimatedTime(remainingSeconds)} remaining` : 'Finishing up...'}</span>
-          </div>
-        </div>
-        
-        {/* Processing info */}
-        <div className="text-center space-y-1">
-          <p className="font-medium">
-            {mode === 'batch' 
-              ? `${t('loading.processing_batch') || 'Processing'} ${fileCount} ${t('loading.files') || 'files'}`
-              : `${t('loading.processing') || 'Processing'} ${pages} ${pages > 1 ? t('loading.pages') || 'pages' : t('loading.page') || 'page'}`
-            }
-          </p>
-          <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-            <Clock className="h-3 w-3" />
-            {mode === 'template' 
-              ? t('loading.template_hint') || 'Using AI template extraction'
-              : t('loading.general_hint') || 'Parsing with LlamaParse'
-            }
-          </p>
-        </div>
-        
-        {/* Steps indicator */}
-        <div className="flex justify-between items-center px-4">
-          {steps.map((step, index) => {
-            const status = getStepStatus(step.key);
-            const Icon = step.icon;
-            return (
-              <div key={step.key} className="flex flex-col items-center gap-1">
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                  status === 'completed' && "bg-green-500 text-white",
-                  status === 'active' && "bg-primary text-white animate-pulse",
-                  status === 'pending' && "bg-muted text-muted-foreground"
-                )}>
-                  {status === 'completed' ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <Icon className="h-4 w-4" />
-                  )}
-                </div>
-                <span className={cn(
-                  "text-[10px] text-center",
-                  status === 'active' && "text-primary font-medium",
-                  status === 'pending' && "text-muted-foreground"
-                )}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+// Batch processing limit - change this value to adjust max files allowed
+const BATCH_FILE_LIMIT = 5000;
 
 export default function Extraction() {
   const { t } = useLanguage();
@@ -242,45 +64,6 @@ export default function Extraction() {
   
   // Selected batch result for viewing
   const [selectedBatchIndex, setSelectedBatchIndex] = useState<number>(0);
-
-  // Limit exceeded dialog state
-  const [showLimitDialog, setShowLimitDialog] = useState(false);
-  const [limitDialogMessage, setLimitDialogMessage] = useState({ files: 0, remaining: 0, excess: 0 });
-
-  // File limit exceeded dialog state
-  const [showFileLimitDialog, setShowFileLimitDialog] = useState(false);
-  const [fileLimitDialogMessage, setFileLimitDialogMessage] = useState({ attempted: 0, limit: BATCH_FILE_LIMIT, current: 0 });
-
-  // Batch processing timer state
-  const [batchStartTime, setBatchStartTime] = useState<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  // Single file state for page count and timer
-  const [singleFilePages, setSingleFilePages] = useState<number>(1);
-  const [singleFileStartTime, setSingleFileStartTime] = useState<number | null>(null);
-
-  // Review status state
-  const [reviewStatus, setReviewStatus] = useState<ExtractionReviewStatus>('pending');
-  const [isEditMode, setIsEditMode] = useState(false);
-
-  // Timer effect for real-time countdown (works for both batch and single file)
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    const startTime = isBatchMode ? batchStartTime : singleFileStartTime;
-    
-    if (isProcessing && startTime) {
-      interval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        setElapsedSeconds(elapsed);
-      }, 1000);
-    } else {
-      setElapsedSeconds(0);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isProcessing, isBatchMode, batchStartTime, singleFileStartTime]);
 
   // Check if this is a general extraction
   const isGeneralExtraction = !type || type === 'general';
@@ -577,35 +360,27 @@ export default function Extraction() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
-    onDropRejected: (fileRejections) => {
-      // Check rejection reasons
-      const tooManyFiles = fileRejections.some(
-        rejection => rejection.errors.some(e => e.code === 'too-many-files')
-      );
-      const filesTooLarge = fileRejections.filter(
-        r => r.errors.some(e => e.code === 'file-too-large')
-      );
-      const invalidTypes = fileRejections.filter(
-        r => r.errors.some(e => e.code === 'file-invalid-type')
-      );
-      
-      if (tooManyFiles) {
-        setFileLimitDialogMessage({
-          attempted: fileRejections.length,
-          limit: BATCH_FILE_LIMIT,
-          current: batchFiles.length
-        });
-        setShowFileLimitDialog(true);
-      } else if (filesTooLarge.length > 0) {
-        const fileNames = filesTooLarge.map(r => r.file.name).slice(0, 3).join(', ');
-        const moreCount = filesTooLarge.length > 3 ? ` และอีก ${filesTooLarge.length - 3} ไฟล์` : '';
-        toast.error(`ไฟล์ใหญ่เกิน 10MB: ${fileNames}${moreCount}`);
-      } else if (invalidTypes.length > 0) {
-        toast.error(`${invalidTypes.length} ไฟล์ถูกปฏิเสธ - รองรับเฉพาะ PDF และรูปภาพ (PNG, JPG)`);
-      }
-    },
-    accept: ALLOWED_FILE_TYPES,
-    maxSize: MAX_FILE_SIZE,
+    accept: isGeneralExtraction 
+      ? {
+          'application/pdf': ['.pdf'],
+          'image/png': ['.png'],
+          'image/jpeg': ['.jpg', '.jpeg'],
+          'image/gif': ['.gif'],
+          'image/webp': ['.webp'],
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+          'application/msword': ['.doc'],
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+          'application/vnd.ms-excel': ['.xls'],
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+          'application/vnd.ms-powerpoint': ['.ppt'],
+          'text/plain': ['.txt'],
+          'text/csv': ['.csv'],
+        }
+      : {
+          'application/pdf': ['.pdf'],
+          'image/png': ['.png'],
+          'image/jpeg': ['.jpg', '.jpeg']
+        },
     maxFiles: isBatchMode ? BATCH_FILE_LIMIT : 1,
     multiple: isBatchMode
   });
@@ -1009,32 +784,39 @@ export default function Extraction() {
           <CardContent className="flex-1 p-0 overflow-hidden">
             {isProcessing && isBatchMode ? (
               // Loading state for batch processing
-              <ProcessingLoading 
-                pages={batchFiles.length}
-                elapsedSeconds={elapsedSeconds}
-                totalEstimatedSeconds={Math.ceil(batchFiles.length * (isGeneralExtraction ? 20 : 30))}
-                mode="batch"
-                fileCount={batchFiles.length}
-                t={t}
-              />
-            ) : isProcessing && isGeneralExtraction && !isBatchMode ? (
-              // Loading state for single file general extraction
-              <ProcessingLoading 
-                pages={singleFilePages}
-                elapsedSeconds={elapsedSeconds}
-                totalEstimatedSeconds={Math.ceil(singleFilePages * 20)}
-                mode="general"
-                t={t}
-              />
-            ) : isProcessing && !isGeneralExtraction && !isBatchMode ? (
-              // Loading state for single file template extraction
-              <ProcessingLoading 
-                pages={singleFilePages}
-                elapsedSeconds={elapsedSeconds}
-                totalEstimatedSeconds={Math.ceil(singleFilePages * 30)}
-                mode="template"
-                t={t}
-              />
+              <div className="h-full flex flex-col items-center justify-center space-y-4 p-8">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="text-center">
+                  <p className="text-muted-foreground font-medium">
+                    {t('extract.batch_processing') || 'Processing batch...'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Processing {batchFiles.length} files sequentially
+                  </p>
+                  <p className="text-sm text-primary mt-2 font-medium">
+                    ~{Math.ceil(batchFiles.length * (isGeneralExtraction ? 15 : 20))} seconds estimated
+                  </p>
+                </div>
+              </div>
+            ) : isProcessing && isGeneralExtraction ? (
+              // Loading state for general extraction
+              <div className="h-full flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="text-center">
+                  <p className="text-muted-foreground font-medium">
+                    {t('extract.parsing') || 'Parsing document with LlamaParse...'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('extract.parsing_sub') || 'This may take a moment for larger documents'}
+                  </p>
+                </div>
+              </div>
+            ) : isProcessing && !isGeneralExtraction ? (
+              // Loading state for template extraction
+              <div className="h-full flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-muted-foreground font-medium">{t('extract.processing')}</p>
+              </div>
             ) : isBatchMode && batchGeneralResults ? (
               // Batch general results
               (() => {

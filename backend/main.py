@@ -8,6 +8,8 @@ import io
 import asyncio
 import io
 import asyncio
+import io
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -29,9 +31,7 @@ import uvicorn
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.core.config import get_settings
-from app.core.database import init_db, async_session_maker
-from app.services.storage import StorageService
-from app.middlewares.usage_logging import UsageLoggingMiddleware
+from app.core.database import init_db
 from app.routes import (
     auth_router,
     documents_router,
@@ -41,9 +41,6 @@ from app.routes import (
     extract_router,
     user_router,
     search_router,
-    chunks_router,
-    api_keys_router,
-    public_extract_router,
 )
 
 
@@ -60,9 +57,27 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("[FastAPI] Database initialized")
     
+    # Start background cleanup task
+    cleanup_task = asyncio.create_task(cleanup_old_extractions_task())
+    print("[FastAPI] Started extraction cleanup background task")
+    
+    # Start monthly usage reset scheduler
+    from app.tasks.scheduler import get_scheduler
+    scheduler = get_scheduler()
+    scheduler.start()
+    print("[FastAPI] Started monthly usage reset scheduler")
+    
     yield
     
     # Shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+    
+    # Shutdown scheduler
+    scheduler.shutdown()
     print("[FastAPI] Shutting down...")
 
 
@@ -136,10 +151,8 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
+app.include_router(public_extract_router)  # Public API endpoints
 app.include_router(search_router)
-app.include_router(chunks_router)
-app.include_router(api_keys_router)
-app.include_router(public_extract_router)
 
 
 # Object storage routes for serving files

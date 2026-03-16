@@ -381,6 +381,7 @@ CONTRACT_SCHEMA = {
 
 # ============ Resume/CV Schema ============
 # Simplified schema - only essential fields for recruitment
+# Simplified schema - only essential fields for recruitment
 RESUME_SCHEMA = {
     "type": "object",
     "properties": {
@@ -512,88 +513,41 @@ RESUME_SCHEMA = {
                 },
             },
         },
-    },
-}
-
-RECEIPT_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "receipt_number": {
+        "summary": {
             "type": "string",
-            "description": "Receipt or transaction number",
+            "description": "Professional summary or objective statement",
         },
-        "receipt_date": {
+        "salaryExpectation": {
+            "type": "integer",
+            "description": "Expected salary in base currency units",
+        },
+        "availabilityDate": {
             "type": "string",
-            "description": "Date the receipt was issued (YYYY-MM-DD)",
+            "description": "When candidate is available to start (ISO 8601 date)",
         },
-        "receipt_time": {
+        "gender": {
             "type": "string",
-            "description": "Time the receipt was issued (HH:MM)",
+            "description": "Gender (male, female, other)",
         },
-        "store_name": {
+        "nationality": {
             "type": "string",
-            "description": "Name of the store or merchant",
+            "description": "Candidate nationality",
         },
-        "store_address": {
-            "type": "string",
-            "description": "Full address of the store or merchant",
+        "birthYear": {
+            "type": "integer",
+            "description": "Birth year for age calculation",
         },
-        "store_tax_id": {
-            "type": "string",
-            "description": "Tax identification number of the store",
+        "hasCar": {
+            "type": "boolean",
+            "description": "Whether candidate owns a car",
         },
-        "cashier": {
-            "type": "string",
-            "description": "Name or ID of the cashier",
+        "hasLicense": {
+            "type": "boolean",
+            "description": "Whether candidate has a driver's license",
         },
-        "payment_method": {
-            "type": "string",
-            "description": "Payment method used (cash, credit card, QR code, etc.)",
-        },
-        "subtotal": {
-            "type": "number",
-            "description": "Subtotal before tax and discounts",
-        },
-        "discount_amount": {
-            "type": "number",
-            "description": "Total discount applied",
-        },
-        "tax_amount": {
-            "type": "number",
-            "description": "Total tax amount",
-        },
-        "total_amount": {
-            "type": "number",
-            "description": "Final total amount paid",
-        },
-        "currency": {
-            "type": "string",
-            "description": "Currency code (e.g., THB, USD)",
-        },
-        "items": {
-            "type": "array",
-            "description": "List of purchased items",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "Name or description of the item",
-                    },
-                    "quantity": {
-                        "type": "number",
-                        "description": "Quantity purchased",
-                    },
-                    "unit_price": {
-                        "type": "number",
-                        "description": "Price per unit",
-                    },
-                    "amount": {
-                        "type": "number",
-                        "description": "Total amount for this line (quantity * unit_price)",
-                    },
-                },
-            },
+        "willingToTravel": {
+            "type": "boolean",
+            "description": "Travel willingness indicator",
         },
     },
 }

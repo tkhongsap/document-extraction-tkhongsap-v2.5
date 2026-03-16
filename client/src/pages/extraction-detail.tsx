@@ -9,7 +9,7 @@ import { getExtraction, updateExtractionReviewStatus, updateExtractionData, type
 import { Link, useParams } from "wouter";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
-import type { DocumentType, ExtractedField } from "@/lib/api";
+import type { DocumentType, ExtractedField, ExtractedField } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,77 +17,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
-import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-
-// Helper to set a value at a dot-separated key path in an object
-function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
-  const clone = { ...obj };
-  const keys = path.split(".");
-  if (keys.length === 1) {
-    clone[path] = value;
-    return clone;
-  }
-  let cursor: Record<string, unknown> = clone;
-  for (let i = 0; i < keys.length - 1; i++) {
-    const k = keys[i];
-    cursor[k] = typeof cursor[k] === "object" && cursor[k] !== null ? { ...(cursor[k] as Record<string, unknown>) } : {};
-    cursor = cursor[k] as Record<string, unknown>;
-  }
-  cursor[keys[keys.length - 1]] = value;
-  return clone;
-}
-
-// Keys that should be treated as arrays and not converted to header fields
-const RESUME_ARRAY_KEYS = [
-  "experience", "education", "skills", "certifications", 
-  "languages", "languagesWithProficiency", "projects"
-];
-
-/**
- * Convert raw extractedData to headerFields format
- * This is needed when loading from history where we only have raw data
- */
-function convertToHeaderFields(
-  data: Record<string, unknown>,
-  documentType: DocumentType,
-  confidenceScores?: Record<string, number>
-): ExtractedField[] {
-  const headerFields: ExtractedField[] = [];
-  const arrayKeysToSkip = documentType === "resume" ? RESUME_ARRAY_KEYS : [];
-  
-  function flattenObject(
-    obj: Record<string, unknown>,
-    prefix: string = ""
-  ): void {
-    for (const [key, value] of Object.entries(obj)) {
-      // Skip array keys for resumes
-      if (arrayKeysToSkip.includes(key)) continue;
-      // Skip null/undefined values
-      if (value === null || value === undefined) continue;
-      // Skip arrays
-      if (Array.isArray(value)) continue;
-      
-      const fullKey = prefix ? `${prefix}.${key}` : key;
-      
-      if (typeof value === "object" && value !== null) {
-        // Recursively flatten nested objects
-        flattenObject(value as Record<string, unknown>, fullKey);
-      } else {
-        // Get confidence score if available
-        const confidence = confidenceScores?.[fullKey] ?? confidenceScores?.[key] ?? 0.9;
-        headerFields.push({
-          key: fullKey,
-          value: String(value),
-          confidence: confidence
-        });
-      }
-    }
-  }
-  
-  flattenObject(data);
-  return headerFields;
-}
 
 export default function ExtractionDetail() {
   const { t } = useLanguage();
@@ -198,31 +127,7 @@ export default function ExtractionDetail() {
     );
   }
 
-  const extractedData = extraction.extractedData as Record<string, unknown>;
-
-  // Map document type to its raw array key in extracted_data
-  const LINE_ITEMS_KEYS: Record<string, string> = {
-    bank: "transactions",
-    invoice: "line_items",
-    po: "line_items",
-    contract: "parties",
-    receipt: "items",
-  };
-
-  // Convert raw extractedData to headerFields if not already present
-  // This happens when loading from history where we only have raw data
-  const headerFields = extractedData?.headerFields as ExtractedField[] | undefined
-    ?? convertToHeaderFields(
-        extractedData || {},
-        extraction.documentType as DocumentType,
-        extractedData?.confidenceScores as Record<string, number> | undefined
-      );
-
-  // Derive lineItems: prefer stored lineItems key, then fall back to raw array key in extractedData
-  const rawArrayKey = LINE_ITEMS_KEYS[extraction.documentType];
-  const lineItems = (extractedData?.lineItems as Array<Record<string, unknown>> | undefined)
-    ?? (rawArrayKey ? (extractedData?.[rawArrayKey] as Array<Record<string, unknown>> | undefined) : undefined)
-    ?? [];
+  const extractedData = extraction.extractedData as any;
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
@@ -369,8 +274,8 @@ export default function ExtractionDetail() {
             />
           ) : (
             <StructuredResultsViewer
-              headerFields={isEditMode ? editedFields : headerFields}
-              lineItems={lineItems}
+              headerFields={extractedData?.headerFields || []}
+              lineItems={extractedData?.lineItems || []}
               extractedData={extractedData}
               confidenceScores={extractedData?.confidenceScores as Record<string, number> | undefined}
               documentType={extraction.documentType as DocumentType}
