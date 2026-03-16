@@ -1,26 +1,17 @@
 """
 RAG Service
 Retrieval-Augmented Generation for resume Q&A
-<<<<<<< HEAD
-=======
 Supports both full-resume search and semantic chunk-based search
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 """
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
-<<<<<<< HEAD
-=======
 from sqlalchemy import text
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 from app.services.llm_service import LLMService, Message, get_llm_service
 from app.services.resume_service import ResumeService
 from app.services.embedding_service import get_embedding_service
-<<<<<<< HEAD
-=======
 from app.services.chunking_service import ChunkingService
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 
 @dataclass
@@ -82,10 +73,7 @@ class RAGService:
         llm_service: Optional[LLMService] = None,
         top_k: int = 5,
         similarity_threshold: float = 0.3,
-<<<<<<< HEAD
-=======
         use_chunks: bool = True,  # NEW: Use semantic chunks instead of full resume
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     ):
         """
         Initialize RAG service
@@ -95,20 +83,12 @@ class RAGService:
             llm_service: LLM service instance
             top_k: Number of resumes to retrieve
             similarity_threshold: Minimum similarity score
-<<<<<<< HEAD
-=======
             use_chunks: If True, search by semantic chunks (more accurate for specific queries)
                        If False, search by full resume embedding (broader matching)
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         """
         self.db = db
         self.llm_service = llm_service or get_llm_service()
         self.resume_service = ResumeService(db)
-<<<<<<< HEAD
-        self.embedding_service = get_embedding_service()
-        self.top_k = top_k
-        self.similarity_threshold = similarity_threshold
-=======
         self.chunking_service = ChunkingService(db)
         self.embedding_service = get_embedding_service()
         self.top_k = top_k
@@ -309,7 +289,6 @@ class RAGService:
             context_parts.append("\n".join(parts))
         
         return "\n\n".join(context_parts)
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     
     def _format_resume_context(self, resumes: List[Dict[str, Any]]) -> str:
         """
@@ -417,10 +396,7 @@ class RAGService:
         top_k: Optional[int] = None,
         prompt_type: Optional[str] = None,
         temperature: float = 0.7,
-<<<<<<< HEAD
-=======
         use_chunks: Optional[bool] = None,  # Override instance setting
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     ) -> RAGResult:
         """
         Execute RAG query
@@ -431,34 +407,12 @@ class RAGService:
             top_k: Override default top_k
             prompt_type: Override auto-detected prompt type
             temperature: LLM temperature
-<<<<<<< HEAD
-=======
             use_chunks: Override use_chunks setting (None = use instance default)
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             
         Returns:
             RAGResult with answer and sources
         """
         k = top_k or self.top_k
-<<<<<<< HEAD
-        
-        # Step 1: Semantic search for relevant resumes
-        search_results = await self.resume_service.search_semantic(
-            query=query,
-            user_id=user_id,
-            limit=k,
-            threshold=self.similarity_threshold,
-        )
-        
-        # Step 2: Format context
-        context = self._format_resume_context(search_results)
-        
-        # Step 3: Build prompt
-        detected_type = prompt_type or self._detect_prompt_type(query)
-        messages = self._build_prompt(query, context, detected_type)
-        
-        # Step 4: Get LLM response
-=======
         should_use_chunks = use_chunks if use_chunks is not None else self.use_chunks
         
         # Step 1: Semantic search
@@ -487,28 +441,19 @@ class RAGService:
         messages = self._build_prompt(query, context, detected_type)
         
         # Step 3: Get LLM response
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         response = await self.llm_service.chat(
             messages=messages,
             temperature=temperature,
         )
         
-<<<<<<< HEAD
-        # Step 5: Return result with sources
-=======
         # Step 4: Return result with sources
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         sources = [
             {
                 "id": r.get("id"),
                 "name": r.get("name"),
                 "current_role": r.get("current_role"),
-<<<<<<< HEAD
-                "similarity_score": r.get("similarity_score"),
-=======
                 "similarity_score": r.get("similarity_score") or r.get("max_similarity"),
                 "matched_chunks": len(r.get("chunks", [])) if should_use_chunks else None,
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             }
             for r in search_results
         ]
@@ -528,10 +473,7 @@ class RAGService:
         top_k: Optional[int] = None,
         prompt_type: Optional[str] = None,
         temperature: float = 0.7,
-<<<<<<< HEAD
-=======
         use_chunks: Optional[bool] = None,  # Override instance setting
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
     ):
         """
         Execute RAG query with streaming response
@@ -541,16 +483,6 @@ class RAGService:
             - Then: content chunks
         """
         k = top_k or self.top_k
-<<<<<<< HEAD
-        
-        # Step 1: Semantic search
-        search_results = await self.resume_service.search_semantic(
-            query=query,
-            user_id=user_id,
-            limit=k,
-            threshold=self.similarity_threshold,
-        )
-=======
         should_use_chunks = use_chunks if use_chunks is not None else self.use_chunks
         
         # Step 1: Semantic search
@@ -572,7 +504,6 @@ class RAGService:
                 threshold=self.similarity_threshold,
             )
             context = self._format_resume_context(search_results)
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         
         # Yield sources first
         sources = [
@@ -580,22 +511,6 @@ class RAGService:
                 "id": r.get("id"),
                 "name": r.get("name"),
                 "current_role": r.get("current_role"),
-<<<<<<< HEAD
-                "similarity_score": r.get("similarity_score"),
-            }
-            for r in search_results
-        ]
-        yield {"type": "sources", "data": sources}
-        
-        # Step 2: Format context
-        context = self._format_resume_context(search_results)
-        
-        # Step 3: Build prompt
-        detected_type = prompt_type or self._detect_prompt_type(query)
-        messages = self._build_prompt(query, context, detected_type)
-        
-        # Step 4: Stream LLM response
-=======
                 "similarity_score": r.get("similarity_score") or r.get("max_similarity"),
                 "matched_chunks": len(r.get("chunks", [])) if should_use_chunks else None,
             }
@@ -608,31 +523,19 @@ class RAGService:
         messages = self._build_prompt(query, context, detected_type)
         
         # Step 3: Stream LLM response
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         async for chunk in self.llm_service.chat_stream(
             messages=messages,
             temperature=temperature,
         ):
-<<<<<<< HEAD
-            yield {"type": "content", "data": chunk}
-        
-        yield {"type": "done", "data": None}
-=======
             yield {"type": "content", "content": chunk}
         
         yield {"type": "done"}
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 
 def get_rag_service(
     db: AsyncSession,
     top_k: int = 5,
     similarity_threshold: float = 0.3,
-<<<<<<< HEAD
-) -> RAGService:
-    """Get RAG service instance"""
-    return RAGService(db=db, top_k=top_k, similarity_threshold=similarity_threshold)
-=======
     use_chunks: bool = True,
 ) -> RAGService:
     """
@@ -651,4 +554,3 @@ def get_rag_service(
         similarity_threshold=similarity_threshold,
         use_chunks=use_chunks,
     )
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd

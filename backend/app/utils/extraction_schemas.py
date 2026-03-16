@@ -380,11 +380,7 @@ CONTRACT_SCHEMA = {
 }
 
 # ============ Resume/CV Schema ============
-<<<<<<< HEAD
-# Schema aligned with database: resumes table
-=======
 # Simplified schema - only essential fields for recruitment
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 RESUME_SCHEMA = {
     "type": "object",
     "properties": {
@@ -402,11 +398,7 @@ RESUME_SCHEMA = {
         },
         "location": {
             "type": "string",
-<<<<<<< HEAD
-            "description": "Current or preferred location (city, country)",
-=======
             "description": "Current location as single string (e.g., 'Bangkok, Thailand')",
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         },
         "currentRole": {
             "type": "string",
@@ -416,11 +408,6 @@ RESUME_SCHEMA = {
             "type": "integer",
             "description": "Total years of professional experience",
         },
-<<<<<<< HEAD
-        "skills": {
-            "type": "array",
-            "description": "Array of skill names",
-=======
         "summary": {
             "type": "string",
             "description": "Professional summary or objective statement",
@@ -428,7 +415,6 @@ RESUME_SCHEMA = {
         "skills": {
             "type": "array",
             "description": "List of skill names only (no categories or proficiency)",
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             "items": {
                 "type": "string",
                 "description": "Skill name (e.g., Python, React, Project Management)",
@@ -440,13 +426,10 @@ RESUME_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-<<<<<<< HEAD
-=======
                     "institution": {
                         "type": "string",
                         "description": "School or university name",
                     },
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     "degree": {
                         "type": "string",
                         "description": "Degree type (Bachelor, Master, PhD, Associate)",
@@ -455,17 +438,8 @@ RESUME_SCHEMA = {
                         "type": "string",
                         "description": "Field of study or major",
                     },
-<<<<<<< HEAD
-                    "institution": {
-                        "type": "string",
-                        "description": "School or university name",
-                    },
-                    "year": {
-                        "type": "integer",
-=======
                     "year": {
                         "type": "string",
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                         "description": "Graduation year",
                     },
                 },
@@ -477,38 +451,10 @@ RESUME_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-<<<<<<< HEAD
-                    "title": {
-                        "type": "string",
-                        "description": "Job title",
-                    },
-=======
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     "company": {
                         "type": "string",
                         "description": "Company name",
                     },
-<<<<<<< HEAD
-                    "location": {
-                        "type": "string",
-                        "description": "Work location",
-                    },
-                    "startDate": {
-                        "type": "string",
-                        "description": "Start date in ISO 8601 format (YYYY-MM-DD)",
-                    },
-                    "endDate": {
-                        "type": "string",
-                        "description": "End date in ISO 8601 format or null if current",
-                    },
-                    "description": {
-                        "type": "string",
-                        "description": "Job description and responsibilities",
-                    },
-                    "isCurrent": {
-                        "type": "boolean",
-                        "description": "Whether this is the current position",
-=======
                     "title": {
                         "type": "string",
                         "description": "Job title",
@@ -524,18 +470,13 @@ RESUME_SCHEMA = {
                     "description": {
                         "type": "string",
                         "description": "Job responsibilities (brief)",
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
                     },
                 },
             },
         },
         "certifications": {
             "type": "array",
-<<<<<<< HEAD
-            "description": "Array of certification names",
-=======
             "description": "List of certification names",
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
             "items": {
                 "type": "string",
                 "description": "Certification name",
@@ -543,66 +484,6 @@ RESUME_SCHEMA = {
         },
         "languages": {
             "type": "array",
-<<<<<<< HEAD
-            "description": "Simple array of language names",
-            "items": {
-                "type": "string",
-                "description": "Language name",
-            },
-        },
-        "languagesWithProficiency": {
-            "type": "array",
-            "description": "Detailed language proficiency data",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "language": {
-                        "type": "string",
-                        "description": "Language name",
-                    },
-                    "level": {
-                        "type": "string",
-                        "description": "Proficiency level (native, fluent, business, conversational, basic, N1-N5)",
-                    },
-                },
-            },
-        },
-        "summary": {
-            "type": "string",
-            "description": "Professional summary or objective statement",
-        },
-        "salaryExpectation": {
-            "type": "integer",
-            "description": "Expected salary in base currency units",
-        },
-        "availabilityDate": {
-            "type": "string",
-            "description": "When candidate is available to start (ISO 8601 date)",
-        },
-        "gender": {
-            "type": "string",
-            "description": "Gender (male, female, other)",
-        },
-        "nationality": {
-            "type": "string",
-            "description": "Candidate nationality",
-        },
-        "birthYear": {
-            "type": "integer",
-            "description": "Birth year for age calculation",
-        },
-        "hasCar": {
-            "type": "boolean",
-            "description": "Whether candidate owns a car",
-        },
-        "hasLicense": {
-            "type": "boolean",
-            "description": "Whether candidate has a driver's license",
-        },
-        "willingToTravel": {
-            "type": "boolean",
-            "description": "Travel willingness indicator",
-=======
             "description": "List of languages spoken",
             "items": {
                 "type": "string",
@@ -630,7 +511,6 @@ RESUME_SCHEMA = {
                     },
                 },
             },
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
         },
     },
 }

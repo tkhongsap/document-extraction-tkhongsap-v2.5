@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from app.core.config import get_settings
 from app.core.database import init_db, async_session_maker
 from app.services.storage import StorageService
+from app.middlewares.usage_logging import UsageLoggingMiddleware
 from app.routes import (
     auth_router,
     documents_router,
@@ -39,6 +40,10 @@ from app.routes import (
     objects_router,
     extract_router,
     user_router,
+    search_router,
+    chunks_router,
+    api_keys_router,
+    public_extract_router,
 )
 
 
@@ -131,6 +136,10 @@ app.include_router(docs_with_extractions_router)
 app.include_router(objects_router)
 app.include_router(extract_router)
 app.include_router(user_router)
+app.include_router(search_router)
+app.include_router(chunks_router)
+app.include_router(api_keys_router)
+app.include_router(public_extract_router)
 
 
 # Object storage routes for serving files

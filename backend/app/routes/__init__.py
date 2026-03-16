@@ -10,11 +10,8 @@ from .extract import router as extract_router
 from .objects import router as objects_router
 from .search import router as search_router
 from .chunks import router as chunks_router
-<<<<<<< HEAD
-=======
 from .api_keys import router as api_keys_router
 from .public_extract import router as public_extract_router
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 
 
 __all__ = [
@@ -27,10 +24,6 @@ __all__ = [
     "objects_router",
     "search_router",
     "chunks_router",
-<<<<<<< HEAD
-    "chunks_router",
-=======
     "api_keys_router",
     "public_extract_router",
->>>>>>> 1be5da5afdf618fbccacaaca326bfb3d9ee46ebd
 ]
