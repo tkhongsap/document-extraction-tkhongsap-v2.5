@@ -22,6 +22,9 @@ class Extraction(Base):
     pages_processed = Column(Integer, nullable=False)
     extracted_data = Column(JSON, nullable=False)
     status = Column(Text, nullable=False, default="completed")
+    review_status = Column(Text, nullable=False, default="pending")
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships

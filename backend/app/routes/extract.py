@@ -642,26 +642,11 @@ async def batch_template_extraction(
                         generate_embedding=can_generate_embedding,
                     )
                     resume_id = resume.id
-                    
-                    # Auto-create chunks for RAG
-                    try:
-                        chunking_service = ChunkingService(db)
-                        chunks = await chunking_service.chunk_and_save_resume(
-                            user_id=current_user.id,
-                            extraction_id=extraction.id,
-                            extracted_data=extraction_result.extracted_data,
-                            document_id=document_id,
-                            generate_embeddings=can_generate_embedding
-                        )
-                        chunks_created = len(chunks)
-                        safe_print(f"[Batch Template] Created {chunks_created} chunks for resume: {file.filename}")
-                    except Exception as chunk_error:
-                        safe_print(f"[Batch Template] Warning: Failed to create chunks: {chunk_error}")
-                        
+                    safe_print(f"[Batch Template] Resume saved ID: {resume_id}")
                 except Exception as e:
                     safe_print(f"[Batch Template] Warning: Failed to save resume: {e}")
 
-                # 2. Try to create chunks (Independent of Resume table success)
+                # 2. Create chunks (runs once regardless of resume save success/failure)
                 try:
                     safe_print(f"[Batch Template] Attempting to create chunks...")
                     chunking_service = ChunkingService(db)
@@ -669,10 +654,11 @@ async def batch_template_extraction(
                         user_id=current_user.id,
                         extraction_id=extraction.id,
                         extracted_data=extraction_result.extracted_data,
-                        document_id=resume_id if resume_id else document_id,
+                        document_id=document_id,
                         generate_embeddings=can_generate_embedding
                     )
-                    safe_print(f"[Batch Template] Created {len(chunks)} chunks for resume")
+                    chunks_created = len(chunks)
+                    safe_print(f"[Batch Template] Created {chunks_created} chunks for resume: {file.filename}")
                 except Exception as chunk_error:
                     safe_print(f"[Batch Template] Warning: Failed to create chunks: {chunk_error}")
                     import traceback

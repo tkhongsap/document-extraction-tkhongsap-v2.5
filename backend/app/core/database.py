@@ -76,8 +76,24 @@ async def init_db():
     """Initialize database tables"""
     # Import all models to register them with Base
     from app.models import User, Document, Extraction
+    from sqlalchemy import text
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Safe column migrations for PostgreSQL (ADD COLUMN IF NOT EXISTS)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text(
+                "ALTER TABLE extractions ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'pending'"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE extractions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE extractions ADD COLUMN IF NOT EXISTS reviewed_by TEXT"
+            ))
+    except Exception as e:
+        print(f"[Database] Migration note: {e}")
     
     print(f"[Database] Tables created: {list(Base.metadata.tables.keys())}")

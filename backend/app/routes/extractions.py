@@ -90,3 +90,79 @@ async def create_extraction(
     await storage.update_user_usage(user.id, data.pages_processed)
     
     return {"extraction": ExtractionResponse.model_validate(extraction)}
+
+
+@router.patch("/{extraction_id}/review", response_model=dict)
+async def update_review_status(
+    extraction_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update extraction review status (approve/reject/edit)"""
+    from sqlalchemy import update as sql_update
+    from app.models.extraction import Extraction
+    from datetime import datetime
+
+    extraction = await StorageService(db).get_extraction(extraction_id)
+    if not extraction:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+    if extraction.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    review_status = body.get("reviewStatus")
+    valid_statuses = ["pending", "edited", "rejected", "approved"]
+    if review_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid reviewStatus. Must be one of: {valid_statuses}")
+
+    await db.execute(
+        sql_update(Extraction)
+        .where(Extraction.id == extraction_id)
+        .values(
+            review_status=review_status,
+            reviewed_at=datetime.utcnow(),
+            reviewed_by=user.id,
+        )
+    )
+    await db.commit()
+
+    updated = await StorageService(db).get_extraction(extraction_id)
+    return {"extraction": ExtractionResponse.model_validate(updated)}
+
+
+@router.patch("/{extraction_id}/data", response_model=dict)
+async def update_extraction_data(
+    extraction_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update extraction data (edit mode)"""
+    from sqlalchemy import update as sql_update
+    from app.models.extraction import Extraction
+    from datetime import datetime
+
+    extraction = await StorageService(db).get_extraction(extraction_id)
+    if not extraction:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+    if extraction.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    extracted_data = body.get("extractedData")
+    if extracted_data is None:
+        raise HTTPException(status_code=400, detail="extractedData is required")
+
+    await db.execute(
+        sql_update(Extraction)
+        .where(Extraction.id == extraction_id)
+        .values(
+            extracted_data=extracted_data,
+            review_status="edited",
+            reviewed_at=datetime.utcnow(),
+            reviewed_by=user.id,
+        )
+    )
+    await db.commit()
+
+    updated = await StorageService(db).get_extraction(extraction_id)
+    return {"extraction": ExtractionResponse.model_validate(updated)}

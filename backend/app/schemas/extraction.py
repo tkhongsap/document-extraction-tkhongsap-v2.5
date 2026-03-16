@@ -28,6 +28,8 @@ class ExtractionResponse(ExtractionBase):
     user_id: str = Field(alias="userId")
     document_id: Optional[str] = Field(default=None, alias="documentId")
     status: str
+    review_status: str = Field(default="pending", alias="reviewStatus")
+    reviewed_at: Optional[datetime] = Field(default=None, alias="reviewedAt")
     created_at: datetime = Field(alias="createdAt")
     
     class Config:

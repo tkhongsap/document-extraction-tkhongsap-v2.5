@@ -3,9 +3,9 @@ import { useDateFormatter } from "@/lib/date-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Edit, XCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Download, Edit, XCircle, CheckCircle, Save, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getExtraction, updateExtractionReviewStatus, type ExtractionReviewStatus } from "@/lib/api";
+import { getExtraction, updateExtractionReviewStatus, updateExtractionData, type ExtractionReviewStatus } from "@/lib/api";
 import { Link, useParams } from "wouter";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { StructuredResultsViewer } from "@/components/StructuredResultsViewer";
@@ -18,7 +18,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { exportToJSON, exportToCSV, exportToExcel, exportToMarkdown, exportToText } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Helper to set a value at a dot-separated key path in an object
+function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
+  const clone = { ...obj };
+  const keys = path.split(".");
+  if (keys.length === 1) {
+    clone[path] = value;
+    return clone;
+  }
+  let cursor: Record<string, unknown> = clone;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    cursor[k] = typeof cursor[k] === "object" && cursor[k] !== null ? { ...(cursor[k] as Record<string, unknown>) } : {};
+    cursor = cursor[k] as Record<string, unknown>;
+  }
+  cursor[keys[keys.length - 1]] = value;
+  return clone;
+}
 
 // Keys that should be treated as arrays and not converted to header fields
 const RESUME_ARRAY_KEYS = [
@@ -78,11 +96,32 @@ export default function ExtractionDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditMode, setIsEditMode] = useState(false);
+  const [editedFields, setEditedFields] = useState<ExtractedField[]>([]);
 
   const { data: extractionData, isLoading: isLoadingExtraction } = useQuery({
     queryKey: ['extraction', id],
     queryFn: () => getExtraction(id!),
     enabled: !!id,
+  });
+
+  // Mutation for saving edited data
+  const saveDataMutation = useMutation({
+    mutationFn: (fields: ExtractedField[]) => {
+      // Reconstruct extractedData from edited header fields
+      let updated = { ...(extractedData || {}) };
+      for (const field of fields) {
+        updated = setAtPath(updated, field.key, field.value);
+      }
+      return updateExtractionData(id!, updated);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['extraction', id] });
+      setIsEditMode(false);
+      toast({ title: t('review.saved') || 'Changes saved' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 
   // Mutation for updating review status
@@ -117,12 +156,16 @@ export default function ExtractionDetail() {
   };
 
   const handleEdit = () => {
-    setIsEditMode(!isEditMode);
-    // TODO: Implement edit mode UI - for now just toggle state
-    toast({
-      title: isEditMode ? 'Edit mode disabled' : 'Edit mode enabled',
-      description: isEditMode ? 'Changes discarded' : 'You can now edit the extracted data',
-    });
+    if (isEditMode) {
+      // Cancel edit
+      setIsEditMode(false);
+      toast({ title: 'Edit mode disabled', description: 'Changes discarded' });
+    } else {
+      // Enter edit mode - initialize editedFields from current headerFields
+      setEditedFields([...headerFields]);
+      setIsEditMode(true);
+      toast({ title: 'Edit mode enabled', description: 'You can now edit the extracted data' });
+    }
   };
 
   const extraction = extractionData?.extraction;
@@ -212,16 +255,29 @@ export default function ExtractionDetail() {
         
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {/* Edit Button */}
+          {/* Edit / Cancel Button */}
           <Button 
-            variant={isEditMode ? "default" : "outline"} 
+            variant={isEditMode ? "outline" : "secondary"} 
             size="sm"
             onClick={handleEdit}
           >
-            <Edit className="mr-2 h-4 w-4" />
-            {t('review.edit') || 'Edit'}
+            {isEditMode ? <X className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
+            {isEditMode ? (t('common.cancel') || 'Cancel') : (t('review.edit') || 'Edit')}
           </Button>
-          
+
+          {/* Save Button (edit mode only) */}
+          {isEditMode && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => saveDataMutation.mutate(editedFields)}
+              disabled={saveDataMutation.isPending}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saveDataMutation.isPending ? (t('common.saving') || 'Saving...') : (t('common.save') || 'Save')}
+            </Button>
+          )}
+
           {/* Reject Button */}
           <Button 
             variant="outline" 
@@ -298,11 +354,12 @@ export default function ExtractionDetail() {
             />
           ) : (
             <StructuredResultsViewer
-              headerFields={headerFields}
+              headerFields={isEditMode ? editedFields : headerFields}
               lineItems={(extractedData?.lineItems as Array<Record<string, unknown>>) || []}
               extractedData={extractedData}
               confidenceScores={extractedData?.confidenceScores as Record<string, number> | undefined}
               documentType={extraction.documentType as DocumentType}
+              onFieldChange={isEditMode ? (idx, val) => setEditedFields(prev => prev.map((f, i) => i === idx ? { ...f, value: val } : f)) : undefined}
               className="h-full"
               fileName={extraction.fileName}
             />

@@ -300,6 +300,9 @@ export const translations: Translations = {
 
     // Common
     'common.back': 'Back',
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.saving': 'Saving...',
     'common.upgrade': 'Upgrade Plan',
     'common.usage': 'Monthly Usage',
     'common.pages': 'page(s)',
@@ -624,6 +627,9 @@ export const translations: Translations = {
 
     // Common
     'common.back': 'ย้อนกลับ',
+    'common.cancel': 'ยกเลิก',
+    'common.save': 'บันทึก',
+    'common.saving': 'กำลังบันทึก...',
     'common.upgrade': 'อัปเกรดแผน',
     'common.usage': 'การใช้งานเดือนนี้',
     'common.pages': 'หน้า',

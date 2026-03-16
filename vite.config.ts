@@ -52,14 +52,41 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, _req, res) => {
+            console.warn("[proxy] /api error:", err.message);
+            if (!res.headersSent) {
+              (res as any).writeHead(502, { "Content-Type": "application/json" });
+              (res as any).end(JSON.stringify({ error: "Backend unavailable" }));
+            }
+          });
+        },
       },
       "/objects": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, _req, res) => {
+            console.warn("[proxy] /objects error:", err.message);
+            if (!res.headersSent) {
+              (res as any).writeHead(502, { "Content-Type": "application/json" });
+              (res as any).end(JSON.stringify({ error: "Backend unavailable" }));
+            }
+          });
+        },
       },
       "/public-objects": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, _req, res) => {
+            console.warn("[proxy] /public-objects error:", err.message);
+            if (!res.headersSent) {
+              (res as any).writeHead(502, { "Content-Type": "application/json" });
+              (res as any).end(JSON.stringify({ error: "Backend unavailable" }));
+            }
+          });
+        },
       },
     },
   },

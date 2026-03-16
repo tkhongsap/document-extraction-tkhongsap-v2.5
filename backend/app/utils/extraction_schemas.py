@@ -530,12 +530,12 @@ LINE_ITEMS_KEYS: Dict[DocumentType, str | None] = {
     "invoice": "line_items",
     "po": "line_items",
     "contract": "parties",
-    "resume": "work_experience",
+    "resume": "experience",
 }
 
 # Resume array keys to skip
 RESUME_ARRAY_KEYS = [
-    "work_experience",
+    "experience",
     "education",
     "skills",
     "certifications",

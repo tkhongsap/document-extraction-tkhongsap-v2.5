@@ -1,4 +1,4 @@
-import { Receipt, FileSpreadsheet, ScrollText, Landmark, FileText, UserCircle, LucideIcon } from "lucide-react";
+import { Receipt, FileSpreadsheet, ScrollText, Landmark, UserCircle, LucideIcon } from "lucide-react";
 import { useLanguage } from "./i18n";
 
 export interface Template {
@@ -51,14 +51,6 @@ export function getTemplates(t: (key: string) => string): Template[] {
       icon: ScrollText, 
       color: 'bg-orange-100 text-orange-600', 
       border: 'hover:border-orange-200' 
-    },
-    { 
-      id: 'general', 
-      name: t('nav.general'), 
-      desc: 'AI-powered extraction for any document type', 
-      icon: FileText, 
-      color: 'bg-slate-100 text-slate-600', 
-      border: 'hover:border-slate-200' 
     },
   ];
 }
