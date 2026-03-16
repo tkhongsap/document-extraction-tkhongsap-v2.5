@@ -6,7 +6,6 @@ import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  FileText,
   Files,
   History,
   Settings,
@@ -18,6 +17,7 @@ import {
   ChevronDown,
   Search
 } from "lucide-react";
+import { TCCLogo, TCCSidebarLogo } from "@/components/TCCLogo";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -227,11 +227,13 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="container flex h-16 items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-xl text-foreground">
-            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white">
-              <FileText className="h-5 w-5" />
+          <Link href="/" className="flex items-center gap-2.5 font-semibold text-foreground">
+            <div className="flex items-center justify-center rounded-xl h-9 w-9"
+              style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.2)' }}
+            >
+              <TCCLogo size={18} color="#F97316" />
             </div>
-            <span className="tracking-tight">DocExtract</span>
+            <span className="tracking-tight text-base font-bold">TCC Document Intelligence</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -308,11 +310,15 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
               transition={{ duration: 0.5, delay: 0.1 }}
               className="flex items-center gap-3 group"
             >
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:shadow-primary/30 transition-all duration-300 group-hover:scale-105">
-                <FileText className="h-5 w-5" />
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.25)' }}
+              >
+                <TCCLogo size={20} color="#F97316" />
               </div>
-              <span className="font-display font-semibold text-xl tracking-tight text-foreground">DocExtract</span>
-              <span className="block text-xs text-muted-foreground/60 font-normal mt-0.5">by TCC Technology</span>
+              <div className="flex flex-col leading-none">
+                <span className="font-display font-bold text-lg tracking-tight text-foreground">TCC Document Intelligence</span>
+                <span className="block text-xs text-muted-foreground/60 font-normal mt-0.5">by TCC Technology</span>
+              </div>
             </motion.div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               {t('footer.description')}
@@ -469,11 +475,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={true}>
       <Sidebar collapsible="icon">
         <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center justify-center">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-xl text-sidebar-foreground">
-            <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
-              <FileText className="h-5 w-5" />
-            </div>
-            <span className="group-data-[collapsible=icon]:hidden">DocExtract</span>
+          <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold text-sidebar-foreground">
+            <TCCSidebarLogo size={18} />
+            <span className="group-data-[collapsible=icon]:hidden text-sm font-bold tracking-tight">TCC Document Intelligence</span>
           </Link>
         </SidebarHeader>
 
@@ -560,10 +564,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           {/* Mobile Header */}
           <header className="md:hidden flex h-16 items-center justify-between border-b bg-background px-4">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-              <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-white">
-                <FileText className="h-4 w-4" />
-              </div>
-              <span className="tracking-tight">DocExtract</span>
+              <TCCSidebarLogo size={16} />
+              <span className="tracking-tight text-sm font-bold">TCC Document Intelligence</span>
             </Link>
             <div className="flex items-center gap-2">
               <LanguageSwitcher />
@@ -582,7 +584,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground hover:bg-muted" />
               <h1 className="text-lg font-semibold tracking-tight">
-                {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'DocExtract'}
+                {navItems.find(i => location === i.href || (i.href !== '/dashboard' && location.startsWith(i.href)))?.label || 'TCC Document Intelligence'}
               </h1>
             </div>
             <LanguageSwitcher />

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { TCCLogo } from "@/components/TCCLogo";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
@@ -145,8 +146,10 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-muted/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <FileText className="w-8 h-8 text-primary" />
+          <div className="mx-auto flex items-center justify-center rounded-2xl h-16 w-16"
+            style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.25)' }}
+          >
+            <TCCLogo size={28} color="#F97316" />
           </div>
           <CardTitle className="text-2xl font-bold text-primary">
             {registrationComplete ? "Check Your Email" : "Create your account"}
@@ -154,7 +157,7 @@ export default function RegisterPage() {
           <CardDescription className="text-muted-foreground">
             {registrationComplete 
               ? "We've sent a verification link to your email address"
-              : "Join DocExtract to process your documents"
+              : "Join TCC Document Intelligence to process your documents"
             }
           </CardDescription>
         </CardHeader>

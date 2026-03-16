@@ -4,12 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
 import { login } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
+import { TCCLogo } from "@/components/TCCLogo";
 
 // Check if running on Replit
 const isReplit = typeof window !== 'undefined' && 
@@ -70,11 +71,14 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-              <FileText className="h-7 w-7" />
+            <div
+              className="h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg"
+              style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.25)' }}
+            >
+              <TCCLogo size={28} color="#F97316" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-primary">DocExtract</CardTitle>
+          <CardTitle className="text-xl font-bold text-foreground">TCC Document Intelligence</CardTitle>
           <CardDescription className="text-base">
             {t('auth.login_subtitle')}
           </CardDescription>
