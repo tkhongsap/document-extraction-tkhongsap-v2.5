@@ -560,6 +560,13 @@ class LlamaExtractService:
                 ))
 
 
+# Module-level singleton — agent_cache persists across requests within the same process
+_service_instance: Optional[LlamaExtractService] = None
+
+
 def create_llama_extract_service() -> LlamaExtractService:
-    """Factory function to create LlamaExtract service"""
-    return LlamaExtractService()
+    """Return module-level singleton so agent_cache is reused across requests."""
+    global _service_instance
+    if _service_instance is None:
+        _service_instance = LlamaExtractService()
+    return _service_instance

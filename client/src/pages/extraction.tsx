@@ -341,7 +341,7 @@ export default function Extraction() {
     if (!file || !type) return;
     
     // Validate document type
-    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract", "resume"];
+    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract", "resume", "receipt"];
     if (!validTypes.includes(type as DocumentType)) {
       toast.error("Invalid document type");
       return;
@@ -401,7 +401,7 @@ export default function Extraction() {
   const handleBatchTemplateExtraction = async () => {
     if (batchFiles.length === 0 || !type) return;
     
-    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract", "resume"];
+    const validTypes: DocumentType[] = ["bank", "invoice", "po", "contract", "resume", "receipt"];
     if (!validTypes.includes(type as DocumentType)) {
       toast.error("Invalid document type");
       return;

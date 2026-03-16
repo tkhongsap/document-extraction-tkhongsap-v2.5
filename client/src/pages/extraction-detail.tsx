@@ -199,7 +199,16 @@ export default function ExtractionDetail() {
   }
 
   const extractedData = extraction.extractedData as Record<string, unknown>;
-  
+
+  // Map document type to its raw array key in extracted_data
+  const LINE_ITEMS_KEYS: Record<string, string> = {
+    bank: "transactions",
+    invoice: "line_items",
+    po: "line_items",
+    contract: "parties",
+    receipt: "items",
+  };
+
   // Convert raw extractedData to headerFields if not already present
   // This happens when loading from history where we only have raw data
   const headerFields = extractedData?.headerFields as ExtractedField[] | undefined
@@ -208,6 +217,12 @@ export default function ExtractionDetail() {
         extraction.documentType as DocumentType,
         extractedData?.confidenceScores as Record<string, number> | undefined
       );
+
+  // Derive lineItems: prefer stored lineItems key, then fall back to raw array key in extractedData
+  const rawArrayKey = LINE_ITEMS_KEYS[extraction.documentType];
+  const lineItems = (extractedData?.lineItems as Array<Record<string, unknown>> | undefined)
+    ?? (rawArrayKey ? (extractedData?.[rawArrayKey] as Array<Record<string, unknown>> | undefined) : undefined)
+    ?? [];
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
@@ -355,7 +370,7 @@ export default function ExtractionDetail() {
           ) : (
             <StructuredResultsViewer
               headerFields={isEditMode ? editedFields : headerFields}
-              lineItems={(extractedData?.lineItems as Array<Record<string, unknown>>) || []}
+              lineItems={lineItems}
               extractedData={extractedData}
               confidenceScores={extractedData?.confidenceScores as Record<string, number> | undefined}
               documentType={extraction.documentType as DocumentType}

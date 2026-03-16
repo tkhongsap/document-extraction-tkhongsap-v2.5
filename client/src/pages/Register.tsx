@@ -146,11 +146,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-muted/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex items-center justify-center rounded-2xl h-16 w-16"
-            style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.25)' }}
-          >
-            <TCCLogo size={28} color="#F97316" />
-          </div>
+          <TCCLogo size={48} className="mx-auto" />
           <CardTitle className="text-2xl font-bold text-primary">
             {registrationComplete ? "Check Your Email" : "Create your account"}
           </CardTitle>

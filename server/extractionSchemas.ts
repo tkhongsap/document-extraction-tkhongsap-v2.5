@@ -5,7 +5,7 @@
  * All schemas use PER_DOC extraction target with MULTIMODAL mode.
  */
 
-export type DocumentType = "bank" | "invoice" | "po" | "contract" | "resume";
+export type DocumentType = "bank" | "invoice" | "po" | "contract" | "resume" | "receipt";
 
 /**
  * Bank Statement Schema
@@ -566,6 +566,93 @@ export const resumeSchema = {
 };
 
 /**
+ * Receipt Schema
+ * Extracts store info, itemized purchases, taxes, and payment details
+ */
+export const receiptSchema = {
+  type: "object",
+  properties: {
+    receipt_number: {
+      type: "string",
+      description: "Receipt or transaction number",
+    },
+    receipt_date: {
+      type: "string",
+      description: "Date the receipt was issued (YYYY-MM-DD)",
+    },
+    receipt_time: {
+      type: "string",
+      description: "Time the receipt was issued (HH:MM)",
+    },
+    store_name: {
+      type: "string",
+      description: "Name of the store or merchant",
+    },
+    store_address: {
+      type: "string",
+      description: "Full address of the store or merchant",
+    },
+    store_tax_id: {
+      type: "string",
+      description: "Tax identification number of the store",
+    },
+    cashier: {
+      type: "string",
+      description: "Name or ID of the cashier",
+    },
+    payment_method: {
+      type: "string",
+      description: "Payment method used (cash, credit card, QR code, etc.)",
+    },
+    subtotal: {
+      type: "number",
+      description: "Subtotal before tax and discounts",
+    },
+    discount_amount: {
+      type: "number",
+      description: "Total discount applied",
+    },
+    tax_amount: {
+      type: "number",
+      description: "Total tax amount",
+    },
+    total_amount: {
+      type: "number",
+      description: "Final total amount paid",
+    },
+    currency: {
+      type: "string",
+      description: "Currency code (e.g., THB, USD)",
+    },
+    items: {
+      type: "array",
+      description: "List of purchased items",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Name or description of the item",
+          },
+          quantity: {
+            type: "number",
+            description: "Quantity purchased",
+          },
+          unit_price: {
+            type: "number",
+            description: "Price per unit",
+          },
+          amount: {
+            type: "number",
+            description: "Total amount for this line (quantity * unit_price)",
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
  * Get the JSON schema for a given document type
  */
 export function getSchemaForType(documentType: DocumentType): Record<string, unknown> {
@@ -575,6 +662,7 @@ export function getSchemaForType(documentType: DocumentType): Record<string, unk
     po: purchaseOrderSchema,
     contract: contractSchema,
     resume: resumeSchema,
+    receipt: receiptSchema,
   };
 
   const schema = schemas[documentType];
@@ -595,6 +683,7 @@ export function getDocumentTypeName(documentType: DocumentType): string {
     po: "Purchase Order",
     contract: "Contract",
     resume: "Resume / CV",
+    receipt: "Receipt",
   };
   return names[documentType] || documentType;
 }

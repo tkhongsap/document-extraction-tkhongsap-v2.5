@@ -78,6 +78,16 @@ function getLineItemsConfig(documentType: DocumentType): ArraySectionConfig | nu
         { key: "address", label: "Address" },
       ],
     },
+    receipt: {
+      key: "items",
+      title: "Items",
+      columns: [
+        { key: "name", label: "Item" },
+        { key: "quantity", label: "Qty", width: "w-16" },
+        { key: "unit_price", label: "Unit Price", width: "w-28" },
+        { key: "amount", label: "Amount", width: "w-24" },
+      ],
+    },
   };
 
   return configs[documentType] || null;

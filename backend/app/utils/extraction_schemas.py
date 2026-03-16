@@ -4,7 +4,7 @@ JSON Schema definitions for each document template type.
 """
 from typing import Dict, Any, Literal
 
-DocumentType = Literal["bank", "invoice", "po", "contract", "resume"]
+DocumentType = Literal["bank", "invoice", "po", "contract", "resume", "receipt"]
 
 # ============ Bank Statement Schema ============
 BANK_STATEMENT_SCHEMA = {
@@ -515,6 +515,89 @@ RESUME_SCHEMA = {
     },
 }
 
+RECEIPT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "receipt_number": {
+            "type": "string",
+            "description": "Receipt or transaction number",
+        },
+        "receipt_date": {
+            "type": "string",
+            "description": "Date the receipt was issued (YYYY-MM-DD)",
+        },
+        "receipt_time": {
+            "type": "string",
+            "description": "Time the receipt was issued (HH:MM)",
+        },
+        "store_name": {
+            "type": "string",
+            "description": "Name of the store or merchant",
+        },
+        "store_address": {
+            "type": "string",
+            "description": "Full address of the store or merchant",
+        },
+        "store_tax_id": {
+            "type": "string",
+            "description": "Tax identification number of the store",
+        },
+        "cashier": {
+            "type": "string",
+            "description": "Name or ID of the cashier",
+        },
+        "payment_method": {
+            "type": "string",
+            "description": "Payment method used (cash, credit card, QR code, etc.)",
+        },
+        "subtotal": {
+            "type": "number",
+            "description": "Subtotal before tax and discounts",
+        },
+        "discount_amount": {
+            "type": "number",
+            "description": "Total discount applied",
+        },
+        "tax_amount": {
+            "type": "number",
+            "description": "Total tax amount",
+        },
+        "total_amount": {
+            "type": "number",
+            "description": "Final total amount paid",
+        },
+        "currency": {
+            "type": "string",
+            "description": "Currency code (e.g., THB, USD)",
+        },
+        "items": {
+            "type": "array",
+            "description": "List of purchased items",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name or description of the item",
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "description": "Quantity purchased",
+                    },
+                    "unit_price": {
+                        "type": "number",
+                        "description": "Price per unit",
+                    },
+                    "amount": {
+                        "type": "number",
+                        "description": "Total amount for this line (quantity * unit_price)",
+                    },
+                },
+            },
+        },
+    },
+}
+
 # Schema mapping
 SCHEMAS: Dict[DocumentType, Dict[str, Any]] = {
     "bank": BANK_STATEMENT_SCHEMA,
@@ -522,6 +605,7 @@ SCHEMAS: Dict[DocumentType, Dict[str, Any]] = {
     "po": PURCHASE_ORDER_SCHEMA,
     "contract": CONTRACT_SCHEMA,
     "resume": RESUME_SCHEMA,
+    "receipt": RECEIPT_SCHEMA,
 }
 
 # Line items key mapping
@@ -531,6 +615,7 @@ LINE_ITEMS_KEYS: Dict[DocumentType, str | None] = {
     "po": "line_items",
     "contract": "parties",
     "resume": "experience",
+    "receipt": "items",
 }
 
 # Resume array keys to skip
@@ -551,6 +636,7 @@ DOCUMENT_TYPE_NAMES: Dict[DocumentType, str] = {
     "po": "Purchase Order",
     "contract": "Contract",
     "resume": "Resume / CV",
+    "receipt": "Receipt",
 }
 
 

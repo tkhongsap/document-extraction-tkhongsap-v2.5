@@ -34,7 +34,7 @@ export default function Dashboard() {
 
   // Get featured templates in specific order: Resume, Bank, Contract, Invoice, PO
   const allTemplates = getTemplates(t);
-  const featuredIds = ['resume', 'bank', 'contract', 'invoice', 'po'];
+  const featuredIds = ['resume', 'bank', 'contract', 'invoice', 'po', 'receipt'];
   const featuredTemplates = featuredIds
     .map(id => allTemplates.find(t => t.id === id))
     .filter((t): t is NonNullable<typeof t> => t !== undefined)

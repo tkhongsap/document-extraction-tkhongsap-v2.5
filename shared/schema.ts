@@ -64,7 +64,7 @@ export const auditActionTypes = [
 export type AuditActionType = typeof auditActionTypes[number];
 
 // Document types for extraction
-export const documentTypes = ["bank", "invoice", "po", "contract", "resume", "general"] as const;
+export const documentTypes = ["bank", "invoice", "po", "contract", "resume", "receipt", "general"] as const;
 export type DocumentType = typeof documentTypes[number];
 
 // ============================================================================

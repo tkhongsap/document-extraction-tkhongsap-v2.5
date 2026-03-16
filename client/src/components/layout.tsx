@@ -228,11 +228,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="container flex h-16 items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 font-semibold text-foreground">
-            <div className="flex items-center justify-center rounded-xl h-9 w-9"
-              style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.2)' }}
-            >
-              <TCCLogo size={18} color="#F97316" />
-            </div>
+            <TCCLogo size={32} />
             <span className="tracking-tight text-base font-bold">TCC Document Intelligence</span>
           </Link>
 
@@ -310,11 +306,7 @@ function Footer({ handleHashLink }: { handleHashLink: (hash: string, e: React.Mo
               transition={{ duration: 0.5, delay: 0.1 }}
               className="flex items-center gap-3 group"
             >
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid rgba(249,115,22,0.25)' }}
-              >
-                <TCCLogo size={20} color="#F97316" />
-              </div>
+              <TCCLogo size={40} />
               <div className="flex flex-col leading-none">
                 <span className="font-display font-bold text-lg tracking-tight text-foreground">TCC Document Intelligence</span>
                 <span className="block text-xs text-muted-foreground/60 font-normal mt-0.5">by TCC Technology</span>
@@ -457,7 +449,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { href: '/resume-search', icon: Search, label: 'Resume Search' },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];
@@ -466,7 +457,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
   const mobileNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { href: '/resume-search', icon: Search, label: 'Resume Search' },
     { href: '/history', icon: History, label: t('nav.history') },
     { href: '/settings', icon: Settings, label: t('nav.settings') },
   ];

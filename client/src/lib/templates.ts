@@ -1,4 +1,4 @@
-import { Receipt, FileSpreadsheet, ScrollText, Landmark, UserCircle, LucideIcon } from "lucide-react";
+import { Receipt, FileSpreadsheet, ScrollText, Landmark, UserCircle, ShoppingCart, LucideIcon } from "lucide-react";
 import { useLanguage } from "./i18n";
 
 export interface Template {
@@ -51,6 +51,14 @@ export function getTemplates(t: (key: string) => string): Template[] {
       icon: ScrollText, 
       color: 'bg-orange-100 text-orange-600', 
       border: 'hover:border-orange-200' 
+    },
+    { 
+      id: 'receipt', 
+      name: t('dash.template_receipt'), 
+      desc: 'Extract items, totals, tax, and payment details', 
+      icon: ShoppingCart, 
+      color: 'bg-pink-100 text-pink-600', 
+      border: 'hover:border-pink-200' 
     },
   ];
 }

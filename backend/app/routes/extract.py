@@ -135,7 +135,7 @@ async def template_extraction(
         raise HTTPException(status_code=400, detail="No file uploaded")
     
     # Validate document type
-    valid_types: List[DocumentType] = ["bank", "invoice", "po", "contract", "resume"]
+    valid_types: List[DocumentType] = ["bank", "invoice", "po", "contract", "resume", "receipt"]
     if documentType not in valid_types:
         raise HTTPException(
             status_code=400,

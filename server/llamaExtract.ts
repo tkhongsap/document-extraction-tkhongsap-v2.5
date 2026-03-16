@@ -471,6 +471,7 @@ export class LlamaExtractService {
       po: "line_items",
       contract: "parties", // Contract has parties and signatures as arrays
       resume: "work_experience", // Resume has multiple arrays, work_experience is primary
+      receipt: "items",
     };
     return lineItemsKeys[documentType];
   }

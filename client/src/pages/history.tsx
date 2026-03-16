@@ -151,6 +151,7 @@ export default function History() {
   const { formatDate, formatRelativeTime } = useDateFormatter();
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDocType, setSelectedDocType] = useState<string>("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
@@ -165,30 +166,25 @@ export default function History() {
 
   // Filter extractions by multiple fields: filename, documentType, status, and extractedData
   const filteredExtractions = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return extractions;
-    }
-    
-    const query = debouncedSearchQuery.toLowerCase().trim();
-    
     return extractions.filter((extraction: typeof extractions[number]) => {
+      // Filter by selected document type tab
+      if (selectedDocType !== "all" && extraction.documentType !== selectedDocType) return false;
+
+      if (!debouncedSearchQuery.trim()) return true;
+      const query = debouncedSearchQuery.toLowerCase().trim();
       // Search in fileName
       if (extraction.fileName.toLowerCase().includes(query)) return true;
-      
       // Search in documentType
       if (extraction.documentType.toLowerCase().includes(query)) return true;
-      
       // Search in status
       if (extraction.status.toLowerCase().includes(query)) return true;
-      
       // Search in extractedData (recursive search through JSON structure)
       if (extraction.extractedData && searchInExtractedData(extraction.extractedData, query)) {
         return true;
       }
-      
       return false;
     });
-  }, [extractions, debouncedSearchQuery]);
+  }, [extractions, debouncedSearchQuery, selectedDocType]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -275,6 +271,47 @@ export default function History() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Document Type Filter */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'bank', label: 'Bank' },
+          { id: 'invoice', label: 'Invoice' },
+          { id: 'po', label: 'PO' },
+          { id: 'contract', label: 'Contract' },
+          { id: 'receipt', label: 'Receipt' },
+          { id: 'resume', label: 'Resume' },
+          { id: 'general', label: 'General' },
+        ].map((type) => {
+          const count = type.id === 'all'
+            ? extractions.length
+            : extractions.filter((e: typeof extractions[number]) => e.documentType === type.id).length;
+          if (type.id !== 'all' && count === 0) return null;
+          return (
+            <button
+              key={type.id}
+              onClick={() => setSelectedDocType(type.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
+                selectedDocType === type.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              )}
+            >
+              {type.label}
+              <span className={cn(
+                'text-xs px-1.5 py-0.5 rounded-full',
+                selectedDocType === type.id
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-background text-muted-foreground'
+              )}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Extraction Cards */}
       {isLoading ? (

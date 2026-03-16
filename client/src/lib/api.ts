@@ -112,7 +112,7 @@ export async function getCurrentUser(): Promise<User> {
 }
 
 // Template Extraction API (LlamaExtract-based for Bank, Invoice, PO, Contract)
-export type DocumentType = "bank" | "invoice" | "po" | "contract" | "resume";
+export type DocumentType = "bank" | "invoice" | "po" | "contract" | "resume" | "receipt";
 
 export interface ExtractedField {
   key: string;
@@ -157,7 +157,8 @@ export async function processTemplateExtraction(
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.message || "Template extraction failed");
+    const message = error.message || (typeof error.detail === 'string' ? error.detail : undefined) || "Template extraction failed";
+    throw new Error(message);
   }
 
   return res.json();
